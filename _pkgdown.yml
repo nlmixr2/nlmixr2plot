@@ -1,0 +1,20 @@
+template:
+  params:
+  bootswatch: flatly
+reference:
+- title: Model diagnostics
+  contents:
+  - '`traceplot`'
+- title: Utilities
+  contents:
+  - '`bootplot`'
+- title: ggplot2 functions
+  contents:
+  - '`stat_amt`'
+  - '`stat_cens`'
+- title: Internal functions
+  contents:
+  - '`plot.dyn.ID`'
+  - '`plot.dyn.mcmc`'
+  - '`plot.nlmixrFitData`'
+  - '`plot.saemFit`'
