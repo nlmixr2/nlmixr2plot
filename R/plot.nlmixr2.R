@@ -28,6 +28,8 @@
 }
 
 #' @importFrom utils stack
+#' @importFrom ggplot2 aes element_blank facet_wrap geom_abline geom_point ggplot scale_color_manual theme scale_x_log10 scale_y_log10 xlab
+#' @importFrom rxode2 rxTheme
 .dvPlot <- function(.dat0, vars, log = FALSE) {
   .xgxr <- getOption("rxode2.xgxr", TRUE) &&
     requireNamespace("xgxr", quietly = TRUE)
@@ -124,8 +126,9 @@
 bootplot <- function(x, ...) {
   UseMethod("bootplot")
 }
-##' @rdname traceplot
-##' @export
+#' @rdname traceplot
+#' @export
+#' @importFrom nlmixr2 bootstrapFit
 bootplot.nlmixr2FitCore <- function(x, ...) {
   .fitName <- as.character(substitute(x))
   quantiles <- deltaofv <- Distribution <- label <- NULL # rcheck hack
@@ -271,8 +274,8 @@ plot.nlmixr2FitData <- function(x, ...) {
           }
         }
       }
-      ## .idPlot <- try(plot.nlmixr2AugPred(nlmixr2AugPred(object)));
-      ## if (inherits(.idPlot, "try-error")){
+      # .idPlot <- try(plot.nlmixr2AugPred(nlmixr2AugPred(object)));
+      # if (inherits(.idPlot, "try-error")){
       .ids <- unique(.dat0$ID)
       .s <- seq(1, length(.ids), by = 16)
       .j <- 0
@@ -293,7 +296,9 @@ plot.nlmixr2FitData <- function(x, ...) {
           rxode2::rxTheme()
         if (any(names(.d1) == "lowerLim")) {
           lowerLim <- upperLim <- NULL
-          .p3 <- .p3 + geom_cens(aes(lower = lowerLim, upper = upperLim), fill = "purple")
+          .p3 <-
+            .p3 +
+            geom_cens(aes(lower = lowerLim, upper = upperLim), fill = "purple")
         }
         .lst[[length(.lst) + 1]] <- .p3
       }
@@ -301,39 +306,39 @@ plot.nlmixr2FitData <- function(x, ...) {
       .ids <- unique(.dat0$id2)
       .s <- seq(1, length(.ids), by = 16)
       .j <- 0
-      ## for (i in .s) {
-      ##   .j <- .j + 1
-      ##   .tmp <- .ids[seq(i, i + 15)]
-      ##   .tmp <- .tmp[!is.na(.tmp)]
-      ##   .d1 <- .dat0[.dat0$id2 %in% .tmp, ]
+      # for (i in .s) {
+      #   .j <- .j + 1
+      #   .tmp <- .ids[seq(i, i + 15)]
+      #   .tmp <- .tmp[!is.na(.tmp)]
+      #   .d1 <- .dat0[.dat0$id2 %in% .tmp, ]
 
-      ##   .p3 <- ggplot2::ggplot(.d1, ggplot2::aes(x = tad, y = DV)) +
-      ##     ggplot2::geom_point() +
-      ##     ggplot2::geom_line(aes(x = tad, y = IPRED), col = "red", size = 1.2) +
-      ##     ggplot2::geom_line(aes(x = tad, y = PRED), col = "blue", size = 1.2) +
-      ##     ggplot2::facet_wrap(~id2) +
-      ##     ggplot2::ggtitle(.cmt, sprintf("Individual TAD Plots (%s of %s)", .j, length(.s))) +
-      ##     rxode2::rxTheme()
-      ##   if (any(names(.d1) == "lowerLim")) {
-      ##     .p3 <- .p3 + geom_cens(aes(lower=lowerLim, upper=upperLim), fill="purple")
-      ##   }
-      ##   .lst[[length(.lst) + 1]] <- .p3
-      ## }
+      #   .p3 <- ggplot2::ggplot(.d1, ggplot2::aes(x = tad, y = DV)) +
+      #     ggplot2::geom_point() +
+      #     ggplot2::geom_line(aes(x = tad, y = IPRED), col = "red", size = 1.2) +
+      #     ggplot2::geom_line(aes(x = tad, y = PRED), col = "blue", size = 1.2) +
+      #     ggplot2::facet_wrap(~id2) +
+      #     ggplot2::ggtitle(.cmt, sprintf("Individual TAD Plots (%s of %s)", .j, length(.s))) +
+      #     rxode2::rxTheme()
+      #   if (any(names(.d1) == "lowerLim")) {
+      #     .p3 <- .p3 + geom_cens(aes(lower=lowerLim, upper=upperLim), fill="purple")
+      #   }
+      #   .lst[[length(.lst) + 1]] <- .p3
+      # }
     }
   }
 
-  ## .id <- unique(.dat0$id2)
-  ## if (grDevices::dev.cur() != 1){
-  ##     .x  <- .lst
-  ##     for (.i in seq_along(.x)){
-  ##         plot(.x[[.i]])
-  ##     }
-  ## }
+  # .id <- unique(.dat0$id2)
+  # if (grDevices::dev.cur() != 1){
+  #     .x  <- .lst
+  #     for (.i in seq_along(.x)){
+  #         plot(.x[[.i]])
+  #     }
+  # }
   class(.lst) <- "nlmixr2PlotList"
   return(.lst)
 }
 
-##' @export
+#' @export
 plot.nlmixr2PlotList <- function(x, y, ...) {
   .x <- x
   class(.x) <- NULL
@@ -342,7 +347,7 @@ plot.nlmixr2PlotList <- function(x, y, ...) {
   }
 }
 
-##' @export
+#' @export
 plot.nlmixr2FitCore <- function(x, ...) {
   stop("This is not a nlmixr2 data frame and cannot be plotted")
 }
@@ -368,11 +373,13 @@ traceplot <- function(x, ...) {
 traceplot.nlmixr2FitCore <- function(x, ...) {
   .m <- x$parHistStacked
   if (!is.null(.m)) {
-    .p0 <- ggplot(.m, ggplot2::aes(.data$iter, .data$val)) +
-      geom_line() +
-      facet_wrap(~par, scales = "free_y")
+    .p0 <- ggplot2::ggplot(.m, ggplot2::aes(.data$iter, .data$val)) +
+      ggplot2::geom_line() +
+      ggplot2::facet_wrap(~par, scales = "free_y")
     if (!is.null(x$mcmc)) {
-      .p0 <- .p0 + ggplot2::geom_vline(xintercept = x$mcmc$niter[1], col = "blue", size = 1.2)
+      .p0 <-
+        .p0 +
+        ggplot2::geom_vline(xintercept = x$mcmc$niter[1], col = "blue", size = 1.2)
     }
     .p0 <- .p0 + rxode2::rxTheme()
     return(.p0)

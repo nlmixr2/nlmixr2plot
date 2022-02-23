@@ -1,3 +1,5 @@
+.lastPredSimulationInfo <- NULL # to get observation dataset with pred attached for pred_corr
+
 #' VPC based on ui model
 #'
 #' @param fit nlmixr2 fit object
@@ -35,13 +37,15 @@
 #'  })
 #' }
 #'
-#' fit <- nlmixr(one.cmt, theo_sd, est="focei")
+#' fit <- nlmixr2::nlmixr(one.cmt, theo_sd, est="focei")
 #'
 #' vpcPlot(fit)
 #'
 #' }
 #'
 #' @export
+#' @importFrom nlmixr2 vpcSim
+#' @importFrom vpc vpc_vpc
 vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                     n_bins = "auto", bin_mid = "mean",
                     show = NULL, stratify = NULL, pred_corr = FALSE,
@@ -70,7 +74,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     }
   }
   # Simulate with VPC
-  .sim <- vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
+  .sim <- nlmixr2::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
   .simCols <- list(
     id="id",
     dv="sim",
@@ -119,4 +123,45 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                uloq = uloq, lloq = lloq, log_y = log_y, log_y_min = log_y_min,
                xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
                facet = facet, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
+}
+
+#' Setup Observation data for VPC
+#'
+#' @param fit nlmixr2 fit
+#' @param data replacement data
+#' @return List with `namesObs`, `namesObsLower`, `obs` and `obsCols`
+#' @author Matthew L. Fidler
+#' @noRd
+.vpcUiSetupObservationData <- function(fit, data=NULL) {
+  if (!is.null(data)) {
+    .obs <- data
+  } else {
+    .obs <- fit$origData
+  }
+  .no <- names(.obs)
+  .nol <- tolower(.no)
+  .wo <- which(.nol == "id")
+  if (length(.wo) != 1) {
+    stop("cannot find 'id' in original dataset",
+         call.=FALSE)
+  }
+  .obsCols <- list(id=.no[.wo])
+  .wo <- which(.nol == "dv")
+  if (length(.wo) != 1) {
+    stop("cannot find 'dv' in original dataset",
+         call.=FALSE)
+  }
+  .obsCols <- c(.obsCols,
+                list(dv=.no[.wo]))
+  .wo <- which(.nol == "time")
+  if (length(.wo) != 1) {
+    stop("cannot find 'time' in original dataset",
+         call.=FALSE)
+  }
+  .obsCols <- c(.obsCols,
+                list(idv=.no[.wo]))
+  list(namesObs=.no,
+       namesObsLower=.nol,
+       obs=.obs,
+       obsCols=.obsCols)
 }
