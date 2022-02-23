@@ -37,7 +37,7 @@
 #'  })
 #' }
 #'
-#' fit <- nlmixr2::nlmixr(one.cmt, theo_sd, est="focei")
+#' fit <- nlmixr2::nlmixr(one.cmt, nlmixr2::theo_sd, est="focei")
 #'
 #' vpcPlot(fit)
 #'

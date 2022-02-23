@@ -2,6 +2,7 @@
 
 #' @export
 #' @importFrom utils assignInMyNamespace
+#' @importFrom ggplot2 .data
 plot.nlmixr2AugPred <- function(x, y, ...) {
   if (any(names(x) == "Endpoint")) {
     for (.tmp in levels(x$Endpoint)) {
@@ -11,7 +12,6 @@ plot.nlmixr2AugPred <- function(x, y, ...) {
     }
   } else {
     ids <- unique(x$id)
-    time <- values <- ind <- id <- NULL # Rcheck fix
     for (i in seq(1, length(ids), by = 16)) {
       tmp <- ids[seq(i, i + 15)]
       tmp <- tmp[!is.na(tmp)]
@@ -19,7 +19,7 @@ plot.nlmixr2AugPred <- function(x, y, ...) {
       dobs <- d1[d1$ind == "Observed", ]
       dpred <- d1[d1$ind != "Observed", ]
       p3 <-
-        ggplot2::ggplot(d1, ggplot2::aes(time, values, col = ind)) +
+        ggplot2::ggplot(d1, ggplot2::aes(.data$time, .data$values, col = .data$ind)) +
         ggplot2::geom_line(data = dpred, size = 1.2) +
         ggplot2::geom_point(data = dobs) +
         ggplot2::facet_wrap(~id) +

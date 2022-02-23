@@ -129,9 +129,9 @@ bootplot <- function(x, ...) {
 #' @rdname traceplot
 #' @export
 #' @importFrom nlmixr2 bootstrapFit
+#' @importFrom ggplot2 .data
 bootplot.nlmixr2FitCore <- function(x, ...) {
   .fitName <- as.character(substitute(x))
-  quantiles <- deltaofv <- Distribution <- label <- NULL # rcheck hack
   if (inherits(x, "nlmixr2FitCore")) {
     if (exists("bootSummary", x$env) & (!exists(".bootPlotData", x$env))) {
       nlmixr2::bootstrapFit(x, x$bootSummary$nboot, plotHist = TRUE, fitName = .fitName)
@@ -144,10 +144,10 @@ bootplot.nlmixr2FitCore <- function(x, ...) {
       .dfD <- x$env$.bootPlotData$dfD
       .deltaN <- x$env$.bootPlotData$deltaN
       .df2 <- x$env$.bootPlotData$df2
-      .plot <- ggplot2::ggplot(.chisq, ggplot2::aes(quantiles, deltaofv, color = Distribution)) +
+      .plot <- ggplot2::ggplot(.chisq, ggplot2::aes(.data$quantiles, .data$deltaofv, color = .data$Distribution)) +
         ggplot2::geom_line() +
         ggplot2::ylab("\u0394 objective function") +
-        ggplot2::geom_text(data = .dfD, ggplot2::aes(label = label), hjust = 0) +
+        ggplot2::geom_text(data = .dfD, ggplot2::aes(label = .data$label), hjust = 0) +
         ggplot2::xlab("Distribution quantiles") +
         ggplot2::scale_color_manual(values = c("red", "blue")) +
         rxode2::rxTheme() +
@@ -199,7 +199,6 @@ bootplot.nlmixr2FitCore <- function(x, ...) {
 plot.nlmixr2FitData <- function(x, ...) {
   .lst <- list()
   object <- x
-  IWRES <- NULL
   .tp <- traceplot(x)
   if (!is.null(.tp)) .lst[[length(.lst) + 1]] <- .tp
   if (exists(".bootPlotData", object$env)) {
@@ -285,20 +284,19 @@ plot.nlmixr2FitData <- function(x, ...) {
         .tmp <- .tmp[!is.na(.tmp)]
         .d1 <- .dat0[.dat0$ID %in% .tmp, ]
 
-        .p3 <- ggplot2::ggplot(.d1, ggplot2::aes(x = TIME, y = DV)) +
+        .p3 <- ggplot2::ggplot(.d1, ggplot2::aes(x = .data$TIME, y = .data$DV)) +
           ggplot2::geom_point() +
-          ggplot2::geom_line(aes(x = TIME, y = IPRED), col = "red", size = 1.2)
+          ggplot2::geom_line(aes(x = .data$TIME, y = .data$IPRED), col = "red", size = 1.2)
         if (any(names(.d1) == "PRED")) {
-          .p3 <- .p3 + ggplot2::geom_line(aes(x = TIME, y = PRED), col = "blue", size = 1.2)
+          .p3 <- .p3 + ggplot2::geom_line(aes(x = .data$TIME, y = .data$PRED), col = "blue", size = 1.2)
         }
         .p3 <- .p3 + ggplot2::facet_wrap(~ID) +
           ggplot2::ggtitle(.cmt, sprintf("Individual Plots (%s of %s)", .j, length(.s))) +
           rxode2::rxTheme()
         if (any(names(.d1) == "lowerLim")) {
-          lowerLim <- upperLim <- NULL
           .p3 <-
             .p3 +
-            geom_cens(aes(lower = lowerLim, upper = upperLim), fill = "purple")
+            geom_cens(aes(lower = .data$lowerLim, upper = .data$upperLim), fill = "purple")
         }
         .lst[[length(.lst) + 1]] <- .p3
       }
