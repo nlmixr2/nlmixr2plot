@@ -123,7 +123,7 @@ one.cmt <- function() {
  })
 }
 
-fit <- nlmixr2::nlmixr(one.cmt, nlmixr2::theo_sd, est="focei")
+fit <- nlmixr2est::nlmixr(one.cmt, nlmixr2est::theo_sd, est="focei")
 
 vpcPlot(fit)
 

@@ -37,14 +37,14 @@
 #'  })
 #' }
 #'
-#' fit <- nlmixr2::nlmixr(one.cmt, nlmixr2::theo_sd, est="focei")
+#' fit <- nlmixr2est::nlmixr(one.cmt, nlmixr2est::theo_sd, est="focei")
 #'
 #' vpcPlot(fit)
 #'
 #' }
 #'
 #' @export
-#' @importFrom nlmixr2 vpcSim
+#' @importFrom nlmixr2est vpcSim
 #' @importFrom vpc vpc_vpc
 vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                     n_bins = "auto", bin_mid = "mean",
@@ -74,7 +74,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     }
   }
   # Simulate with VPC
-  .sim <- nlmixr2::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
+  .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
   .simCols <- list(
     id="id",
     dv="sim",

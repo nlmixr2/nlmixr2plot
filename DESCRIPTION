@@ -7,8 +7,9 @@ Authors@R:
       comment=c(ORCID="0000-0001-8538-6691")),
     person("Bill", "Denney",
       role=c("ctb"), email="wdenney@humanpredictions.com",
-      comment=c(ORCID="0000-0002-5759-428X"))
-    )
+      comment=c(ORCID="0000-0002-5759-428X")),
+    person("Wenping", "Wang", role="aut", email = "wwang8198@gmail.com"),
+    person("Vipul", "Mann", role="aut", email="vm2583@columbia.edu"))
 Description: What the package does (one paragraph).
 License: GPL (>= 3)
 Suggests:
@@ -18,7 +19,7 @@ Suggests:
 Imports:
     rxode2,
     ggplot2,
-    nlmixr2,
+    nlmixr2est,
     dplyr,
     tidyr,
     vpc
