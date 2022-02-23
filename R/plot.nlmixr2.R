@@ -128,17 +128,17 @@ bootplot <- function(x, ...) {
 }
 #' @rdname traceplot
 #' @export
-#' @importFrom nlmixr2 bootstrapFit
+#' @importFrom nlmixr2est bootstrapFit
 #' @importFrom ggplot2 .data
 bootplot.nlmixr2FitCore <- function(x, ...) {
   .fitName <- as.character(substitute(x))
   if (inherits(x, "nlmixr2FitCore")) {
     if (exists("bootSummary", x$env) & (!exists(".bootPlotData", x$env))) {
-      nlmixr2::bootstrapFit(x, x$bootSummary$nboot, plotHist = TRUE, fitName = .fitName)
+      nlmixr2est::bootstrapFit(x, x$bootSummary$nboot, plotHist = TRUE, fitName = .fitName)
     }
     if (exists(".bootPlotData", x$env)) {
       if (x$bootSummary$nboot != x$env$.bootPlotData$deltaN) {
-        nlmixr2::bootstrapFit(x, x$bootSummary$nboot, plotHist = TRUE, fitName = .fitName)
+        nlmixr2est::bootstrapFit(x, x$bootSummary$nboot, plotHist = TRUE, fitName = .fitName)
       }
       .chisq <- x$env$.bootPlotData$chisq
       .dfD <- x$env$.bootPlotData$dfD
