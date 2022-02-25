@@ -151,11 +151,11 @@ plot.nlmixr2FitData <- function(x, ...) {
           ggplot2::ggtitle(.cmt, "log-scale DV vs PRED/IPRED")
         .lst[[length(.lst) + 1]] <- .p1
       } else if (.hasIpred) {
-        .p1 <- .dvPlot(.dat0, c("IPRED")) +
+        .p1 <- .dvPlot(.dat0, "IPRED") +
           ggplot2::ggtitle(.cmt, "DV vs IPRED")
         .lst[[length(.lst) + 1]] <- .p1
 
-        .p1 <- .dvPlot(.dat0, c("IPRED"), TRUE) +
+        .p1 <- .dvPlot(.dat0, "IPRED", TRUE) +
           ggplot2::ggtitle(.cmt, "log-scale DV vs IPRED")
         .lst[[length(.lst) + 1]] <- .p1
       }
