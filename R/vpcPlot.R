@@ -1,5 +1,3 @@
-.lastPredSimulationInfo <- NULL # to get observation dataset with pred attached for pred_corr
-
 #' VPC based on ui model
 #'
 #' @param fit nlmixr2 fit object
@@ -81,7 +79,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     idv="time")
   if (pred_corr) {
     .simCols <- c(.simCols, list(pred="pred"))
-    .si <- .lastPredSimulationInfo
+    .si <- nlmixr2est::.nlmixr2estLastPredSimulationInfo()
     .si$keep <- unique(c(stratify, .obsCols$dv))
     .si$addDosing <- FALSE
     .si$subsetNonmem <- TRUE
