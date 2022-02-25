@@ -14,6 +14,7 @@ Description: What the package does (one paragraph).
 License: GPL (>= 3)
 Suggests:
     ggtext,
+    nlmixr2data,
     testthat (>= 3.0.0),
     xgxr
 Imports:
@@ -22,7 +23,8 @@ Imports:
     nlmixr2est,
     dplyr,
     tidyr,
-    vpc
+    vpc,
+    nlmixr2extra
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.2

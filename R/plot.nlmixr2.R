@@ -131,7 +131,7 @@ plot.nlmixr2FitData <- function(x, ...) {
   .tp <- traceplot(x)
   if (!is.null(.tp)) .lst[[length(.lst) + 1]] <- .tp
   if (exists(".bootPlotData", object$env)) {
-    .bp <- bootplot(x)
+    .bp <- nlmixr2extra::bootplot(x)
     .lst[[length(.lst) + 1]] <- .bp
   }
   .dat <- .setupPlotData(x)
