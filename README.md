@@ -3,6 +3,7 @@
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/nlmixr2/nlmixr2plot/workflows/R-CMD-check/badge.svg)](https://github.com/nlmixr2/nlmixr2plot/actions)
+[![CodeFactor](https://www.codefactor.io/repository/github/nlmixr2/nlmixr2plot/badge)](https://www.codefactor.io/repository/github/nlmixr2/nlmixr2plot)
 <!-- badges: end -->
 
 The goal of nlmixr2plot is to provide a central place for the nlmixr2 plot functions
