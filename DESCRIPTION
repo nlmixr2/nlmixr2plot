@@ -13,9 +13,11 @@ Authors@R:
 Description: What the package does (one paragraph).
 License: GPL (>= 3)
 Suggests:
+    covr,
     ggtext,
     nlmixr2data,
     testthat (>= 3.0.0),
+    vdiffr,
     xgxr
 Imports:
     rxode2,
