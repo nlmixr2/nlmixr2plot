@@ -27,6 +27,7 @@ vpcPlot(
   smooth = TRUE,
   vpc_theme = NULL,
   facet = "wrap",
+  scales = "fixed",
   labeller = NULL,
   vpcdb = FALSE,
   verbose = FALSE,
@@ -81,6 +82,8 @@ this argument.}
 \item{vpc_theme}{theme to be used in VPC. Expects list of class vpc_theme created with function vpc_theme()}
 
 \item{facet}{either "wrap", "columns", or "rows"}
+
+\item{scales}{either "fixed" (default), "free_y", "free_x" or "free"}
 
 \item{labeller}{ggplot2 labeller function to be passed to underlying ggplot object}
 

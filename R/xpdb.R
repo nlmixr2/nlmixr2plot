@@ -1,4 +1,4 @@
-#' @export
+#' @importFrom nlmixr2est nmObjGetData
 nmObjGetData.xpdb <- function(x, ...) {
   if (!requireNamespace("xpose.nlmixr", quietly = TRUE)) {
     NULL
