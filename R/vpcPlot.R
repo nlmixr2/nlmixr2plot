@@ -73,6 +73,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   }
   # Simulate with VPC
   .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
+  .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify)
   .simCols <- list(
     id="id",
     dv="sim",
