@@ -50,8 +50,8 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                     pred_corr_lower_bnd = 0, pi = c(0.05, 0.95), ci = c(0.05, 0.95),
                     uloq = NULL, lloq = NULL, log_y = FALSE, log_y_min = 0.001,
                     xlab = NULL, ylab = NULL, title = NULL, smooth = TRUE, vpc_theme = NULL,
-                    facet = "wrap", labeller = NULL, vpcdb = FALSE, verbose = FALSE, ...,
-                    seed=1009) {
+                    facet = "wrap", scales = "fixed", labeller = NULL, vpcdb = FALSE,
+                    verbose = FALSE, ..., seed=1009) {
   rxode2::rxReq("vpc")
   .ui <- fit$ui
   .obsLst <- .vpcUiSetupObservationData(fit, data)
@@ -103,7 +103,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     if (any(names(.obs) == "dv")) {
       .obsCols$dv <- "dv"
     }
-  }
+   }
   .both <- intersect(names(.sim), names(.obs))
   for (.n in .both) {
     if (inherits(.obs[[.n]], "factor") && !inherits(.sim[[.n]], "factor")) {
@@ -120,7 +120,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                pred_corr_lower_bnd = pred_corr_lower_bnd, pi = pi, ci = ci,
                uloq = uloq, lloq = lloq, log_y = log_y, log_y_min = log_y_min,
                xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
-               facet = facet, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
+               facet = facet, scales=scales, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
 }
 
 #' Setup Observation data for VPC
