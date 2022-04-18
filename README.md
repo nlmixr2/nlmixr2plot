@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# nlmixr2plot: The core estimation routines for nlmixr2
+# nlmixr2plot: The plotting routines for nlmixr2
 
 <!-- badges: start -->
 
