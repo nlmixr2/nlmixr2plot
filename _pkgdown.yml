@@ -1,10 +1,13 @@
+url: https://nlmixr2.github.io/nlmixr2extra
 template:
+  bootstrap: 5
   params:
-  bootswatch: flatly
+    bootswatch: flatly
 reference:
 - title: Model diagnostics
   contents:
   - '`traceplot`'
+  - '`vpcPlot`'
 - title: Utilities
   contents:
   - '`bootplot`'
@@ -18,3 +21,4 @@ reference:
   - '`plot.dyn.mcmc`'
   - '`plot.nlmixrFitData`'
   - '`plot.saemFit`'
+  - '`plot.nlmixr2FitData`'
