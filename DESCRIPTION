@@ -24,7 +24,8 @@ Suggests:
     nlmixr2data,
     testthat (>= 3.0.0),
     vdiffr,
-    xgxr
+    xgxr,
+    units
 Imports:
     rxode2,
     ggplot2,
