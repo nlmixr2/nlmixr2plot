@@ -6,4 +6,6 @@
 ^codecov\.yml$
 ^doc$
 ^docs$
+^README\.Rmd$
+^pkgdown$
 
