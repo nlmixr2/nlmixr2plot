@@ -16,12 +16,6 @@
     <loc>https://nlmixr2.github.io/nlmixr2extra/reference/asNlmixr2PlotList.html</loc>
   </url>
   <url>
-    <loc>https://nlmixr2.github.io/nlmixr2extra/reference/geom_amt.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2extra/reference/geom_cens.html</loc>
-  </url>
-  <url>
     <loc>https://nlmixr2.github.io/nlmixr2extra/reference/index.html</loc>
   </url>
   <url>
@@ -32,6 +26,9 @@
   </url>
   <url>
     <loc>https://nlmixr2.github.io/nlmixr2extra/reference/plot.saemFit.html</loc>
+  </url>
+  <url>
+    <loc>https://nlmixr2.github.io/nlmixr2extra/reference/reexports.html</loc>
   </url>
   <url>
     <loc>https://nlmixr2.github.io/nlmixr2extra/reference/traceplot.html</loc>
