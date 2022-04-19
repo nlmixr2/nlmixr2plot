@@ -127,6 +127,11 @@ jobs:
       - name: Install development nlmixr2extra
         run: remotes::install_github("nlmixr2/nlmixr2extra")
         shell: Rscript {0}
+
+      - name: Install devtools
+        run: remotes::install_cran("devtools")
+        shell: Rscript {0}
+
         
       - name: Install dependencies
         run: remotes::install_deps(dependencies = TRUE)
