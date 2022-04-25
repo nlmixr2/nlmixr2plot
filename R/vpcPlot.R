@@ -137,7 +137,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   } else {
     .obs <- fit$origData
   }
-  .obs <- nlmixr2est::vpcNameDataCmts(.obs, fit)
+  .obs <- nlmixr2est::vpcNameDataCmts(fit, .obs)
   .no <- names(.obs)
   .nol <- tolower(.no)
   .wo <- which(.nol == "id")
