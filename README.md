@@ -1,29 +1,25 @@
+---
+output: github_document
+---
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# nlmixr2plot: The plotting routines for nlmixr2
+
+
+# nlmixr2plot: The core estimation routines for nlmixr2
 
 <!-- badges: start -->
-
 [![R build
 status](https://github.com/nlmixr2/nlmixr2plot/workflows/R-CMD-check/badge.svg)](https://github.com/nlmixr2/nlmixr2plot/actions)
 [![CodeFactor](https://www.codefactor.io/repository/github/nlmixr2/nlmixr2plot/badge)](https://www.codefactor.io/repository/github/nlmixr2/nlmixr2plot)
-[![CRAN
-checks](https://cranchecks.info/badges/summary/nlmixr2plot)](https://cran.r-project.org/web/checks/check_results_nlmixr2plot.html)
-[![CRAN total
-downloads](https://cranlogs.r-pkg.org/badges/grand-total/nlmixr2plot)](https://cran.r-project.org/package=nlmixr2plot)
-[![CRAN monthly
-downloads](https://cranlogs.r-pkg.org/badges/nlmixr2plot)](https://cran.r-project.org/package=nlmixr2plot)
-[![codecov](https://codecov.io/gh/nlmixr2/nlmixr2plot/branch/main/graph/badge.svg)](https://codecov.io/gh/nlmixr2/nlmixr2plot)
+[![codecov](https://codecov.io/gh/nlmixr2/nlmixr2plot/branch/main/graph/badge.svg)](https://app.codecov.io/gh/nlmixr2/nlmixr2plot)
 <!-- badges: end -->
 
-The goal of nlmixr2plot is to provide the nlmixr2 core estimation
-routines.
+The goal of nlmixr2plot is to provide the nlmixr2 core estimation routines.
 
 ## Installation
 
-You can install the development version of nlmixr2plot from
-[GitHub](https://github.com/) with:
+You can install the development version of nlmixr2plot from [GitHub](https://github.com/) with:
 
 ``` r
 # install.packages("remotes")
@@ -37,7 +33,8 @@ remotes::install_github("nlmixr2/nlmixr2plot")
 
 For most people, using nlmixr2 directly would be likely easier.
 
-``` r
+
+```r
 library(nlmixr2est)
 #> Loading required package: nlmixr2data
 library(nlmixr2plot)
@@ -67,49 +64,47 @@ one.compartment <- function() {
 
 ## The fit is performed by the function nlmixr/nlmix2 specifying the model, data and estimate
 fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
+#> 
+#>  
+#> 
 #> ℹ parameter labels from comments will be replaced by 'label()'
+#> 
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
 #> ✔ done
 #> → finding duplicate expressions in saem model...
-#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> → optimizing duplicate expressions in saem model...
-#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> ✔ done
-#> rxode2 1.0.0 using 4 threads (see ?getRxThreads)
+#> rxode2 2.0.6 using 4 threads (see ?getRxThreads)
 #> Calculating covariance matrix
-#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
 #> ✔ done
 #> → finding duplicate expressions in saem predOnly model 0...
-#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> → finding duplicate expressions in saem predOnly model 1...
-#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> → optimizing duplicate expressions in saem predOnly model 1...
-#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> → finding duplicate expressions in saem predOnly model 2...
-#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> ✔ done
+#> 
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 5952
 #> → compress phiM in nlmixr2 object, save 62360
 #> → compress parHist in nlmixr2 object, save 9408
-#> → compress saem0 in nlmixr2 object, save 22720
+#> → compress saem0 in nlmixr2 object, save 22936
 
 print(fit)
-#> ── nlmixr SAEM OBJF by FOCEi approximation ─────────────────────────────────────
+#> ── nlmixr SAEM OBJF by FOCEi approximation ──
 #> 
 #>  Gaussian/Laplacian Likelihoods: AIC() or $objf etc. 
 #>  FOCEi CWRES & Likelihoods: addCwres() 
 #> 
-#> ── Time (sec $time): ───────────────────────────────────────────────────────────
+#> ── Time (sec $time): ──
 #> 
-#>            setup covariance  saem table compress    other
-#> elapsed 0.001535   0.009003 2.737 0.019    0.017 1.748462
+#>           setup covariance  saem table compress    other
+#> elapsed 0.00189   0.021008 5.183 0.026    0.023 2.156102
 #> 
-#> ── Population Parameters ($parFixed or $parFixedDf): ───────────────────────────
+#> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
 #>        Parameter  Est.     SE %RSE Back-transformed(95%CI) BSV(CV%) Shrink(SD)%
 #> tka       Log Ka 0.454  0.196 43.1       1.57 (1.07, 2.31)     71.5   -0.0203% 
@@ -122,7 +117,7 @@ print(fit)
 #>   Full BSV covariance ($omega) or correlation ($omegaR; diagonals=SDs) 
 #>   Distribution stats (mean/skewness/kurtosis/p-value) available in $shrink 
 #> 
-#> ── Fit Data (object is a modified tibble): ─────────────────────────────────────
+#> ── Fit Data (object is a modified tibble): ──
 #> # A tibble: 132 × 19
 #>   ID     TIME    DV  PRED    RES IPRED   IRES  IWRES eta.ka eta.cl   eta.v    cp
 #>   <fct> <dbl> <dbl> <dbl>  <dbl> <dbl>  <dbl>  <dbl>  <dbl>  <dbl>   <dbl> <dbl>
@@ -136,57 +131,85 @@ print(fit)
 plot(fit)
 ```
 
-<img src="man/figures/README-example-1.png" width="100%" /><img src="man/figures/README-example-2.png" width="100%" />
+<img src="man/figures/README-example-1.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-2.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
-    #> Warning: Transformation introduced infinite values in continuous y-axis
+```
+#> Warning: Transformation introduced infinite values in continuous x-axis
+#> Warning: Transformation introduced infinite values in continuous y-axis
+```
 
-<img src="man/figures/README-example-3.png" width="100%" /><img src="man/figures/README-example-4.png" width="100%" />
+<img src="man/figures/README-example-3.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-4.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+```
+#> Warning: Transformation introduced infinite values in continuous x-axis
+```
 
-<img src="man/figures/README-example-5.png" width="100%" /><img src="man/figures/README-example-6.png" width="100%" />
+<img src="man/figures/README-example-5.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-6.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+```
+#> Warning: Transformation introduced infinite values in continuous x-axis
+```
 
-<img src="man/figures/README-example-7.png" width="100%" /><img src="man/figures/README-example-8.png" width="100%" />
+<img src="man/figures/README-example-7.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-8.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+```
+#> Warning: Transformation introduced infinite values in continuous x-axis
+```
 
-<img src="man/figures/README-example-9.png" width="100%" /><img src="man/figures/README-example-10.png" width="100%" />
+<img src="man/figures/README-example-9.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-10.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+```
+#> Warning: Transformation introduced infinite values in continuous x-axis
+```
 
-<img src="man/figures/README-example-11.png" width="100%" /><img src="man/figures/README-example-12.png" width="100%" />
+<img src="man/figures/README-example-11.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-12.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+```
+#> Warning: Transformation introduced infinite values in continuous x-axis
+```
 
-<img src="man/figures/README-example-13.png" width="100%" /><img src="man/figures/README-example-14.png" width="100%" />
+<img src="man/figures/README-example-13.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-14.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+```
+#> Warning: Transformation introduced infinite values in continuous x-axis
+```
 
-<img src="man/figures/README-example-15.png" width="100%" /><img src="man/figures/README-example-16.png" width="100%" />
+<img src="man/figures/README-example-15.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-16.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+```
+#> Warning: Transformation introduced infinite values in continuous x-axis
+```
 
-<img src="man/figures/README-example-17.png" width="100%" /><img src="man/figures/README-example-18.png" width="100%" />
+<img src="man/figures/README-example-17.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-18.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+```
+#> Warning: Transformation introduced infinite values in continuous x-axis
+```
 
-<img src="man/figures/README-example-19.png" width="100%" /><img src="man/figures/README-example-20.png" width="100%" />
+<img src="man/figures/README-example-19.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-20.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+```
+#> Warning: Transformation introduced infinite values in continuous x-axis
+```
 
-<img src="man/figures/README-example-21.png" width="100%" /><img src="man/figures/README-example-22.png" width="100%" />
+<img src="man/figures/README-example-21.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-22.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+```
+#> Warning: Transformation introduced infinite values in continuous x-axis
+```
 
-<img src="man/figures/README-example-23.png" width="100%" /><img src="man/figures/README-example-24.png" width="100%" />
+<img src="man/figures/README-example-23.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-24.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+```
+#> Warning: Transformation introduced infinite values in continuous x-axis
+```
 
-<img src="man/figures/README-example-25.png" width="100%" /><img src="man/figures/README-example-26.png" width="100%" />
+<img src="man/figures/README-example-25.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-26.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+```
+#> Warning: Transformation introduced infinite values in continuous x-axis
+```
 
-<img src="man/figures/README-example-27.png" width="100%" /><img src="man/figures/README-example-28.png" width="100%" />
+<img src="man/figures/README-example-27.png" title="plot of chunk example" alt="plot of chunk example" width="100%" /><img src="man/figures/README-example-28.png" title="plot of chunk example" alt="plot of chunk example" width="100%" />
+
+
