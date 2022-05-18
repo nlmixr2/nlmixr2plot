@@ -17,6 +17,41 @@ Nothing, called for its side effects
 \description{
 Plot some standard goodness of fit plots for the focei fitted object
 }
+\examples{
+\donttest{
+
+library(nlmixr2est)
+## The basic model consiss of an ini block that has initial estimates
+one.compartment <- function() {
+  ini({
+    tka <- 0.45 # Log Ka
+    tcl <- 1 # Log Cl
+    tv <- 3.45    # Log V
+    eta.ka ~ 0.6
+    eta.cl ~ 0.3
+    eta.v ~ 0.1
+    add.sd <- 0.7
+  })
+  # and a model block with the error sppecification and model specification
+  model({
+    ka <- exp(tka + eta.ka)
+    cl <- exp(tcl + eta.cl)
+    v <- exp(tv + eta.v)
+    d/dt(depot) = -ka * depot
+    d/dt(center) = ka * depot - cl / v * center
+    cp = center / v
+    cp ~ add(add.sd)
+  })
+}
+
+## The fit is performed by the function nlmixr/nlmix2 specifying the model, data and estimate
+fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
+
+# This shows many goodness of fit plots
+plot(fit)
+
+}
+}
 \author{
 Wenping Wang & Matthew Fidler
 }

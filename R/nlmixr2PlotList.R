@@ -2,6 +2,7 @@
 #'
 #' @param x The list to cast as an nlmixr2PlotList
 #' @return An nlmixr2PlotList object
+#' @noRd
 newNlmixr2PlotList <- function(x) {
   stopifnot(is.list(x))
   stopifnot(!is.null(names(x)))
@@ -14,7 +15,7 @@ newNlmixr2PlotList <- function(x) {
 #'
 #' @param ... Something that can be converted into an nlmixr2PlotList (see details)
 #' @return An nlmixr2PlotList object
-#' @export
+#' @noRd
 asNlmixr2PlotList <- function(...) {
   x <- list(...)
   if (length(x) == 1 & is.list(x[[1]]) & is.null(names(x))) {
