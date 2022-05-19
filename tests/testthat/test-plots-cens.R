@@ -53,7 +53,7 @@ test_that("plot censoring", {
   apo <- nlmixr2est::augPred(fit)
   ap <- plot(apo)
   vp <- vpcPlot(fit, stratify="DOSE")
-  vp2 <- vpcPlot(fit, pred_corr=TRUE, stratify="DOSE")
+  vp2 <- vpcPlot(fit, pred_corr=TRUE, stratify="DOSE", log_y=TRUE)
 
   gof <- plot(fit)
 
@@ -70,7 +70,5 @@ test_that("plot censoring", {
   for (i in seq_along(gof)) {
       vdiffr::expect_doppelganger(sprintf("gof %03d", i), gof[[i]])
   }
-
-
 
 })
