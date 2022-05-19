@@ -330,6 +330,7 @@ plot.nlmixr2FitCoreSilent <- plot.nlmixr2FitCore
 #' @author Rik Schoemaker, Wenping Wang & Matthew L. Fidler
 #' @export
 #' @examples
+#' \donttest{
 #'
 #' library(nlmixr2est)
 #' ## The basic model consiss of an ini block that has initial estimates
@@ -361,6 +362,7 @@ plot.nlmixr2FitCoreSilent <- plot.nlmixr2FitCore
 #' # This shows the traceplot of the fit (useful for saem)
 #' traceplot(fit)
 #'
+#'}
 traceplot <- function(x, ...) {
   UseMethod("traceplot")
 }

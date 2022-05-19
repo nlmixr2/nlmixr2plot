@@ -11,6 +11,7 @@
 #'
 #' @examples
 #' @examples
+#' \donttest{
 #'
 #' library(nlmixr2est)
 #' ## The basic model consiss of an ini block that has initial estimates
@@ -46,6 +47,7 @@
 #' # you can plot it with plot(augPred object)
 #' plot(a)
 #'
+#' }
 #' @export
 #' @importFrom utils assignInMyNamespace
 #' @importFrom ggplot2 .data

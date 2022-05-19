@@ -21,6 +21,7 @@ Fit traceplot or nothing.
 Produce trace-plot for fit if applicable
 }
 \examples{
+\donttest{
 
 library(nlmixr2est)
 ## The basic model consiss of an ini block that has initial estimates
@@ -52,6 +53,7 @@ fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
 # This shows the traceplot of the fit (useful for saem)
 traceplot(fit)
 
+}
 }
 \author{
 Rik Schoemaker, Wenping Wang & Matthew L. Fidler
