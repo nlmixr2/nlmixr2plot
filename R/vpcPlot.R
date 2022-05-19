@@ -114,6 +114,16 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       .sim[[.n]] <- .tmp
     }
   }
+  .w <- which(tolower(names(.obs)) == "dv")
+  .obs <- .obs[!is.na(.obs[[.w]]), ]
+  .w <- which(tolower(names(.obs)) == "ipred")
+  if (length(.w) > 0) {
+    .obs <- .obs[, -.w]
+  }
+  .w <- which(tolower(names(.obs)) == "pred")
+  if (length(.w) > 0) {
+    .obs <- .obs[, -.w]
+  }
   vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
                obs=.obs, obs_cols=.obsCols,
                bins=bins, n_bins=n_bins, bin_mid=bin_mid,
