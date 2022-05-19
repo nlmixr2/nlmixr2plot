@@ -20,7 +20,6 @@ Nothing called for side effects
 Plot a nlmixr2 augPred object
 }
 \examples{
-\donttest{
 
 library(nlmixr2est)
 ## The basic model consiss of an ini block that has initial estimates
@@ -56,5 +55,4 @@ a <- nlmixr2est::augPred(fit)
 # you can plot it with plot(augPred object)
 plot(a)
 
-}
 }
