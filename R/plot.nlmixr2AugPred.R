@@ -38,11 +38,11 @@
 #' }
 #'
 #' ## The fit is performed by the function nlmixr/nlmix2 specifying the model, data and estimate
-#' fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
+#' fit <- nlmixr2est::nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
 #'
 #' # augPred shows more points for the fit:
 #'
-#' a <- augPred(fit)
+#' a <- nlmixr2est::augPred(fit)
 #'
 #' # you can plot it with plot(augPred object)
 #' plot(a)
@@ -53,14 +53,19 @@
 #' @importFrom ggplot2 .data
 plot.nlmixr2AugPred <- function(x, y, ...) {
   if (any(names(x) == "Endpoint")) {
+    .ret <- NULL
     for (.tmp in levels(x$Endpoint)) {
       utils::assignInMyNamespace(".augPredEndpoint", .tmp)
       .x <- x[x$Endpoint == .tmp, names(x) != "Endpoint"]
-      plot.nlmixr2AugPred(.x)
+      .r <- plot.nlmixr2AugPred(.x)
+      class(.r) <- NULL
+      .ret <- c(.ret, .r)
     }
+    class(.ret) <- "nlmixr2PlotList"
+    return(.ret)
   } else {
     ids <- unique(x$id)
-    for (i in seq(1, length(ids), by = 16)) {
+    .ret <- lapply(seq(1, length(ids), by = 16), function(i) {
       tmp <- ids[seq(i, i + 15)]
       tmp <- tmp[!is.na(tmp)]
       d1 <- x[x$id %in% tmp, ]
@@ -73,7 +78,9 @@ plot.nlmixr2AugPred <- function(x, y, ...) {
         ggplot2::facet_wrap(~id) +
         rxode2::rxTheme() +
         ggplot2::ggtitle(label=.augPredEndpoint)
-      print(p3)
-    }
+      p3
+    })
+    class(.ret) <- "nlmixr2PlotList"
+    return(.ret)
   }
 }

@@ -304,8 +304,13 @@ plot.nlmixr2PlotList <- function(x, y, ...) {
   .x <- x
   class(.x) <- NULL
   for (.i in seq_along(.x)) {
-    plot(.x[[.i]])
+    try(plot(.x[[.i]]))
   }
+}
+
+#' @export
+print.nlmixr2PlotList <- function(x, ...) {
+  plot.nlmixr2PlotList(x, ...)
 }
 
 #' @export

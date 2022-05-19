@@ -47,11 +47,11 @@ one.compartment <- function() {
 }
 
 ## The fit is performed by the function nlmixr/nlmix2 specifying the model, data and estimate
-fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
+fit <- nlmixr2est::nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
 
 # augPred shows more points for the fit:
 
-a <- augPred(fit)
+a <- nlmixr2est::augPred(fit)
 
 # you can plot it with plot(augPred object)
 plot(a)
