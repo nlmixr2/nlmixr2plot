@@ -8,4 +8,6 @@
 ^docs$
 ^README\.Rmd$
 ^pkgdown$
+^logo.png$
+
 
