@@ -54,7 +54,9 @@ test_that("multiple endpoint plots", {
     })
   }
 
-  fit <- nlmixr2est::nlmixr(pk.turnover.emax3, warfarin, "saem", control=list(print=0),
+  fit <- nlmixr2est::nlmixr(pk.turnover.emax3,
+                            nlmixr2data::warfarin,
+                            "saem", control=list(print=0),
                 table=list(cwres=TRUE, npde=TRUE))
 
   apo <- nlmixr2est::augPred(fit)
