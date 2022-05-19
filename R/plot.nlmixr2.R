@@ -376,10 +376,11 @@ traceplot.nlmixr2FitCore <- function(x, ...) {
     .p0 <- ggplot2::ggplot(.m, ggplot2::aes(.data$iter, .data$val)) +
       ggplot2::geom_line() +
       ggplot2::facet_wrap(~par, scales = "free_y")
-    if (!is.null(x$mcmc)) {
+    .niter <- attr(class(x$parHist), "niter")
+    if (!is.null(.niter)) {
       .p0 <-
         .p0 +
-        ggplot2::geom_vline(xintercept = x$mcmc$niter[1], col = "blue", size = 1.2)
+        ggplot2::geom_vline(xintercept = .niter, col = "blue", size = 1.2)
     }
     .p0 <- .p0 + rxode2::rxTheme()
     return(.p0)
