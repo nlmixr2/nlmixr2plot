@@ -13,19 +13,13 @@
     <loc>https://nlmixr2.github.io/nlmixr2extra/index.html</loc>
   </url>
   <url>
-    <loc>https://nlmixr2.github.io/nlmixr2extra/reference/asNlmixr2PlotList.html</loc>
-  </url>
-  <url>
     <loc>https://nlmixr2.github.io/nlmixr2extra/reference/index.html</loc>
   </url>
   <url>
-    <loc>https://nlmixr2.github.io/nlmixr2extra/reference/newNlmixr2PlotList.html</loc>
+    <loc>https://nlmixr2.github.io/nlmixr2extra/reference/plot.nlmixr2AugPred.html</loc>
   </url>
   <url>
     <loc>https://nlmixr2.github.io/nlmixr2extra/reference/plot.nlmixr2FitData.html</loc>
-  </url>
-  <url>
-    <loc>https://nlmixr2.github.io/nlmixr2extra/reference/plot.saemFit.html</loc>
   </url>
   <url>
     <loc>https://nlmixr2.github.io/nlmixr2extra/reference/reexports.html</loc>
