@@ -29,7 +29,6 @@ Imports:
     xgxr
 Suggests:
     testthat (>= 3.0.0),
-    vdiffr,
     dplyr,
     withr,
     nlmixr2data

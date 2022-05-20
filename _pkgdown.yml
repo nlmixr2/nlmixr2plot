@@ -14,8 +14,4 @@ reference:
   - '`stat_cens`'
 - title: Internal functions
   contents:
-  - '`plot.saemFit`'
   - '`plot.nlmixr2FitData`'
-  - '`asNlmixr2PlotList`'
-  - '`newNlmixr2PlotList`'
-
