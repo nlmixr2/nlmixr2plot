@@ -8,10 +8,7 @@ reference:
   contents:
   - '`traceplot`'
   - '`vpcPlot`'
-- title: ggplot2 functions
-  contents:
-  - '`stat_amt`'
-  - '`stat_cens`'
 - title: Internal functions
   contents:
   - '`plot.nlmixr2FitData`'
+  - '`plot.nlmixr2AugPred`'

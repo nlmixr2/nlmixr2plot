@@ -50,7 +50,7 @@ test_that("plot censoring", {
                                      control=list(print=0),
                                      table=nlmixr2est::tableControl(cwres=TRUE, npde=TRUE))
 
-  expect_error(nlmixr2est::augPred(fit), NA)
+  apo <- nlmixr2est::augPred(fit)
   expect_error(plot(apo), NA)
   expect_error(vpcPlot(fit, stratify="DOSE"), NA)
   expect_error(vpcPlot(fit, pred_corr=TRUE, stratify="DOSE", log_y=TRUE), NA)

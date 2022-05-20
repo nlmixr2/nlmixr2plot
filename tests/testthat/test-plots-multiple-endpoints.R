@@ -61,8 +61,8 @@ test_that("multiple endpoint plots", {
 
   apo <- nlmixr2est::augPred(fit)
   expect_error(plot(apo), NA)
-  expect_error(vpcPlot(fit))
-  expect_error(vpcPlot(fit, pred_corr=TRUE))
+  expect_error(vpcPlot(fit), NA)
+  expect_error(vpcPlot(fit, pred_corr=TRUE), NA)
 
   expect_error(plot(fit), NA)
 
