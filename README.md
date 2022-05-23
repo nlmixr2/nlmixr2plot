@@ -12,6 +12,9 @@ output: github_document
 [![R build
 status](https://github.com/nlmixr2/nlmixr2plot/workflows/R-CMD-check/badge.svg)](https://github.com/nlmixr2/nlmixr2plot/actions)
 [![CodeFactor](https://www.codefactor.io/repository/github/nlmixr2/nlmixr2plot/badge)](https://www.codefactor.io/repository/github/nlmixr2/nlmixr2plot)
+[![CRAN version](http://www.r-pkg.org/badges/version/nlmixr2plot)](https://cran.r-project.org/package=nlmixr2plot)
+[![CRAN total downloads](https://cranlogs.r-pkg.org/badges/grand-total/nlmixr2plot)](https://cran.r-project.org/package=nlmixr2plot)
+[![CRAN total downloads](https://cranlogs.r-pkg.org/badges/nlmixr2plot)](https://cran.r-project.org/package=nlmixr2plot)
 [![codecov](https://codecov.io/gh/nlmixr2/nlmixr2plot/branch/main/graph/badge.svg)](https://app.codecov.io/gh/nlmixr2/nlmixr2plot)
 <!-- badges: end -->
 
@@ -75,7 +78,7 @@ fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
 #> → finding duplicate expressions in saem model...
 #> → optimizing duplicate expressions in saem model...
 #> ✔ done
-#> rxode2 2.0.6 using 4 threads (see ?getRxThreads)
+#> rxode2 2.0.7 using 4 threads (see ?getRxThreads)
 #> Calculating covariance matrix
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
@@ -90,8 +93,8 @@ fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 5952
 #> → compress phiM in nlmixr2 object, save 62360
-#> → compress parHist in nlmixr2 object, save 9408
-#> → compress saem0 in nlmixr2 object, save 22936
+#> → compress parHist in nlmixr2 object, save 9560
+#> → compress saem0 in nlmixr2 object, save 24680
 
 print(fit)
 #> ── nlmixr SAEM OBJF by FOCEi approximation ──
@@ -101,8 +104,8 @@ print(fit)
 #> 
 #> ── Time (sec $time): ──
 #> 
-#>           setup covariance  saem table compress    other
-#> elapsed 0.00189   0.021008 5.183 0.026    0.023 2.156102
+#>            setup covariance  saem table compress    other
+#> elapsed 0.001688   0.009007 3.093 0.021    0.024 1.499305
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
