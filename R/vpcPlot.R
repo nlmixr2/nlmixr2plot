@@ -72,7 +72,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     }
   }
   # Simulate with VPC
-  if (inheirts(fit, "nlmixr2vpcSim")) {
+  if (inherits(fit, "nlmixr2vpcSim")) {
     .sim <- fit
   } else {
     .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
