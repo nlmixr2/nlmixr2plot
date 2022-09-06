@@ -41,6 +41,8 @@ test_that("test plots with vdiffr", {
   expect_error(vpcPlotTad(fit), NA)
   expect_error(vpcPlot(fit, pred_corr=TRUE), NA)
   expect_error(vpcPlotTad(fit, pred_corr=TRUE), NA)
+  expect_error(vpcCens(fit), NA)
+  expect_error(vpcCensTad(fit), NA)
 
   expect_error(plot(fit), NA)
 
