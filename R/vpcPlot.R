@@ -52,7 +52,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                     xlab = NULL, ylab = NULL, title = NULL, smooth = TRUE, vpc_theme = NULL,
                     facet = "wrap", scales = "fixed", labeller = NULL, vpcdb = FALSE,
                     verbose = FALSE, ..., seed=1009,
-                    idv="time") {
+                    idv="time", cens=FALSE) {
   force(idv)
   rxode2::rxReq("vpc")
   .ui <- fit$ui
@@ -134,20 +134,47 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   .obsCols$idv <- idv
   .w <- which(tolower(names(.sim)) == "id")
   names(.sim)[.w] <- "id"
-  vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
-               obs=.obs, obs_cols=.obsCols,
-               bins=bins, n_bins=n_bins, bin_mid=bin_mid,
-               show = show, stratify = stratify, pred_corr = pred_corr,
-               pred_corr_lower_bnd = pred_corr_lower_bnd, pi = pi, ci = ci,
-               uloq = uloq, lloq = lloq, log_y = log_y, log_y_min = log_y_min,
-               xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
-               facet = facet, scales=scales, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
+  if (cens) {
+    if (is.null(lloq) && is.null(uloq)) {
+      stop("this data is not censored")
+    }
+    vpc::vpc_cens(sim=.sim, sim_cols=.simCols,
+                 obs=.obs, obs_cols=.obsCols,
+                 bins=bins, n_bins=n_bins, bin_mid=bin_mid,
+                 show = show, stratify = stratify, 
+                 ci = ci,
+                 uloq = uloq, lloq = lloq, 
+                 xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
+                 facet = facet, labeller = labeller, vpcdb = vpcdb, verbose = verbose)    
+  } else {
+    vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
+                 obs=.obs, obs_cols=.obsCols,
+                 bins=bins, n_bins=n_bins, bin_mid=bin_mid,
+                 show = show, stratify = stratify, pred_corr = pred_corr,
+                 pred_corr_lower_bnd = pred_corr_lower_bnd, pi = pi, ci = ci,
+                 uloq = uloq, lloq = lloq, log_y = log_y, log_y_min = log_y_min,
+                 xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
+                 facet = facet, scales=scales, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
+  }
 }
 
 #' @rdname vpcPlot
 #' @export
 vpcPlotTad <- function(..., idv="tad") {
   vpcPlot(..., idv=idv)
+}
+
+
+#' @rdname vpcPlot
+#' @export
+vpcCensTad <- function(..., cens=TRUE, idv="tad") {
+  vpcPlot(..., cens=cens, idv=idv)
+}
+
+#' @rdname vpcPlot
+#' @export
+vpcCens <- function(..., cens=TRUE, idv="time") {
+  vpcPlot(..., cens=cens, idv=idv)
 }
 
 #' Setup Observation data for VPC

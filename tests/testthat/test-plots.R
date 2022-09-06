@@ -22,7 +22,7 @@ test_that("test plots with vdiffr", {
     })
   }
 
-  censData <- theo_md
+  censData <- nlmixr2data::theo_md
   # Assign CENS = 1 for bloq values, otherwise CENS = 0.
   censData$CENS[censData$DV < 3 & censData$AMT == 0] <- 1
   censData$CENS[censData$DV >= 3 & censData$AMT == 0] <- 0
