@@ -22,13 +22,25 @@ test_that("test plots with vdiffr", {
     })
   }
 
-  fit <- nlmixr2est::nlmixr(one.cmt, nlmixr2data::theo_sd, est="focei",
+  censData <- theo_md
+  # Assign CENS = 1 for bloq values, otherwise CENS = 0.
+  censData$CENS[censData$DV < 3 & censData$AMT == 0] <- 1
+  censData$CENS[censData$DV >= 3 & censData$AMT == 0] <- 0
+  #
+  # Set DV to LOQ for all censored items
+  censData$DV[censData$CENS == 1] <-  3
+#
+
+  fit <- nlmixr2est::nlmixr(one.cmt, censData,
+                            est="focei",
                             table=nlmixr2est::tableControl(npde=TRUE))
 
   apo <- nlmixr2est::augPred(fit)
   expect_error(plot(apo), NA)
   expect_error(vpcPlot(fit), NA)
+  expect_error(vpcPlotTad(fit), NA)
   expect_error(vpcPlot(fit, pred_corr=TRUE), NA)
+  expect_error(vpcPlotTad(fit, pred_corr=TRUE), NA)
 
   expect_error(plot(fit), NA)
 

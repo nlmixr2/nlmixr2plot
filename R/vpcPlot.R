@@ -51,10 +51,13 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                     uloq = NULL, lloq = NULL, log_y = FALSE, log_y_min = 0.001,
                     xlab = NULL, ylab = NULL, title = NULL, smooth = TRUE, vpc_theme = NULL,
                     facet = "wrap", scales = "fixed", labeller = NULL, vpcdb = FALSE,
-                    verbose = FALSE, ..., seed=1009) {
+                    verbose = FALSE, ..., seed=1009,
+                    idv="time") {
+  force(idv)
   rxode2::rxReq("vpc")
   .ui <- fit$ui
-  .obsLst <- .vpcUiSetupObservationData(fit, data)
+  .obsLst <- .vpcUiSetupObservationData(fit, data=data, idv=idv)
+  .obs <- .obsLst$obs
   .no <- .obsLst$namesObs
   .nol <- .obsLst$namesObsLower
   .obs <- .obsLst$obs
@@ -77,11 +80,11 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   } else {
     .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
   }
-  .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify)
+  .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, .obs)
   .simCols <- list(
     id="id",
     dv="sim",
-    idv="time")
+    idv=idv)
   if (pred_corr) {
     .simCols <- c(.simCols, list(pred="pred"))
     .si <- nlmixr2est::.nlmixr2estLastPredSimulationInfo()
@@ -103,7 +106,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .w <- which(.no == "sim")
     names(.obs)[.w] <- "pred"
     .obsCols$pred <- "pred"
-    .obsCols$idv <- "time"
+    .obsCols$idv <- idv
     .obsCols$id <- "id"
     if (any(names(.obs) == "dv")) {
       .obsCols$dv <- "dv"
@@ -128,6 +131,9 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   if (length(.w) > 0) {
     .obs <- .obs[, -.w]
   }
+  .obsCols$idv <- idv
+  .w <- which(tolower(names(.sim)) == "id")
+  names(.sim)[.w] <- "id"
   vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
                obs=.obs, obs_cols=.obsCols,
                bins=bins, n_bins=n_bins, bin_mid=bin_mid,
@@ -138,6 +144,12 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                facet = facet, scales=scales, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
 }
 
+#' @rdname vpcPlot
+#' @export
+vpcPlotTad <- function(..., idv="tad") {
+  vpcPlot(..., idv=idv)
+}
+
 #' Setup Observation data for VPC
 #'
 #' @param fit nlmixr2 fit
@@ -145,7 +157,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
 #' @return List with `namesObs`, `namesObsLower`, `obs` and `obsCols`
 #' @author Matthew L. Fidler
 #' @noRd
-.vpcUiSetupObservationData <- function(fit, data=NULL) {
+.vpcUiSetupObservationData <- function(fit, data=NULL, idv="time") {
   if (!is.null(data)) {
     .obs <- data
   } else {
@@ -167,10 +179,23 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   }
   .obsCols <- c(.obsCols,
                 list(dv=.no[.wo]))
-  .wo <- which(.nol == "time")
+  .wo <- which(.nol == idv)
   if (length(.wo) != 1) {
-    stop("cannot find 'time' in original dataset",
-         call.=FALSE)
+    if (any(names(fit) == idv)) {
+      .fit <- as.data.frame(fit)
+      .wid <- which(tolower(names(.fit)) == "id")
+      names(.fit)[.wid] <- "ID"
+      .fit$nlmixrRowNums <-  fit$env$.rownum
+      .fit <- .fit[, c("ID", idv, "nlmixrRowNums")]
+      .obs$nlmixrRowNums <- seq_along(.obs$ID)
+      .obs <- merge(.obs, .fit, by=c("ID", "nlmixrRowNums"), all.x=TRUE)
+      .wo <- which(.nol == idv)
+    } else {
+      stop("cannot find '", idv, "' in original dataset",
+           call.=FALSE)
+    }
+  } else {
+    names(.obs)[.wo] <- idv
   }
   .obsCols <- c(.obsCols,
                 list(idv=.no[.wo]))
