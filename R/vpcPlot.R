@@ -2,10 +2,17 @@
 #'
 #' @param fit nlmixr2 fit object
 #' @param data this is the data to use to augment the VPC fit.  By
-#'     default is the fitted data, (can be retrieved by
-#'     \code{\link[nlme]{getData}}), but it can be changed by specifying
-#'     this argument.
+#'   default is the fitted data, (can be retrieved by
+#'   \code{\link[nlme]{getData}}), but it can be changed by specifying
+#'   this argument.
 #' @param n Number of VPC simulations.  By default 100
+#' @param idv Name of independent variable. For `vpcPlot()` and
+#'   `vpcCens()` the default is `"time"` for `vpcPlotTad()` and
+#'   `vpcCensTad()` this is `"tad"`
+#' @param cens is a boolean to show if this is a censoring plot or
+#'   not.  When `cens=TRUE` this is actually a censoring vpc plot
+#'   (with `vpcCens()` and `vpcCensTad()`).  When `cens=FALSE` this is
+#'   traditional VPC plot (`vpcPlot()` and `vpcPlotTad()`).
 #' @inheritParams vpc::vpc
 #' @inheritParams rxode2::rxSolve
 #' @param ... Args sent to \code{\link[rxode2]{rxSolve}}
