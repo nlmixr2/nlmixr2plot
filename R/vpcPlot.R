@@ -62,6 +62,17 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                     idv="time", cens=FALSE) {
   force(idv)
   rxode2::rxReq("vpc")
+    # Simulate with VPC
+  if (inherits(fit, "nlmixr2vpcSim")) {
+    .sim <- fit
+    .fit <- attr(class(.sim), "fit")
+    .cls <- class(.fit)
+    .attr <- attr(.cls, ".foceiEnv")
+    .cls <- .cls[-1]
+    attr(.cls, ".foceiEnv") <- .attr
+    class(.fit) <- .cls
+    fit <- .fit
+  }
   .ui <- fit$ui
   .obsLst <- .vpcUiSetupObservationData(fit, data=data, idv=idv)
   .obs <- .obsLst$obs
@@ -82,9 +93,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     }
   }
   # Simulate with VPC
-  if (inherits(fit, "nlmixr2vpcSim")) {
-    .sim <- fit
-  } else {
+  if (!inherits(fit, "nlmixr2vpcSim")) {
     .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
   }
   .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, .obs)
@@ -146,13 +155,12 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       stop("this data is not censored")
     }
     vpc::vpc_cens(sim=.sim, sim_cols=.simCols,
-                 obs=.obs, obs_cols=.obsCols,
-                 bins=bins, n_bins=n_bins, bin_mid=bin_mid,
-                 show = show, stratify = stratify, 
-                 ci = ci,
-                 uloq = uloq, lloq = lloq, 
-                 xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
-                 facet = facet, labeller = labeller, vpcdb = vpcdb, verbose = verbose)    
+                  obs=.obs, obs_cols=.obsCols,
+                  bins=bins, n_bins=n_bins, bin_mid=bin_mid,
+                  show = show, stratify = stratify, ci = ci,
+                  uloq = uloq, lloq = lloq, 
+                  xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
+                  facet = facet, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
   } else {
     vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
                  obs=.obs, obs_cols=.obsCols,

@@ -35,6 +35,8 @@ test_that("test plots with vdiffr", {
                             est="focei",
                             table=nlmixr2est::tableControl(npde=TRUE))
 
+  fitSim <- nlmixr2est::vpcSim(fit)
+
   apo <- nlmixr2est::augPred(fit)
   expect_error(plot(apo), NA)
   expect_error(vpcPlot(fit), NA)
