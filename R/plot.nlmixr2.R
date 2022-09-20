@@ -1,5 +1,6 @@
 .setupPlotData <- function(data) {
   .dat <- as.data.frame(data)
+  .dat <- .dat[!is.na(.dat$RES),]
   .doCmt <- FALSE
   if (any(names(.dat) == "CMT")) {
     if (length(levels(.dat$CMT)) > 1) {
