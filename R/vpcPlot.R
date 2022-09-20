@@ -97,6 +97,23 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
   }
   .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, .obs)
+  if (cens) {
+    if (is.null(lloq) && is.null(uloq)) {
+      stop("this data is not censored")
+    }
+    .sim$dv <- .sim$sim
+    .sim$idv <- .sim[[idv]]
+    .obs <- as.data.frame(fit)
+    .obs$idv <- .obs[[idv]]
+    .obs$TIME <- .obs[[idv]]
+    return(vpc::vpc_cens(sim=.sim,
+                         obs=.obs,
+                         bins=bins, n_bins=n_bins, bin_mid=bin_mid,
+                         show = show, stratify = stratify, ci = ci,
+                         uloq = uloq, lloq = lloq,
+                         xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
+                         facet = facet, labeller = labeller, vpcdb = vpcdb, verbose = verbose))
+  }
   .simCols <- list(
     id="id",
     dv="sim",
@@ -137,7 +154,13 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       .sim[[.n]] <- .tmp
     }
   }
+  .w <- which(tolower(names(.obs)) == "evid")
+  if (length(.w) == 1L) {
+    .obs <- .obs[.obs[, .w] == 0 | .obs[, .w] == 2, ]
+  }
   .w <- which(tolower(names(.obs)) == "dv")
+  .obsCols$dv <-"dv"
+  names(.obs)[.w] <- "dv"
   .obs <- .obs[!is.na(.obs[[.w]]), ]
   .w <- which(tolower(names(.obs)) == "ipred")
   if (length(.w) > 0) {
@@ -150,27 +173,14 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   .obsCols$idv <- idv
   .w <- which(tolower(names(.sim)) == "id")
   names(.sim)[.w] <- "id"
-  if (cens) {
-    if (is.null(lloq) && is.null(uloq)) {
-      stop("this data is not censored")
-    }
-    vpc::vpc_cens(sim=.sim, sim_cols=.simCols,
-                  obs=.obs, obs_cols=.obsCols,
-                  bins=bins, n_bins=n_bins, bin_mid=bin_mid,
-                  show = show, stratify = stratify, ci = ci,
-                  uloq = uloq, lloq = lloq, 
-                  xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
-                  facet = facet, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
-  } else {
-    vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
-                 obs=.obs, obs_cols=.obsCols,
-                 bins=bins, n_bins=n_bins, bin_mid=bin_mid,
-                 show = show, stratify = stratify, pred_corr = pred_corr,
-                 pred_corr_lower_bnd = pred_corr_lower_bnd, pi = pi, ci = ci,
-                 uloq = uloq, lloq = lloq, log_y = log_y, log_y_min = log_y_min,
-                 xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
-                 facet = facet, scales=scales, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
-  }
+  vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
+               obs=.obs, obs_cols=.obsCols,
+               bins=bins, n_bins=n_bins, bin_mid=bin_mid,
+               show = show, stratify = stratify, pred_corr = pred_corr,
+               pred_corr_lower_bnd = pred_corr_lower_bnd, pi = pi, ci = ci,
+               uloq = uloq, lloq = lloq, log_y = log_y, log_y_min = log_y_min,
+               xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
+               facet = facet, scales=scales, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
 }
 
 #' @rdname vpcPlot
