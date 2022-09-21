@@ -105,7 +105,8 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .sim$idv <- .sim[[idv]]
     .obs <- as.data.frame(fit)
     .obs$idv <- .obs[[idv]]
-    .obs$TIME <- .obs[[idv]]
+    .w <- which(tolower(names(.obs)) == idv)
+    .obs$TIME <- .obs[, .w]
     return(vpc::vpc_cens(sim=.sim,
                          obs=.obs,
                          bins=bins, n_bins=n_bins, bin_mid=bin_mid,
