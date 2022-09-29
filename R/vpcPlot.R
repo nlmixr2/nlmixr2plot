@@ -73,7 +73,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     class(.fit) <- .cls
     fit <- .fit
   }
-  .ui <- fit$ui
+  .ui <- rxode2::rxUiDecompress(fit$ui)
   .obsLst <- .vpcUiSetupObservationData(fit, data=data, idv=idv)
   .obs <- .obsLst$obs
   .no <- .obsLst$namesObs
