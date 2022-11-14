@@ -2,13 +2,9 @@ test_that("test plots with vdiffr", {
 
   one.cmt <- function() {
     ini({
-      ## You may label each parameter with a comment
-      tka <- 0.45 # Log Ka
-      tcl <- log(c(0, 2.7, 100)) # Log Cl
-      ## This works with interactive models
-      ## You may also label the preceding line with label("label text")
-      tv <- 3.45; label("log V")
-      ## the label("Label name") works with all models
+      tka <- 0.45
+      tcl <- log(c(0, 2.7, 100))
+      tv <- 3.45
       eta.ka ~ 0.6
       eta.cl ~ 0.3
       eta.v ~ 0.1
@@ -26,19 +22,21 @@ test_that("test plots with vdiffr", {
   # Assign CENS = 1 for bloq values, otherwise CENS = 0.
   censData$CENS[censData$DV < 3 & censData$AMT == 0] <- 1
   censData$CENS[censData$DV >= 3 & censData$AMT == 0] <- 0
-  #
+
   # Set DV to LOQ for all censored items
   censData$DV[censData$CENS == 1] <-  3
 
-  fit <-
-    nlmixr2est::nlmixr(
-      one.cmt, censData,
-      est="focei",
-      control = list(print = 0),
-      table=nlmixr2est::tableControl(npde=TRUE)
-    )
+  suppressMessages(
+    fit <-
+      nlmixr2est::nlmixr(
+        one.cmt, censData,
+        est="focei",
+        control = nlmixr2est::foceiControl(print = 0, eval.max = 10),
+        table=nlmixr2est::tableControl(npde=TRUE)
+      )
+  )
 
-  fitSim <- nlmixr2est::vpcSim(fit)
+  fitSim <- nlmixr2est::vpcSim(fit, n = 10)
 
   apo <- nlmixr2est::augPred(fit)
   expect_error(plot(apo), NA)
@@ -55,7 +53,10 @@ test_that("test plots with vdiffr", {
   expect_error(vpcCensTad(fit), NA)
   expect_error(vpcCensTad(fitSim, pred_corr=TRUE), NA)
 
-  expect_error(plot(fit), NA)
+  expect_error(plotted <- plot(fit), NA)
+  expect_length(plotted, 2)
+  expect_named(plotted, c("traceplot", "All Data"))
+  expect_named(plotted[["All Data"]])
 
   expect_error(traceplot(fit),NA)
 
@@ -81,13 +82,9 @@ test_that("test plots with vdiffr", {
 
   one.cmt <- function() {
     ini({
-      ## You may label each parameter with a comment
-      tka <- 0.45 # Log Ka
-      tcl <- log(c(0, 2.7, 100)) # Log Cl
-      ## This works with interactive models
-      ## You may also label the preceding line with label("label text")
-      tv <- 3.45; label("log V")
-      ## the label("Label name") works with all models
+      tka <- 0.45
+      tcl <- log(c(0, 2.7, 100))
+      tv <- 3.45
       add.sd <- 0.7
     })
     model({

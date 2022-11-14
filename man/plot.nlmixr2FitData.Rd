@@ -9,30 +9,28 @@
 \arguments{
 \item{x}{a focei fit object}
 
-\item{...}{additional arguments}
+\item{...}{additional arguments (currently ignored)}
 }
 \value{
-Nothing, called for its side effects
+An \code{nlmixr2PlotList} object (a list of ggplot2 objects with easier
+plotting for all of them at the same time)
 }
 \description{
 Plot some standard goodness of fit plots for the focei fitted object
 }
 \examples{
 \donttest{
-
 library(nlmixr2est)
-## The basic model consiss of an ini block that has initial estimates
 one.compartment <- function() {
   ini({
-    tka <- 0.45 # Log Ka
-    tcl <- 1 # Log Cl
-    tv <- 3.45    # Log V
+    tka <- 0.45
+    tcl <- 1
+    tv <- 3.45
     eta.ka ~ 0.6
     eta.cl ~ 0.3
     eta.v ~ 0.1
     add.sd <- 0.7
   })
-  # and a model block with the error sppecification and model specification
   model({
     ka <- exp(tka + eta.ka)
     cl <- exp(tcl + eta.cl)
@@ -45,11 +43,10 @@ one.compartment <- function() {
 }
 
 ## The fit is performed by the function nlmixr/nlmix2 specifying the model, data and estimate
-fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
+fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0, nBurn = 10, nEm = 20))
 
 # This shows many goodness of fit plots
 plot(fit)
-
 }
 }
 \author{
