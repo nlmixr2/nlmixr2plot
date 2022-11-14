@@ -80,7 +80,7 @@ test_that("test plots with vdiffr", {
     #}
   })
 
-  one.cmt <- function() {
+  oneCmtNoIiv <- function() {
     ini({
       tka <- 0.45
       tcl <- log(c(0, 2.7, 100))
@@ -95,24 +95,31 @@ test_that("test plots with vdiffr", {
     })
   }
 
-  fit2 <-
-    nlmixr2est::nlmixr(
-      one.cmt, nlmixr2data::theo_sd,
-      est="focei",
-      control = list(print = 0),
-      table=nlmixr2est::tableControl(npde=TRUE)
-    )
+  suppressMessages(
+    fitNoIiv <-
+      nlmixr2est::nlmixr(
+        object = oneCmtNoIiv,
+        data = nlmixr2data::theo_sd,
+        est = "focei",
+        control = nlmixr2est::foceiControl(print = 0, eval.max = 10),
+        table = nlmixr2est::tableControl(npde=TRUE)
+      )
+  )
 
-  ## apo <- nlmixr2est::augPred(fit2)
+  ## apo <- nlmixr2est::augPred(fitNoIiv)
   ## ap <- plot(apo)
 
-  expect_error(vpcPlot(fit2), NA)
+  suppressWarnings(
+    expect_error(vpcPlot(fitNoIiv, n = 10), NA)
+  )
 
-  #vp2 <- vpcPlot(fit2, pred_corr=TRUE)
+  #vp2 <- vpcPlot(fitNoIiv, pred_corr=TRUE)
 
-  expect_error(plot(fit2), NA)
+  expect_error(currentPlot <- plot(fitNoIiv), NA)
+  expect_named(currentPlot, c("traceplot", "All Data"))
+  expect_true(length(currentPlot[["All Data"]]) > 1)
 
-  expect_error(traceplot(fit2), NA)
+  expect_error(traceplot(fitNoIiv), NA)
 
   #vdiffr::expect_doppelganger("vpc plot np", vp)
   #vdiffr::expect_doppelganger("vpc pred_corr plot np", vp2)

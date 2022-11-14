@@ -3,6 +3,8 @@
 * `plot()` now returns a named list of lists so that users can more easily
   choose which plots to include, if all plots are not desired.  Or the user
   could use those names as the basis of figure captions (fix #8).
+* Models without eta values (between subject variability) now have more
+  consistent plotting to models with eta values (fix #18).
 
 # nlmixr2plot 2.0.7
 
