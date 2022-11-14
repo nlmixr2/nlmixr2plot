@@ -46,9 +46,12 @@ test_that("plot censoring", {
   ## Check parsing
   cmt2m <- nlmixr2est::nlmixr(cmt2)
 
-  fit <- nlmixr2est::nlmixr(cmt2m, dat2, "saem",
-                                     control=list(print=0),
-                                     table=nlmixr2est::tableControl(cwres=TRUE, npde=TRUE))
+  fit <-
+    nlmixr2est::nlmixr(
+      cmt2m, dat2, "saem",
+      control=list(print=0),
+      table=nlmixr2est::tableControl(cwres=TRUE, npde=TRUE)
+    )
 
   apo <- nlmixr2est::augPred(fit)
   expect_error(plot(apo), NA)

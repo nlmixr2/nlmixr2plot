@@ -1,3 +1,9 @@
+#' Prepare data for plotting by converting numeric to human-readable data
+#'
+#' @param data The data.frame to convert
+#' @return The data.frame with compartment names updated to character versions
+#'   and censoring indicating what type of censoring was used, if applicable
+#' @noRd
 .setupPlotData <- function(data) {
   .dat <- as.data.frame(data)
   .w <- which(!is.na(.dat$RES))
@@ -17,7 +23,7 @@
     .censLeft <- any(.dat$CENS == 1)
     .censRight <- any(.dat$CENS == -1)
     if (.censLeft & .censRight) {
-      .dat$CENS <- factor(.dat$CENS, c(-1, 0, 1), c("Right censored data", "Observed data", "left censored data"))
+      .dat$CENS <- factor(.dat$CENS, c(-1, 0, 1), c("Right censored data", "Observed data", "Left censored data"))
     } else if (.censLeft) {
       .dat$CENS <- factor(.dat$CENS, c(0, 1), c("Observed data", "Censored data"))
     } else if (.censRight) {
@@ -29,9 +35,6 @@
   return(.dat)
 }
 
-#' @importFrom utils stack
-#' @importFrom ggplot2 aes element_blank facet_wrap geom_abline geom_point ggplot scale_color_manual theme scale_x_log10 scale_y_log10 xlab
-#' @importFrom rxode2 rxTheme
 .dvPlot <- function(.dat0, vars, log = FALSE) {
   .xgxr <- getOption("rxode2.xgxr", TRUE) &&
     requireNamespace("xgxr", quietly = TRUE)
@@ -48,7 +51,7 @@
       legend.title = ggplot2::element_blank()
     )
   } else {
-    dataPlot <- data.frame(DV = .dat0$DV, stack(.dat0[, vars, drop = FALSE]))
+    dataPlot <- data.frame(DV = .dat0$DV, utils::stack(.dat0[, vars, drop = FALSE]))
     .aes <- ggplot2::aes(.data$values, .data$DV)
     .color <- NULL
     .legendPos <- NULL
@@ -165,7 +168,9 @@ plot.nlmixr2FitData <- function(x, ...) {
   .lst <- list()
   object <- x
   .tp <- traceplot(x)
-  if (!is.null(.tp)) .lst[[length(.lst) + 1]] <- .tp
+  if (!is.null(.tp)) {
+    .lst[[length(.lst) + 1]] <- .tp
+  }
   if (exists(".bootPlotData", object$env)) {
     .bp <- nlmixr2extra::bootplot(x)
     .lst[[length(.lst) + 1]] <- .bp
@@ -251,9 +256,9 @@ plot.nlmixr2FitData <- function(x, ...) {
 
         .p3 <- ggplot2::ggplot(.d1, ggplot2::aes(x = .data$TIME, y = .data$DV)) +
           ggplot2::geom_point() +
-          ggplot2::geom_line(aes(x = .data$TIME, y = .data$IPRED), col = "red", size = 1.2)
+          ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$IPRED), col = "red", size = 1.2)
         if (any(names(.d1) == "PRED")) {
-          .p3 <- .p3 + ggplot2::geom_line(aes(x = .data$TIME, y = .data$PRED), col = "blue", size = 1.2)
+          .p3 <- .p3 + ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$PRED), col = "blue", size = 1.2)
         }
         .p3 <- .p3 + ggplot2::facet_wrap(~ID) +
           ggplot2::ggtitle(.cmt, sprintf("Individual Plots (%s of %s)", .j, length(.s))) +
@@ -261,7 +266,7 @@ plot.nlmixr2FitData <- function(x, ...) {
         if (any(names(.d1) == "lowerLim")) {
           .p3 <-
             .p3 +
-            geom_cens(aes(lower = .data$lowerLim, upper = .data$upperLim), fill = "purple")
+            geom_cens(ggplot2::aes(lower = .data$lowerLim, upper = .data$upperLim), fill = "purple")
         }
         .lst[[length(.lst) + 1]] <- .p3
       }
@@ -277,13 +282,13 @@ plot.nlmixr2FitData <- function(x, ...) {
 
       #   .p3 <- ggplot2::ggplot(.d1, ggplot2::aes(x = tad, y = DV)) +
       #     ggplot2::geom_point() +
-      #     ggplot2::geom_line(aes(x = tad, y = IPRED), col = "red", size = 1.2) +
-      #     ggplot2::geom_line(aes(x = tad, y = PRED), col = "blue", size = 1.2) +
+      #     ggplot2::geom_line(ggplot2::aes(x = tad, y = IPRED), col = "red", size = 1.2) +
+      #     ggplot2::geom_line(ggplot2::aes(x = tad, y = PRED), col = "blue", size = 1.2) +
       #     ggplot2::facet_wrap(~id2) +
       #     ggplot2::ggtitle(.cmt, sprintf("Individual TAD Plots (%s of %s)", .j, length(.s))) +
       #     rxode2::rxTheme()
       #   if (any(names(.d1) == "lowerLim")) {
-      #     .p3 <- .p3 + geom_cens(aes(lower=lowerLim, upper=upperLim), fill="purple")
+      #     .p3 <- .p3 + geom_cens(ggplot2::aes(lower=lowerLim, upper=upperLim), fill="purple")
       #   }
       #   .lst[[length(.lst) + 1]] <- .p3
       # }
