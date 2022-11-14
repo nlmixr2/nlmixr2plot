@@ -6,7 +6,7 @@
 #' @noRd
 .setupPlotData <- function(data) {
   .dat <- as.data.frame(data)
-  .w <- which(!is.na(.dat$RES))
+  .w <- which(!is.na(.dat$IRES))
   .dat <- .dat[.w, ]
   .doCmt <- FALSE
   if (any(names(.dat) == "CMT")) {
@@ -15,7 +15,7 @@
     }
   }
   if (!.doCmt) {
-    .dat$CMT <- factor(rep(1, length(.dat[, 1])), 1, "All Data")
+    .dat$CMT <- factor("All Data")
   } else {
     levels(.dat$CMT) <- paste("Endpoint: ", levels(.dat$CMT))
   }
@@ -195,7 +195,7 @@ plotCmt <- function(x, cmt) {
   .hasIpred <- any(names(x) == "IPRED")
   .datCmt <- x[x$CMT == cmt,, drop = FALSE]
   if (nrow(.datCmt) > 0) {
-    if (.hasPred) {
+    if (.hasPred & .hasIpred) {
       .lst[["dv_pred_ipred_linear"]] <-
         .dvPlot(.datCmt, c("PRED", "IPRED")) +
         ggplot2::ggtitle(cmt, "DV vs PRED/IPRED")
@@ -211,6 +211,14 @@ plotCmt <- function(x, cmt) {
       .lst[["dv_ipred_log"]] <-
         .dvPlot(.datCmt, "IPRED", TRUE) +
         ggplot2::ggtitle(cmt, "log-scale DV vs IPRED")
+    } else if (.hasPred) {
+      .lst[["dv_pred_linear"]] <-
+        .dvPlot(.datCmt, "PRED") +
+        ggplot2::ggtitle(cmt, "DV vs PRED")
+
+      .lst[["dv_pred_log"]] <-
+        .dvPlot(.datCmt, "PRED", TRUE) +
+        ggplot2::ggtitle(cmt, "log-scale DV vs PRED")
     }
 
     if (.hasCwres) {
@@ -233,24 +241,20 @@ plotCmt <- function(x, cmt) {
         ggplot2::ggtitle(cmt, "log-scale DV vs EPRED/IPRED")
     }
 
-    for (x in c("IPRED", "PRED", "CPRED", "EPRED", "TIME", "tad")) {
-      if (any(names(.datCmt) == x)) {
-        for (y in c("IWRES", "IRES", "RES", "CWRES", "NPD")) {
-          if (any(names(.datCmt) == y)) {
-            if (y == "CWRES" && x %in% c("TIME", "CPRED")) {
-              .doIt <- TRUE
-            } else if (y == "NPD" && x %in% c("TIME", "EPRED")) {
-              .doIt <- TRUE
-            } else if (!(y %in% c("CWRES", "NPD"))) {
-              .doIt <- TRUE
-            }
-            if (.doIt) {
-              .lst[[paste(y, x, "linear", sep = "_")]] <-
-                .scatterPlot(.datCmt, c(x, y), cmt, log = FALSE)
-              .lst[[paste(y, x, "log", sep = "_")]] <-
-                .scatterPlot(.datCmt, c(x, y), cmt, log = TRUE)
-            }
-          }
+    for (x in intersect(names(.datCmt), c("IPRED", "PRED", "CPRED", "EPRED", "TIME", "tad"))) {
+      for (y in intersect(names(.datCmt), c("IWRES", "IRES", "RES", "CWRES", "NPD"))) {
+        if (y == "CWRES" && x %in% c("TIME", "CPRED")) {
+          .doIt <- TRUE
+        } else if (y == "NPD" && x %in% c("TIME", "EPRED")) {
+          .doIt <- TRUE
+        } else if (!(y %in% c("CWRES", "NPD"))) {
+          .doIt <- TRUE
+        }
+        if (.doIt) {
+          .lst[[paste(y, x, "linear", sep = "_")]] <-
+            .scatterPlot(.datCmt, c(x, y), cmt, log = FALSE)
+          .lst[[paste(y, x, "log", sep = "_")]] <-
+            .scatterPlot(.datCmt, c(x, y), cmt, log = TRUE)
         }
       }
     }
