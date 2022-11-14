@@ -10,7 +10,6 @@
 #' @return Nothing called for side effects
 #'
 #' @examples
-#' @examples
 #' \donttest{
 #'
 #' library(nlmixr2est)
@@ -49,7 +48,6 @@
 #'
 #' }
 #' @export
-#' @importFrom utils assignInMyNamespace
 #' @importFrom ggplot2 .data
 plot.nlmixr2AugPred <- function(x, y, ...) {
   if (any(names(x) == "Endpoint")) {

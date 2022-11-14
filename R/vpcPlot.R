@@ -49,8 +49,6 @@
 #' }
 #'
 #' @export
-#' @importFrom nlmixr2est vpcSim
-#' @importFrom vpc vpc_vpc
 vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                     n_bins = "auto", bin_mid = "mean",
                     show = NULL, stratify = NULL, pred_corr = FALSE,

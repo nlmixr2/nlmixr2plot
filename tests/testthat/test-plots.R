@@ -29,11 +29,14 @@ test_that("test plots with vdiffr", {
   #
   # Set DV to LOQ for all censored items
   censData$DV[censData$CENS == 1] <-  3
-#
 
-  fit <- nlmixr2est::nlmixr(one.cmt, censData,
-                            est="focei",
-                            table=nlmixr2est::tableControl(npde=TRUE))
+  fit <-
+    nlmixr2est::nlmixr(
+      one.cmt, censData,
+      est="focei",
+      control = list(print = 0),
+      table=nlmixr2est::tableControl(npde=TRUE)
+    )
 
   fitSim <- nlmixr2est::vpcSim(fit)
 
@@ -95,8 +98,13 @@ test_that("test plots with vdiffr", {
     })
   }
 
-  fit2 <- nlmixr2est::nlmixr(one.cmt, nlmixr2data::theo_sd, est="focei",
-                             table=nlmixr2est::tableControl(npde=TRUE))
+  fit2 <-
+    nlmixr2est::nlmixr(
+      one.cmt, nlmixr2data::theo_sd,
+      est="focei",
+      control = list(print = 0),
+      table=nlmixr2est::tableControl(npde=TRUE)
+    )
 
   ## apo <- nlmixr2est::augPred(fit2)
   ## ap <- plot(apo)
