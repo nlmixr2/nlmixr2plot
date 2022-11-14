@@ -17,7 +17,8 @@ Description: Fit and compare nonlinear mixed-effects models in
     Hallow, and James 2015 <doi:10.1002/psp4.12052>). This package is for
     'ggplot2' plotting methods for 'nlmixr2' objects.
 License: GPL (>= 3)
-URL: https://github.com/nlmixr2/nlmixr2plot
+URL: https://github.com/nlmixr2/nlmixr2plot,
+    https://nlmixr2.github.io/nlmixr2plot/
 BugReports: https://github.com/nlmixr2/nlmixr2plot/issues/
 Imports:
     ggplot2,
