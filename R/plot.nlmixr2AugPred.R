@@ -71,7 +71,7 @@ plot.nlmixr2AugPred <- function(x, y, ...) {
       dpred <- d1[d1$ind != "Observed", ]
       p3 <-
         ggplot2::ggplot(d1, ggplot2::aes(.data$time, .data$values, col = .data$ind)) +
-        ggplot2::geom_line(data = dpred, size = 1.2) +
+        ggplot2::geom_line(data = dpred, linewidth = 1.2) +
         ggplot2::geom_point(data = dobs) +
         ggplot2::facet_wrap(~id) +
         rxode2::rxTheme() +

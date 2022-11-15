@@ -5,6 +5,7 @@
   could use those names as the basis of figure captions (fix #8).
 * Models without eta values (between subject variability) now have more
   consistent plotting to models with eta values (fix #18).
+* The package was updated to align with changes in ggplot2.
 
 # nlmixr2plot 2.0.7
 
