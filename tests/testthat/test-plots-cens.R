@@ -1,23 +1,27 @@
 test_that("plot censoring", {
   skip_on_cran()
 
-  dat <- xgxr::case1_pkpd |>
+  dat <-
+    xgxr::case1_pkpd |>
     dplyr::rename(DV=LIDV) |>
     dplyr::filter(CMT %in% 1:2) |>
     dplyr::filter(TRTACT != "Placebo")
 
   doses <- unique(dat$DOSE)
   nid <- 10 # 7 ids per dose group
-  dat2 <- do.call("rbind",
-                  lapply(doses, function(x) {
-                    ids <- dat |>
-                      dplyr::filter(DOSE == x) |>
-                      dplyr::summarize(ids=unique(ID)) |>
-                      dplyr::pull()
-                    ids <- ids[seq(1, nid)]
-                    dat |>
-                      dplyr::filter(ID %in% ids)
-                  }))
+  dat2 <-
+    do.call(
+      "rbind",
+      lapply(doses, function(x) {
+        ids <- dat |>
+          dplyr::filter(DOSE == x) |>
+          dplyr::summarize(ids=unique(ID)) |>
+          dplyr::pull()
+        ids <- ids[seq(1, nid)]
+        dat |>
+          dplyr::filter(ID %in% ids)
+      })
+    )
 
   ## Use 2 compartment model
   cmt2 <- function() {
@@ -44,19 +48,26 @@ test_that("plot censoring", {
   }
 
   ## Check parsing
-  cmt2m <- nlmixr2est::nlmixr(cmt2)
+  suppressMessages(
+    cmt2m <- nlmixr2est::nlmixr(cmt2)
+  )
 
-  fit <-
-    nlmixr2est::nlmixr(
-      cmt2m, dat2, "saem",
-      control=list(print=0),
-      table=nlmixr2est::tableControl(cwres=TRUE, npde=TRUE)
-    )
+  suppressMessages(
+    fit <-
+      nlmixr2est::nlmixr(
+        cmt2m, dat2, "saem",
+        control=nlmixr2est::saemControl(print=0, nBurn = 10, nEm = 20),
+        table=nlmixr2est::tableControl(cwres=TRUE, npde=TRUE)
+      )
+  )
 
   apo <- nlmixr2est::augPred(fit)
   expect_error(plot(apo), NA)
-  expect_error(vpcPlot(fit, stratify="DOSE"), NA)
-  expect_error(vpcPlot(fit, pred_corr=TRUE, stratify="DOSE", log_y=TRUE), NA)
+  expect_error(vpcPlot(fit, stratify="DOSE", n = 10), NA)
+  expect_message(
+    vpcPlot(fit, pred_corr=TRUE, stratify="DOSE", log_y=TRUE, n = 10),
+    regexp = "Prediction-correction cannot be used together with censored data"
+  )
 
   expect_error(plot(fit), NA)
 

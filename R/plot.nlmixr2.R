@@ -69,7 +69,7 @@
   }
   ggplot2::ggplot(dataPlot, .aes) +
     ggplot2::facet_wrap(~ind) +
-    ggplot2::geom_abline(slope = 1, intercept = 0, col = "red", size = 1.2) +
+    ggplot2::geom_abline(slope = 1, intercept = 0, col = "red", linewidth = 1.2) +
     .logx +
     .logy +
     ggplot2::geom_point(alpha = 0.5) +
@@ -271,9 +271,9 @@ plotCmt <- function(x, cmt) {
 
       .pIndividual <- ggplot2::ggplot(.d1, ggplot2::aes(x = .data$TIME, y = .data$DV)) +
         ggplot2::geom_point() +
-        ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$IPRED), col = "red", size = 1.2)
+        ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$IPRED), col = "red", linewidth = 1.2)
       if (any(names(.d1) == "PRED")) {
-        .pIndividual <- .pIndividual + ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$PRED), col = "blue", size = 1.2)
+        .pIndividual <- .pIndividual + ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$PRED), col = "blue", linewidth = 1.2)
       }
       .pIndividual <- .pIndividual + ggplot2::facet_wrap(~ID) +
         ggplot2::ggtitle(cmt, sprintf("Individual Plots (%s of %s)", .j, length(.s))) +
@@ -374,7 +374,7 @@ traceplot.nlmixr2FitCore <- function(x, ...) {
     if (!is.null(.niter)) {
       .p0 <-
         .p0 +
-        ggplot2::geom_vline(xintercept = .niter, col = "blue", size = 1.2)
+        ggplot2::geom_vline(xintercept = .niter, col = "blue", linewidth = 1.2)
     }
     .p0 <- .p0 + rxode2::rxTheme()
     return(.p0)
