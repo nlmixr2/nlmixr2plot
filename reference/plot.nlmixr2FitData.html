@@ -81,6 +81,11 @@ plotting for all of them at the same time)</p>
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
 <span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/nlmixr2/nlmixr2est" class="external-link">nlmixr2est</a></span><span class="op">)</span></span></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error:</span> package or namespace load failed for ‘nlmixr2est’:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span>  .onAttach failed in attachNamespace() for 'nlmixr2est', details:</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span>   call: NULL</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span>   error: nlmixr2 compiled against different version of rxode2, cannot run nlmixr2</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> try `install.packages("nlmixr2", type = "source")` to recompile</span>
 <span class="r-in"><span><span class="va">one.compartment</span> <span class="op">&lt;-</span> <span class="kw">function</span><span class="op">(</span><span class="op">)</span> <span class="op">{</span></span></span>
 <span class="r-in"><span>  <span class="fu"><a href="https://nlmixr2.github.io/rxode2/reference/ini.html" class="external-link">ini</a></span><span class="op">(</span><span class="op">{</span></span></span>
 <span class="r-in"><span>    <span class="va">tka</span> <span class="op">&lt;-</span> <span class="fl">0.45</span></span></span>
@@ -104,80 +109,11 @@ plotting for all of them at the same time)</p>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co">## The fit is performed by the function nlmixr/nlmix2 specifying the model, data and estimate</span></span></span>
 <span class="r-in"><span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html" class="external-link">nlmixr2</a></span><span class="op">(</span><span class="va">one.compartment</span>, <span class="va">theo_sd</span>,  est<span class="op">=</span><span class="st">"saem"</span>, <span class="fu"><a href="https://nlmixr2.github.io/nlmixr2est/reference/saemControl.html" class="external-link">saemControl</a></span><span class="op">(</span>print<span class="op">=</span><span class="fl">0</span>, nBurn <span class="op">=</span> <span class="fl">10</span>, nEm <span class="op">=</span> <span class="fl">20</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → loading into <span style="color: #0000BB;">symengine</span> environment...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → pruning branches (`if`/`else`) of saem model...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> done</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → finding duplicate expressions in saem model...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → optimizing duplicate expressions in saem model...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> done</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Calculating covariance matrix</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → loading into <span style="color: #0000BB;">symengine</span> environment...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → pruning branches (`if`/`else`) of saem model...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> done</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → finding duplicate expressions in saem predOnly model 0...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → finding duplicate expressions in saem predOnly model 1...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → optimizing duplicate expressions in saem predOnly model 1...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → finding duplicate expressions in saem predOnly model 2...</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> done</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → Calculating residuals/tables</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> done</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → compress origData in nlmixr2 object, save 5952</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → compress phiM in nlmixr2 object, save 2832</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → compress parHist in nlmixr2 object, save 1968</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → compress saem0 in nlmixr2 object, save 25112</span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in nlmixr2(one.compartment, theo_sd, est = "saem", saemControl(print = 0,     nBurn = 10, nEm = 20)):</span> could not find function "nlmixr2"</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># This shows many goodness of fit plots</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-1.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-2.png" alt="" width="700" height="433"></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous x-axis</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous y-axis</span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-3.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-4.png" alt="" width="700" height="433"></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous x-axis</span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-5.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-6.png" alt="" width="700" height="433"></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous x-axis</span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-7.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-8.png" alt="" width="700" height="433"></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous x-axis</span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-9.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-10.png" alt="" width="700" height="433"></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous x-axis</span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-11.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-12.png" alt="" width="700" height="433"></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous x-axis</span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-13.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-14.png" alt="" width="700" height="433"></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous x-axis</span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-15.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-16.png" alt="" width="700" height="433"></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous x-axis</span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-17.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-18.png" alt="" width="700" height="433"></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous x-axis</span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-19.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-20.png" alt="" width="700" height="433"></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous x-axis</span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-21.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-22.png" alt="" width="700" height="433"></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous x-axis</span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-23.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-24.png" alt="" width="700" height="433"></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous x-axis</span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-25.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-26.png" alt="" width="700" height="433"></span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Transformation introduced infinite values in continuous x-axis</span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-27.png" alt="" width="700" height="433"></span>
-<span class="r-plt img"><img src="plot.nlmixr2FitData-28.png" alt="" width="700" height="433"></span>
+<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in plot(fit):</span> object 'fit' not found</span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
     </div>
