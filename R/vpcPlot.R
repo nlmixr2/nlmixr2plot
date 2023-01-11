@@ -5,7 +5,7 @@
 #'   default is the fitted data, (can be retrieved by
 #'   \code{\link[nlme]{getData}}), but it can be changed by specifying
 #'   this argument.
-#' @param n Number of VPC simulations.  By default 100
+#' @param n Number of VPC simulations
 #' @param idv Name of independent variable. For `vpcPlot()` and
 #'   `vpcCens()` the default is `"time"` for `vpcPlotTad()` and
 #'   `vpcCensTad()` this is `"tad"`
@@ -38,7 +38,13 @@
 #'  })
 #' }
 #'
-#' fit <- nlmixr2est::nlmixr(one.cmt, nlmixr2data::theo_sd, est="focei")
+#' fit <-
+#'   nlmixr2est::nlmixr(
+#'     one.cmt,
+#'     data = nlmixr2data::theo_sd,
+#'     est = "focei",
+#'     control = list(print = 0)
+#'   )
 #'
 #' vpcPlot(fit)
 #' }

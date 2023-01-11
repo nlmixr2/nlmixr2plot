@@ -54,7 +54,7 @@ default is the fitted data, (can be retrieved by
 \code{\link[nlme]{getData}}), but it can be changed by specifying
 this argument.}
 
-\item{n}{Number of VPC simulations.  By default 100}
+\item{n}{Number of VPC simulations}
 
 \item{bins}{either "density", "time", or "data", "none", or one of the approaches available in classInterval() such as "jenks" (default) or "pretty", or a numeric vector specifying the bin separators.}
 
@@ -142,7 +142,13 @@ one.cmt <- function() {
  })
 }
 
-fit <- nlmixr2est::nlmixr(one.cmt, nlmixr2data::theo_sd, est="focei")
+fit <-
+  nlmixr2est::nlmixr(
+    one.cmt,
+    data = nlmixr2data::theo_sd,
+    est="focei",
+    control=list(print = 0)
+  )
 
 vpcPlot(fit)
 }
