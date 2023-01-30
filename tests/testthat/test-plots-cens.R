@@ -85,7 +85,7 @@ test_that("plot censoring", {
   #    vdiffr::expect_doppelganger(sprintf("gof %03d", i), gof[[i]])
   #}
 
-  theo_cens <- theo_sd
+  theo_cens <- nlmixr2data::theo_sd
   theo_cens$cens <- 0
   theo_cens$cens[theo_cens$DV <= 1] <- 1
   theo_cens$DV[theo_cens$DV <= 1 & theo_cens$AMT == 0] <- 1
@@ -107,8 +107,8 @@ test_that("plot censoring", {
       linCmt() ~ add(add.err)
     })
   }
-  fit1 <- nlmixr(m1, theo_cens, 
-                 est = "focei", control=foceiControl(print=0),
-                 table = tableControl(npde = TRUE, censMethod = "cdf"))
+  fit1 <- nlmixr2est::nlmixr(m1, theo_cens, 
+                 est = "focei", control=nlmixr2est::foceiControl(print=0),
+                 table = nlmixr2est::tableControl(npde = TRUE, censMethod = "cdf"))
   expect_error(vpcPlot(fit = fit1), NA)
 })
