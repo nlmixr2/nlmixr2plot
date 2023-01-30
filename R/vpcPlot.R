@@ -72,7 +72,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     fit <- .fit
   }
   .ui <- rxode2::rxUiDecompress(fit$ui)
-  .obsLst <- .vpcUiSetupObservationData(fit, data=data, idv=idv)
+  .obsLst <- .vpcUiSetupObservationData(fit, data=data, idv=idv, cens=cens)
   .obs <- .obsLst$obs
   .no <- .obsLst$namesObs
   .nol <- .obsLst$namesObsLower
@@ -210,7 +210,7 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' @return List with `namesObs`, `namesObsLower`, `obs` and `obsCols`
 #' @author Matthew L. Fidler
 #' @noRd
-.vpcUiSetupObservationData <- function(fit, data=NULL, idv="time") {
+.vpcUiSetupObservationData <- function(fit, data=NULL, idv="time", cens=FALSE) {
   if (!is.null(data)) {
     .obs <- data
   } else {
@@ -252,8 +252,13 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   }
   .obsCols <- c(.obsCols,
                 list(idv=.no[.wo]))
+  if (!cens) {
+    .no <- .no[which(tolower(.no) != "cens")]
+    .nol <- .no[which(tolower(.no) != "cens")]
+    .obs <- .obs[which(tolower(names(.obs)) != "cens")]
+  }
   list(namesObs=.no,
        namesObsLower=.nol,
-       obs=.obs,
-       obsCols=.obsCols)
+              obs=.obs,
+              obsCols=.obsCols)
 }

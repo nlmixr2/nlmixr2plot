@@ -84,4 +84,31 @@ test_that("plot censoring", {
   #for (i in seq_along(gof)) {
   #    vdiffr::expect_doppelganger(sprintf("gof %03d", i), gof[[i]])
   #}
+
+  theo_cens <- theo_sd
+  theo_cens$cens <- 0
+  theo_cens$cens[theo_cens$DV <= 1] <- 1
+  theo_cens$DV[theo_cens$DV <= 1 & theo_cens$AMT == 0] <- 1
+
+  m1 <- function() {
+    ini({
+      tka <- 0.5
+      tcl <- -3.2
+      tv <- -1
+      eta.ka ~ 1
+      eta.cl ~ 2
+      eta.v ~ 1
+      add.err <- 0.1
+    })
+    model({
+      ka <- exp(tka + eta.ka)
+      cl <- exp(tcl + eta.cl)
+      v <- exp(tv + eta.v)
+      linCmt() ~ add(add.err)
+    })
+  }
+  fit1 <- nlmixr(m1, theo_cens, 
+                 est = "focei", control=foceiControl(print=0),
+                 table = tableControl(npde = TRUE, censMethod = "cdf"))
+  expect_error(vpcPlot(fit = fit1), NA)
 })
