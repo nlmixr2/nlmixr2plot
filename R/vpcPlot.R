@@ -42,7 +42,7 @@
 #'   nlmixr2est::nlmixr(
 #'     one.cmt,
 #'     data = nlmixr2data::theo_sd,
-#'     est = "focei",
+#'     est = "saem",
 #'     control = list(print = 0)
 #'   )
 #'

@@ -52,6 +52,8 @@ test_that("plot censoring", {
     cmt2m <- nlmixr2est::nlmixr(cmt2)
   )
 
+  skip_if_not(rxode2parse::.linCmtSens())
+
   suppressMessages(
     fit <-
       nlmixr2est::nlmixr(
@@ -107,7 +109,7 @@ test_that("plot censoring", {
       linCmt() ~ add(add.err)
     })
   }
-  fit1 <- nlmixr2est::nlmixr(m1, theo_cens, 
+  fit1 <- nlmixr2est::nlmixr(m1, theo_cens,
                  est = "focei", control=nlmixr2est::foceiControl(print=0),
                  table = nlmixr2est::tableControl(npde = TRUE, censMethod = "cdf"))
   expect_error(vpcPlot(fit = fit1), NA)

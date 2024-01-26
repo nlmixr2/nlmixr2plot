@@ -146,8 +146,8 @@ fit <-
   nlmixr2est::nlmixr(
     one.cmt,
     data = nlmixr2data::theo_sd,
-    est="focei",
-    control=list(print = 0)
+    est = "saem",
+    control = list(print = 0)
   )
 
 vpcPlot(fit)
