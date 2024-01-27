@@ -44,6 +44,7 @@ jobs:
           pak-version: devel
           extra-packages: |
             any::rcmdcheck
+            nlmixr2/nlmixr2data
             nlmixr2/lotri
             nlmixr2/rxode2ll
             nlmixr2/rxode2parse
