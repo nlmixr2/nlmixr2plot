@@ -258,7 +258,7 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
     .obs <- .obs[which(tolower(names(.obs)) != "cens")]
   }
   list(namesObs=.no,
-       namesObsLower=.nol,
+       namesObsLower=tolower(.nol),
               obs=.obs,
               obsCols=.obsCols)
 }

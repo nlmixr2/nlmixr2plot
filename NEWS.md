@@ -1,3 +1,8 @@
+# nlmixr2plot 2.0.9
+
+* Bug fix for `vpcPlot()` where input data frame for models did not
+  stratify all the time when the columns were upper case.
+
 # nlmixr2plot 2.0.8
 
 * `plot()` now returns a named list of lists so that users can more easily
