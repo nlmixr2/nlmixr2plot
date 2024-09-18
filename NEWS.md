@@ -1,3 +1,7 @@
+# nlmixr2plot 3.0.0
+
+* Update to support new version of rxode2
+
 # nlmixr2plot 2.0.9
 
 * Bug fix for `vpcPlot()` where input data frame for models did not
