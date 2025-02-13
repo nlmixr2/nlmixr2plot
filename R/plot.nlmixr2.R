@@ -176,7 +176,7 @@ plot.nlmixr2FitData <- function(x, ...) {
   for (.cmt in levels(.dat$CMT)) {
     .lst[[.cmt]] <- plotCmt(.dat, cmt = .cmt)
   }
-  ggtibble::new_gglist(.lst)
+  .gglist(.lst)
 }
 
 #' Plot data from one compartment
@@ -288,7 +288,7 @@ plotCmt <- function(x, cmt) {
     .s <- seq(1, length(.ids), by = 16)
     .j <- 0
   }
-  ggtibble::new_gglist(.lst)
+  .gglist(.lst)
 }
 
 #' @export
@@ -368,3 +368,30 @@ traceplot.nlmixr2FitCore <- function(x, ...) {
 
 #' @export
 traceplot.nlmixr2FitCoreSilent <- traceplot.nlmixr2FitCore
+
+.gglist <- function(x) {
+  # Flatten before combining
+  .x <- do.call(`c`, lapply(seq_along(x), function(i) {
+    if (inherits(x[[i]], "gg")) {
+      list(x[[i]])
+    } else if (inherits(x[[i]], "labels")) {
+      list(x[[i]])
+    } else if (is.null(x[[i]])) {
+      NULL
+    } else if (is.list(x[[i]])) {
+      .ret <- x[[i]]
+      class(.ret) <- NULL
+      .ret
+    } else {
+      x[[i]]
+    }
+  }))
+  .null <- vapply(X = .x, FUN = is.null, FUN.VALUE = TRUE)
+  .gg <- vapply(X = .x, FUN = inherits, "gg", FUN.VALUE = TRUE)
+  .labels <- vapply(X = .x, FUN = inherits, "labels", FUN.VALUE = TRUE)
+  .w <- which(.null | .gg | .labels)
+  if (length(.w) < length(.x)) {
+    browser()
+  }
+  ggtibble::new_gglist(.x)
+}
