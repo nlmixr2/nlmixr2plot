@@ -59,7 +59,7 @@ plot.nlmixr2AugPred <- function(x, y, ...) {
       class(.r) <- NULL
       .ret <- c(.ret, .r)
     }
-    class(.ret) <- "nlmixr2PlotList"
+    .ret <- ggtibble::new_gglist(.ret)
     return(.ret)
   } else {
     ids <- unique(x$id)
@@ -78,7 +78,7 @@ plot.nlmixr2AugPred <- function(x, y, ...) {
         ggplot2::ggtitle(label=.augPredEndpoint)
       p3
     })
-    class(.ret) <- "nlmixr2PlotList"
+    .ret <- ggtibble::new_gglist(.ret)
     return(.ret)
   }
 }

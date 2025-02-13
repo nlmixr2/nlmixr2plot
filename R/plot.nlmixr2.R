@@ -127,7 +127,7 @@
 #'
 #' @param x a focei fit object
 #' @param ... additional arguments (currently ignored)
-#' @return An `nlmixr2PlotList` object (a list of ggplot2 objects with easier
+#' @return An `ggtibble::gglist` object (a list of ggplot2 objects with easier
 #'   plotting for all of them at the same time)
 #' @author Wenping Wang & Matthew Fidler
 #' @examples
@@ -176,9 +176,7 @@ plot.nlmixr2FitData <- function(x, ...) {
   for (.cmt in levels(.dat$CMT)) {
     .lst[[.cmt]] <- plotCmt(.dat, cmt = .cmt)
   }
-
-  class(.lst) <- "nlmixr2PlotList"
-  .lst
+  ggtibble::new_gglist(.lst)
 }
 
 #' Plot data from one compartment
@@ -290,22 +288,7 @@ plotCmt <- function(x, cmt) {
     .s <- seq(1, length(.ids), by = 16)
     .j <- 0
   }
-  class(.lst) <- "nlmixr2PlotList"
-  .lst
-}
-
-#' @export
-plot.nlmixr2PlotList <- function(x, y, ...) {
-  .x <- x
-  class(.x) <- NULL
-  for (.i in seq_along(.x)) {
-    try(plot(.x[[.i]]))
-  }
-}
-
-#' @export
-print.nlmixr2PlotList <- function(x, ...) {
-  plot.nlmixr2PlotList(x, ...)
+  ggtibble::new_gglist(.lst)
 }
 
 #' @export

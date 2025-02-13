@@ -12,7 +12,7 @@
 \item{...}{additional arguments (currently ignored)}
 }
 \value{
-An \code{nlmixr2PlotList} object (a list of ggplot2 objects with easier
+An \code{ggtibble::gglist} object (a list of ggplot2 objects with easier
 plotting for all of them at the same time)
 }
 \description{
