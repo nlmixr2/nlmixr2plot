@@ -41,3 +41,40 @@ asNlmixr2PlotList <- function(...) {
   }
   newNlmixr2PlotList(ret)
 }
+
+#' @export
+`+.nlmixr2PlotList` <- function(x, y) {
+  if (inherits(x, "nlmixr2PlotList")) {
+    if (!inherits(y, "nlmixr2PlotList")) {
+      .nx <- names(x)
+      .ret <- stats::setNames(lapply(
+        seq_along(x),
+        function(i) {
+          if (inherits(x[[i]], "gg")) {
+            ggplot2::`%+%`(x[[i]], y)
+          } else if (inherits(x[[i]], "nlmixr2PlotList")) {
+            `+.nlmixr2PlotList`(x[[i]], y)
+          } else if (is.null(x[[i]])) {
+            NULL
+          } else {
+            stop(sprintf(
+              "cannot add class %s to an nlmixr2PlotList", paste(class(x[[i]]), collapse=", ")
+            ), call.=FALSE)
+          }
+        }
+      ), .nx)
+      class(.ret) <- "nlmixr2PlotList"
+      .ret
+    } else {
+      .x <- x
+      .y <- y
+      .ret <- c(.x, .y)
+      class(.ret) <- "nlmixr2PlotList"
+      .ret
+    }
+  } else {
+    stop(sprintf(
+      "Cannot add class %s to an nlmixr2PlotList", paste(class(y), collapse=", ")
+    ))
+  }
+}
