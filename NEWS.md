@@ -1,3 +1,7 @@
+# nlmixr2plot 3.0.1
+
+* Added the ability to add ggplot items to a nlmixr2 plot list with `+`
+
 # nlmixr2plot 3.0.0
 
 * Update to support new version of rxode2
