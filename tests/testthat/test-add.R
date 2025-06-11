@@ -42,8 +42,8 @@ test_that("test addition operator", {
   expect_true(inherits(p2, "nlmixr2PlotList"))
   expect_true(inherits(pl, "nlmixr2PlotList"))
 
-  expect_true(inherits(p2[[1]], "gg"))
-  expect_true(inherits(pl[[1]], "gg"))
+  expect_true(ggplot2::is_ggplot(p2[[1]]))
+  expect_true(ggplot2::is_ggplot(pl[[1]]))
 
   expect_false(identical(p2[[1]], pl[[1]]))
 })

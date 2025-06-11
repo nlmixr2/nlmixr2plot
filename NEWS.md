@@ -1,5 +1,7 @@
 # nlmixr2plot (development version)
 
+* Updated tests to work with ggplot2 version 4 (#39)
+
 # nlmixr2plot 3.0.1
 
 * Added the ability to add ggplot items to a nlmixr2 plot list with `+`

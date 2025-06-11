@@ -26,7 +26,7 @@ asNlmixr2PlotList <- function(...) {
     ret <- list()
     for (idx in seq_along(x)) {
       ret[[names(x)[idx]]] <-
-        if (inherits(x[[idx]], "gg")) {
+        if (ggplot2::is_ggplot(x[[idx]]) | inherits(x[[idx]], "gg")) {
           x[[idx]]
         } else if (inherits(x[[idx]], "nlmixr2PlotList")) {
           x[[idx]]
@@ -50,7 +50,7 @@ asNlmixr2PlotList <- function(...) {
       .ret <- stats::setNames(lapply(
         seq_along(x),
         function(i) {
-          if (inherits(x[[i]], "gg")) {
+          if (ggplot2::is_ggplot(x[[i]]) | inherits(x[[i]], "gg")) {
             ggplot2::`%+%`(x[[i]], y)
           } else if (inherits(x[[i]], "nlmixr2PlotList")) {
             `+.nlmixr2PlotList`(x[[i]], y)
