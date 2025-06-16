@@ -55,7 +55,11 @@ asNlmixr2PlotList <- function(...) {
           .gg <- try(ggplot2::is_ggplot(x[[i]]), silent=TRUE)
           if (inherits(.gg, "try-error")) .gg <- FALSE
           if (.gg || inherits(x[[i]], "gg")) {
-            ggplot2::`%+%`(x[[i]], y)
+            if (packageVersion("ggplot2") >= "3.5.2") {
+              ggplot2::add_gg(x[[i]], y)
+            } else {
+              ggplot2::`%+%`(x[[i]], y)
+            }
           } else if (inherits(x[[i]], "nlmixr2PlotList")) {
             `+.nlmixr2PlotList`(x[[i]], y)
           } else if (is.null(x[[i]])) {
