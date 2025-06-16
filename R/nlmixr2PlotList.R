@@ -52,7 +52,7 @@ asNlmixr2PlotList <- function(...) {
       .ret <- stats::setNames(lapply(
         seq_along(x),
         function(i) {
-          .gg <- try(ggplot2::is_ggplot(x[[idx]]), silent=TRUE)
+          .gg <- try(ggplot2::is_ggplot(x[[i]]), silent=TRUE)
           if (inherits(.gg, "try-error")) .gg <- FALSE
           if (.gg || inherits(x[[i]], "gg")) {
             ggplot2::`%+%`(x[[i]], y)
