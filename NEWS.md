@@ -1,4 +1,4 @@
-# nlmixr2plot (development version)
+# nlmixr2plot 3.0.2
 
 * Updated tests to work with ggplot2 version 4 (#39)
 

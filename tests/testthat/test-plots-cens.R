@@ -52,7 +52,9 @@ test_that("plot censoring", {
     cmt2m <- nlmixr2est::nlmixr(cmt2)
   )
 
-  skip_if_not(rxode2::.linCmtSensB())
+  .linS <- try(rxode2::.linCmtSensB(), silent=TRUE)
+  if (inherits(.linS, "try-error")) .linS <- TRUE
+  skip_if_not(.linS)
 
   suppressMessages(
     fit <-
