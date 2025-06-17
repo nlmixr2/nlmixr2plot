@@ -44,6 +44,16 @@ asNlmixr2PlotList <- function(...) {
   newNlmixr2PlotList(ret)
 }
 
+
+.add_gg <- function(e1, e2) {
+  .ns <- requireNamespace("ggplot2", quietly=TRUE)
+  if (exists(.ns, "add_gg")) {
+    .ns$add_gg(e1, e2)
+  } else {
+    .ns$`%+%`(e1, e2)
+  }
+}
+
 #' @export
 `+.nlmixr2PlotList` <- function(x, y) {
   if (inherits(x, "nlmixr2PlotList")) {
@@ -55,11 +65,7 @@ asNlmixr2PlotList <- function(...) {
           .gg <- try(ggplot2::is_ggplot(x[[i]]), silent=TRUE)
           if (inherits(.gg, "try-error")) .gg <- FALSE
           if (.gg || inherits(x[[i]], "gg")) {
-            if (packageVersion("ggplot2") >= "3.5.2") {
-              ggplot2::add_gg(x[[i]], y)
-            } else {
-              ggplot2::`%+%`(x[[i]], y)
-            }
+            .add_gg(x[[i]], y)
           } else if (inherits(x[[i]], "nlmixr2PlotList")) {
             `+.nlmixr2PlotList`(x[[i]], y)
           } else if (is.null(x[[i]])) {
