@@ -1,5 +1,3 @@
-This is a maintenance release of nlmixr2plot that:
+## R CMD check results
 
-- Adds support for properly displaying plots with log-likelihood models
-
-- Fixes for forthcoming 'ggplot2' '3.4.0'
+- Proactively fix ggplot2 new version changes
