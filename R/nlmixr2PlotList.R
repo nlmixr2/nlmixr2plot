@@ -45,16 +45,6 @@ asNlmixr2PlotList <- function(...) {
 }
 
 
-.add_gg <- function(e1, e2) {
-  .ns <- requireNamespace("ggplot2", quietly=TRUE)
-  .add <- try(.ns$add_gg(e1, e2), silent=TRUE)
-  if (inherits(.add, "try-error")) {
-    # If the namespace does not have add_gg, then we use the default
-    # ggplot2::`%+%` operator
-    .add <- .ns$`%+%`(e1, e2)
-  }
-  .add
-}
 
 #' @export
 `+.nlmixr2PlotList` <- function(x, y) {
@@ -67,7 +57,7 @@ asNlmixr2PlotList <- function(...) {
           .gg <- try(ggplot2::is_ggplot(x[[i]]), silent=TRUE)
           if (inherits(.gg, "try-error")) .gg <- FALSE
           if (.gg || inherits(x[[i]], "gg")) {
-            .add_gg(x[[i]], y)
+            ggplot2::`%+%`(x[[i]], y)
           } else if (inherits(x[[i]], "nlmixr2PlotList")) {
             `+.nlmixr2PlotList`(x[[i]], y)
           } else if (is.null(x[[i]])) {
