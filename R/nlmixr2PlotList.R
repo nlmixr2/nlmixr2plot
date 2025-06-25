@@ -47,11 +47,13 @@ asNlmixr2PlotList <- function(...) {
 
 .add_gg <- function(e1, e2) {
   .ns <- requireNamespace("ggplot2", quietly=TRUE)
-  if (exists(.ns, "add_gg")) {
-    .ns$add_gg(e1, e2)
-  } else {
-    .ns$`%+%`(e1, e2)
+  .add <- try(.ns$add_gg(e1, e2), silent=TRUE)
+  if (inherits(.add, "try-error")) {
+    # If the namespace does not have add_gg, then we use the default
+    # ggplot2::`%+%` operator
+    .add <- .ns$`%+%`(e1, e2)
   }
+  .add
 }
 
 #' @export
