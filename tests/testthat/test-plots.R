@@ -26,7 +26,9 @@ test_that("test plots with vdiffr", {
   # Set DV to LOQ for all censored items
   censData$DV[censData$CENS == 1] <-  3
 
-  skip_if_not(rxode2::.linCmtSensB())
+  .linB <- try(rxode2::.linCmtSensB(), silent=TRUE)
+  if (inherits(.linB, "try-error")) .linB <- TRUE
+  skip_if_not(.linB)
 
   suppressMessages(
     fit <-
