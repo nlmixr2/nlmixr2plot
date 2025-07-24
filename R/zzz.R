@@ -1,7 +1,7 @@
 class_nlmixr2PlotList <- S7::new_S3_class("nlmixr2PlotList")
 
 S7::method(`+`, list(class_nlmixr2PlotList, S7::class_any)) <- function(e1, e2)  {
-  `+.nlmixr2PlotList`(e1, e1)
+  `+.nlmixr2PlotList`(e1, e2)
 }
 .onAttach <- function(libname, pkgname) {
   ## nocov start
