@@ -27,7 +27,8 @@ Imports:
     rxode2,
     utils,
     vpc,
-    xgxr
+    xgxr,
+    S7
 Suggests:
     testthat (>= 3.0.0),
     dplyr,
