@@ -25,14 +25,14 @@ test_that("test addition operator", {
   }
 
   fitOne.comp.KA.solved_S <-
-    nlmixr2est::nlmixr(
+    suppressMessages(nlmixr2est::nlmixr(
       One.comp.KA.solved,
       PKdata,
       est = "saem",
       nlmixr2est::saemControl(nBurn = 2,
                               nEm   = 3,
                               print = 0)
-    )
+    ))
 
   ap <- nlmixr2est::augPred(fitOne.comp.KA.solved_S)
 
