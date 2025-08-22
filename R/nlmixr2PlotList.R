@@ -49,40 +49,34 @@ Ops.nlmixr2PlotList <- function(e1, e2) {
   if(nargs() == 1L) {
     stop("Unary methods are not supported")
   } else if (!(.Generic %in% "+")) {
-    stop(".Generic ", .Generic, "is not supported")
+    stop(".Generic ", .Generic, " is not supported")
   }
-  if (inherits(e1, "nlmixr2PlotList")) {
-    if (!inherits(e2, "nlmixr2PlotList")) {
-      .nmE1 <- names(e1)
-      .ret <- stats::setNames(lapply(
-        seq_along(e1),
-        function(i) {
-          .gg <- try(ggplot2::is_ggplot(e1[[i]]), silent=TRUE)
-          if (inherits(.gg, "try-error")) .gg <- FALSE
-          if (.gg ||
-              inherits(e1[[i]], "gg") ||
-              inherits(e1[[i]], "nlmixr2PlotList")) {
-            e1[[i]] + e2
-          } else if (is.null(e1[[i]])) {
-            NULL
-          } else {
-            stop(sprintf(
-              "cannot add class %s to an nlmixr2PlotList", paste(class(e1[[i]]), collapse=", ")
-            ), call.=FALSE)
-          }
+  if (!inherits(e2, "nlmixr2PlotList")) {
+    .nmE1 <- names(e1)
+    .ret <- stats::setNames(lapply(
+      seq_along(e1),
+      function(i) {
+        .gg <- try(ggplot2::is_ggplot(e1[[i]]), silent=TRUE)
+        if (inherits(.gg, "try-error")) .gg <- FALSE
+        if (.gg ||
+            inherits(e1[[i]], "gg") ||
+            inherits(e1[[i]], "nlmixr2PlotList")) {
+          e1[[i]] + e2
+        } else if (is.null(e1[[i]])) {
+          NULL
+        } else {
+          stop(sprintf(
+            "cannot add class %s to an nlmixr2PlotList", paste(class(e1[[i]]), collapse=", ")
+          ), call.=FALSE)
         }
-      ), .nmE1)
-      class(.ret) <- "nlmixr2PlotList"
-      .ret
-    } else {
-      .ret <- c(e1, e2)
-      class(.ret) <- "nlmixr2PlotList"
-      .ret
-    }
+      }
+    ), .nmE1)
+    class(.ret) <- "nlmixr2PlotList"
+    .ret
   } else {
-    stop(sprintf(
-      "Cannot add class %s to an nlmixr2PlotList", paste(class(e2), collapse=", ")
-    ))
+    .ret <- c(e1, e2)
+    class(.ret) <- "nlmixr2PlotList"
+    .ret
   }
 }
 

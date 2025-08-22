@@ -57,4 +57,13 @@ test_that("test addition operator", {
   expect_true(ggplot2::is_ggplot(pl[[1]]))
 
   expect_false(identical(p2[[1]], pl[[1]]))
+
+  expect_error(
+    +pl,
+    regexp = "Unary methods are not supported"
+  )
+  expect_error(
+    pl - 1,
+    regexp = ".Generic - is not supported"
+  )
 })
