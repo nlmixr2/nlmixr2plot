@@ -1,3 +1,3 @@
 ## R CMD check results
 
-- Proactively fix ggplot2 new version changes
+- Fix + operator for nlmixr2PlotList and ggplot 4.0
