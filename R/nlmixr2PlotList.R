@@ -44,43 +44,49 @@ asNlmixr2PlotList <- function(...) {
   newNlmixr2PlotList(ret)
 }
 
-
-
 #' @export
-`+.nlmixr2PlotList` <- function(x, y) {
-  if (inherits(x, "nlmixr2PlotList")) {
-    if (!inherits(y, "nlmixr2PlotList")) {
-      .nx <- names(x)
+Ops.nlmixr2PlotList <- function(e1, e2) {
+  if(nargs() == 1L) {
+    stop("Unary methods are not supported")
+  } else if (!(.Generic %in% "+")) {
+    stop(".Generic ", .Generic, "is not supported")
+  }
+  if (inherits(e1, "nlmixr2PlotList")) {
+    if (!inherits(e2, "nlmixr2PlotList")) {
+      .nmE1 <- names(e1)
       .ret <- stats::setNames(lapply(
-        seq_along(x),
+        seq_along(e1),
         function(i) {
-          .gg <- try(ggplot2::is_ggplot(x[[i]]), silent=TRUE)
+          .gg <- try(ggplot2::is_ggplot(e1[[i]]), silent=TRUE)
           if (inherits(.gg, "try-error")) .gg <- FALSE
-          if (.gg || inherits(x[[i]], "gg")) {
-            ggplot2::`%+%`(x[[i]], y)
-          } else if (inherits(x[[i]], "nlmixr2PlotList")) {
-            `+.nlmixr2PlotList`(x[[i]], y)
-          } else if (is.null(x[[i]])) {
+          if (.gg ||
+              inherits(e1[[i]], "gg") ||
+              inherits(e1[[i]], "nlmixr2PlotList")) {
+            e1[[i]] + e2
+          } else if (is.null(e1[[i]])) {
             NULL
           } else {
             stop(sprintf(
-              "cannot add class %s to an nlmixr2PlotList", paste(class(x[[i]]), collapse=", ")
+              "cannot add class %s to an nlmixr2PlotList", paste(class(e1[[i]]), collapse=", ")
             ), call.=FALSE)
           }
         }
-      ), .nx)
+      ), .nmE1)
       class(.ret) <- "nlmixr2PlotList"
       .ret
     } else {
-      .x <- x
-      .y <- y
-      .ret <- c(.x, .y)
+      .ret <- c(e1, e2)
       class(.ret) <- "nlmixr2PlotList"
       .ret
     }
   } else {
     stop(sprintf(
-      "Cannot add class %s to an nlmixr2PlotList", paste(class(y), collapse=", ")
+      "Cannot add class %s to an nlmixr2PlotList", paste(class(e2), collapse=", ")
     ))
   }
+}
+
+#' @export
+chooseOpsMethod.nlmixr2PlotList <- function(x, y, mx, my, cl, reverse) {
+  TRUE
 }
