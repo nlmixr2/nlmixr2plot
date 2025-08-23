@@ -1,4 +1,4 @@
-# nlmixr2plot 3.0.2
+# nlmixr2plot 3.0.3
 
 * Updated tests and added `Ops` method (removing `+` method) to work
   with ggplot2 version 4 (#39)
