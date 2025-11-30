@@ -237,7 +237,6 @@ fit <-
 #> ✔ done
 #> → finding duplicate expressions in saem model...
 #> ✔ done
-#> using C compiler: ‘gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0’
 #> ℹ calculate uninformed etas
 #> ℹ done
 #> Calculating covariance matrix
@@ -250,17 +249,12 @@ fit <-
 #> ✔ done
 #>  
 #>  
-#> using C compiler: ‘gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0’
 #> → Calculating residuals/tables
 #> ✔ done
-#> → compress origData in nlmixr2 object, save 5952
-#> → compress parHistData in nlmixr2 object, save 13904
-#> → compress phiM in nlmixr2 object, save 60752
 
 vpcPlot(fit)
 #>  
 #>  
-#> using C compiler: ‘gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0’
 #> Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
 #> ℹ Please use `linewidth` instead.
 #> ℹ The deprecated feature was likely used in the vpc package.

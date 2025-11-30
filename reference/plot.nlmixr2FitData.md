@@ -70,7 +70,6 @@ fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0, nBurn
 #> → finding duplicate expressions in saem model...
 #> → optimizing duplicate expressions in saem model...
 #> ✔ done
-#> using C compiler: ‘gcc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0’
 #> ℹ calculate uninformed etas
 #> ℹ done
 #> Calculating covariance matrix
@@ -86,9 +85,6 @@ fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0, nBurn
 #>  
 #> → Calculating residuals/tables
 #> ✔ done
-#> → compress origData in nlmixr2 object, save 5952
-#> → compress parHistData in nlmixr2 object, save 2456
-#> → compress phiM in nlmixr2 object, save 3712
 
 # This shows many goodness of fit plots
 plot(fit)
