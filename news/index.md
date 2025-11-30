@@ -1,5 +1,11 @@
 # Changelog
 
+## nlmixr2plot 5.0.0
+
+CRAN release: 2025-11-29
+
+- Updated to use nlmixr2 5.0 file format
+
 ## nlmixr2plot 3.0.3
 
 CRAN release: 2025-08-23
