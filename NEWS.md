@@ -1,3 +1,7 @@
+# nlmixr2plot 5.0.0
+
+* Updated to use nlmixr2 5.0 file format
+
 # nlmixr2plot 3.0.3
 
 * Updated tests and added `Ops` method (removing `+` method) to work
