@@ -17,14 +17,14 @@
 Source:
 [`DESCRIPTION`](https://github.com/nlmixr2/nlmixr2plot/blob/main/DESCRIPTION)
 
-Fidler M, Wang W, Mann V (2025). *nlmixr2plot: Nonlinear Mixed Effects
+Fidler M, Wang W, Mann V (2026). *nlmixr2plot: Nonlinear Mixed Effects
 Models in Population PK/PD, Plot Functions*. R package version 5.0.0,
 <https://github.com/nlmixr2/nlmixr2plot>.
 
     @Manual{,
       title = {nlmixr2plot: Nonlinear Mixed Effects Models in Population PK/PD, Plot Functions},
       author = {Matthew Fidler and Wenping Wang and Vipul Mann},
-      year = {2025},
+      year = {2026},
       note = {R package version 5.0.0},
       url = {https://github.com/nlmixr2/nlmixr2plot},
     }

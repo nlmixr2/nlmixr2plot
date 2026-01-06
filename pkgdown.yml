@@ -2,7 +2,7 @@ pandoc: 3.1.11
 pkgdown: 2.2.0
 pkgdown_sha: ~
 articles: {}
-last_built: 2025-12-30T05:49Z
+last_built: 2026-01-06T05:45Z
 urls:
   reference: https://nlmixr2.github.io/nlmixr2plot/reference
   article: https://nlmixr2.github.io/nlmixr2plot/articles
