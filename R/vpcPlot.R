@@ -57,7 +57,8 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                     xlab = NULL, ylab = NULL, title = NULL, smooth = TRUE, vpc_theme = NULL,
                     facet = "wrap", scales = "fixed", labeller = NULL, vpcdb = FALSE,
                     verbose = FALSE, ..., seed=1009,
-                    idv="time", cens=FALSE) {
+                    idv="time", cens=FALSE,
+                    tidyvpc=TRUE) {
   force(idv)
   rxode2::rxReq("vpc")
     # Simulate with VPC
@@ -102,6 +103,9 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .sim$dv <- .sim$sim
     .sim$idv <- .sim[[idv]]
     .obs <- as.data.frame(fit)
+    # Make sure idv is not missing
+    #.obs <- .obs[!is.na(.obs[[idv]]), ]
+
     .obs$idv <- .obs[[idv]]
     .w <- which(tolower(names(.obs)) == idv)
     .time <- .obs[, .w]
@@ -174,14 +178,109 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   .obsCols$idv <- idv
   .w <- which(tolower(names(.sim)) == "id")
   names(.sim)[.w] <- "id"
-  vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
-               obs=.obs, obs_cols=.obsCols,
-               bins=bins, n_bins=n_bins, bin_mid=bin_mid,
-               show = show, stratify = stratify, pred_corr = pred_corr,
-               pred_corr_lower_bnd = pred_corr_lower_bnd, pi = pi, ci = ci,
-               uloq = uloq, lloq = lloq, log_y = log_y, log_y_min = log_y_min,
-               xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
-               facet = facet, scales=scales, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
+  if (idv == "tad") {
+    # drop values before TAD
+    .sim <- .sim[!is.na(.sim[[idv]]), ]
+  }
+  # use tidyvpc
+  if (tidyvpc) {
+    # Add arguments as needed
+    .tidyObs <- c(".obs", paste0("x=", .obsCols$dv), paste0("y=", .obsCols$idv))
+    .tidySim <- c(".tidyObs", ".sim",
+                  paste0("x=", .simCols$dv),
+                  paste0("y=", .simCols$idv))
+    if (pred_corr) {
+      .tidyObs <- c(.tidyObs, paste0("pred=", .obsCols$pred))
+    }
+    if (cens) {
+      .w <- which(tolower(names(.obs)) == "cens")
+      .censVals <- unique(.obs[[.w]])
+      # if there are only 0 and 1, then the data is blq
+      if (length(.censVals) == 2 && all(sort(.censVals) == c(0, 1))) {
+        .tidyObs <- c(.tidyObs,
+                      paste0("blq=.obs$cens == 1"),
+                      paste0("lloq = ifelse(.obs$cens==1, .obs[[.obsCols$dv]], NA_real_)"))
+      } else if (length(.censVals) == 2 && all(sort(.censVals) == c(-1, 0))) {
+        .tidyObs <- c(.tidyObs, "alq=.obs$cens == -1",
+                      paste0("uloq = ifelse(.obs$cens==-1, .obs[[.obsCols$dv]], NA_real_)"))
+      } else if (length(.censVals) == 3 && all(sort(.censVals) == c(-1, 0, 1))) {
+        .tidyObs <- c(.tidyObs, "blq=.obs$cens == 1", "alq=.obs$cens == -1",
+                      paste0("lloq = ifelse(.obs$cens==1, .obs[[.obsCols$dv]], NA_real_)"),
+                      paste0("uloq = ifelse(.obs$cens==-1, .obs[[.obsCols$dv]], NA_real_)"))
+      } else {
+        stop("it is unclear the censoring type of the data, please make sure the 'cens' column is coded as 0 for non-censored, 1 for blq, and -1 for alq",
+             call.=FALSE)
+      }
+    }
+    .tidyObs <- eval(str2lang(paste0("tidyvpc::observed(",
+                                     paste(.tidyObs, collapse=", "),
+                                     ")")))
+    .tidySim <- eval(str2lang(paste0("tidyvpc::simulated(",
+                                     paste(.tidySim, collapse=", "),
+                                     ")")))
+
+    if (!is.null(stratify)) {
+      .tidySim <- eval(str2lang(paste0("tidyvpc::stratify(.tidySim, ~",
+                                       paste(stratify, collapse="+"),
+                                       ")")))
+    }
+    .tidyBin <- ".tidySim"
+    .binless <- FALSE
+    if (inherits(bins, "character")) {
+      .tidyBin <- c(.tidyBin, paste0("bin=", deparse1(bins)))
+      if (missing(n_bins)) {
+        cli::cli_alert("tidyvpc does not support automatic binning, changing to binless")
+        .binless <- TRUE
+        .tidyBin <- c(.tidyBin, "loess.ypc = TRUE")
+      } else {
+        .tidyBin <- c(.tidyBin, paste0("nbins=n_bins"))
+      }
+    } else {
+      .tinyBin <- c(.tidyBin, paste0("bin='breaks', breaks=", deparse1(bins)))
+    }
+    if (!.binless) {
+      .tidyBin <- c("n_bins=n_bins", "bin_mid=paste0(\"x\", bin_mid)")
+    }
+    .tidyBin <- eval(str2lang(paste0(ifelse(.binless, "tidyvpc::binless(",
+                                            "tidyvpc::binning("),
+                                     paste(.tidyBin, collapse=", "),
+                                     ")")))
+    if (ci[2] != 1-ci[1]) {
+      cli::cli_alert("tidyvpc does not support asymmetric confidence intervals, changing to symmetric")
+      ci <- c(ci[1], 1-ci[1])
+    }
+    .vpcStats <- eval(str2lang(paste0("tidyvpc::vpcstats(.tidyBin, qpred = c(", pi[1],
+                                      ", 0.5, ", pi[2],
+                                      "), conf.level=", ci[2], ")")))
+    .vpcGg <- plot(.vpcStats)
+    if (!is.null(xlab)) {
+      .vpcGg <- .vpcGg + xlab(xlab)
+    }
+    if (!is.null(ylab)) {
+      .vpcGg <- .vpcGg + ylab(ylab)
+    }
+    if (!is.null(title)) {
+      .vpcGg <- .vpcGg + ggtitle(title)
+    }
+    if (!missing(show)) {
+      warning("tidyvpc does not support showing specific percentiles, showing all", immediate.=TRUE,
+              call.=FALSE)
+    }
+    .vpcGg
+  } else {
+    # use vpc
+    vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
+                 obs=.obs, obs_cols=.obsCols,
+                 bins=bins, n_bins=n_bins, bin_mid=bin_mid,
+                 show = show, stratify = stratify, pred_corr = pred_corr,
+                 pred_corr_lower_bnd = pred_corr_lower_bnd, pi = pi, ci = ci,
+                 uloq = uloq, lloq = lloq, log_y = log_y, log_y_min = log_y_min,
+                 xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
+                 facet = facet, scales=scales, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
+  }
+
+
+
 }
 
 #' @rdname vpcPlot

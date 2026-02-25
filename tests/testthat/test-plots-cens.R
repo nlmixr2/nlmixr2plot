@@ -15,7 +15,7 @@ test_that("plot censoring", {
       lapply(doses, function(x) {
         ids <- dat |>
           dplyr::filter(DOSE == x) |>
-          dplyr::summarize(ids=unique(ID)) |>
+          dplyr::reframe(ids=unique(ID)) |>
           dplyr::pull()
         ids <- ids[seq(1, nid)]
         dat |>
