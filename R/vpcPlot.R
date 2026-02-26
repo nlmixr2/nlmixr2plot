@@ -96,7 +96,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
   }
   .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, .obs)
-  if (cens) {
+  if (cens & !tidyvpc) {
     if (is.null(lloq) && is.null(uloq)) {
       stop("this data is not censored")
     }
@@ -172,7 +172,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .obs <- .obs[, -.w]
   }
   .w <- which(tolower(names(.obs)) == "pred")
-  if (length(.w) > 0) {
+  if (!tidyvpc && length(.w) > 0) {
     .obs <- .obs[, -.w]
   }
   .obsCols$idv <- idv
@@ -191,30 +191,33 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                   paste0("y=", .simCols$idv))
     if (pred_corr) {
       .tidyObs <- c(.tidyObs, paste0("pred=", .obsCols$pred))
+      .tidySim <- c(.tidySim, paste0("pred=", .simCols$pred))
     }
-    if (cens) {
+    if (cens & tidyvpc) {
       .w <- which(tolower(names(.obs)) == "cens")
+      .cens <- names(.obs)[.w]
       .censVals <- unique(.obs[[.w]])
+      .obs$blq <- .obs[[.w]] == 1
+      .obs$alq <- .obs[[.w]] == -1
+      .obs$lloq <- ifelse(.obs[[.w]] == 1, .obs[[.obsCols$dv]], NA_real_)
+      .obs$uloq <- ifelse(.obs[[.w]] == -1, .obs[[.obsCols$dv]], NA_real_)
       # if there are only 0 and 1, then the data is blq
       if (length(.censVals) == 2 && all(sort(.censVals) == c(0, 1))) {
-        .tidyObs <- c(.tidyObs,
-                      paste0("blq=.obs$cens == 1"),
-                      paste0("lloq = ifelse(.obs$cens==1, .obs[[.obsCols$dv]], NA_real_)"))
+        .tidyObs <- c(.tidyObs, "blq=blq", "lloq=lloq")
       } else if (length(.censVals) == 2 && all(sort(.censVals) == c(-1, 0))) {
-        .tidyObs <- c(.tidyObs, "alq=.obs$cens == -1",
-                      paste0("uloq = ifelse(.obs$cens==-1, .obs[[.obsCols$dv]], NA_real_)"))
+        .tidyObs <- c(.tidyObs, "alq=alq", "uloq = uloq")
       } else if (length(.censVals) == 3 && all(sort(.censVals) == c(-1, 0, 1))) {
-        .tidyObs <- c(.tidyObs, "blq=.obs$cens == 1", "alq=.obs$cens == -1",
-                      paste0("lloq = ifelse(.obs$cens==1, .obs[[.obsCols$dv]], NA_real_)"),
-                      paste0("uloq = ifelse(.obs$cens==-1, .obs[[.obsCols$dv]], NA_real_)"))
+        .tidyObs <- c(.tidyObs, "blq=blq", "alq=alq",
+                      "lloq=lloq", "uloq=uloq")
       } else {
         stop("it is unclear the censoring type of the data, please make sure the 'cens' column is coded as 0 for non-censored, 1 for blq, and -1 for alq",
              call.=FALSE)
       }
     }
-    .tidyObs <- eval(str2lang(paste0("tidyvpc::observed(",
+    .tidyObs <- str2lang(paste0("tidyvpc::observed(",
                                      paste(.tidyObs, collapse=", "),
-                                     ")")))
+                                ")"))
+    .tidyObs <- eval(.tidyObs)
     .tidySim <- eval(str2lang(paste0("tidyvpc::simulated(",
                                      paste(.tidySim, collapse=", "),
                                      ")")))
@@ -227,7 +230,9 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .tidyBin <- ".tidySim"
     .binless <- FALSE
     if (inherits(bins, "character")) {
-      .tidyBin <- c(.tidyBin, paste0("bin=", deparse1(bins)))
+      if (!missing(bins) || !missing(n_bins)) {
+        .tidyBin <- c(.tidyBin, paste0("bin=", deparse1(bins)))
+      }
       if (missing(n_bins)) {
         cli::cli_alert("tidyvpc does not support automatic binning, changing to binless")
         .binless <- TRUE
@@ -278,9 +283,6 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                  xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
                  facet = facet, scales=scales, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
   }
-
-
-
 }
 
 #' @rdname vpcPlot
