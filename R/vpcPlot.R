@@ -201,6 +201,8 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       .obs$alq <- .obs[[.w]] == -1
       .obs$lloq <- ifelse(.obs[[.w]] == 1, .obs[[.obsCols$dv]], NA_real_)
       .obs$uloq <- ifelse(.obs[[.w]] == -1, .obs[[.obsCols$dv]], NA_real_)
+      .obs <- .obs |>
+        tidyr::fill(lloq, uloq, .direction="down")
       # if there are only 0 and 1, then the data is blq
       if (length(.censVals) == 2 && all(sort(.censVals) == c(0, 1))) {
         .tidyObs <- c(.tidyObs, "blq=blq", "lloq=lloq")
@@ -215,29 +217,30 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       }
     }
     .tidyObs <- str2lang(paste0("tidyvpc::observed(",
-                                     paste(.tidyObs, collapse=", "),
+                                paste(.tidyObs, collapse=", "),
                                 ")"))
     .tidyObs <- eval(.tidyObs)
-    .tidySim <- eval(str2lang(paste0("tidyvpc::simulated(",
-                                     paste(.tidySim, collapse=", "),
-                                     ")")))
+    .tidySim <- str2lang(paste0("tidyvpc::simulated(",
+                                paste(.tidySim, collapse=", "),
+                                ")"))
+    .tidySim <- eval(.tidySim)
 
     if (!is.null(stratify)) {
-      .tidySim <- eval(str2lang(paste0("tidyvpc::stratify(.tidySim, ~",
-                                       paste(stratify, collapse="+"),
-                                       ")")))
+      .strat <- str2lang(paste0("tidyvpc::stratify(.tidySim, ~",
+                                paste(stratify, collapse="+"),
+                                ")"))
+      print(.strat)
+      .tidySim <- eval(.strat)
     }
     .tidyBin <- ".tidySim"
     .binless <- FALSE
     if (inherits(bins, "character")) {
-      if (!missing(bins) || !missing(n_bins)) {
-        .tidyBin <- c(.tidyBin, paste0("bin=", deparse1(bins)))
-      }
       if (missing(n_bins)) {
         cli::cli_alert("tidyvpc does not support automatic binning, changing to binless")
         .binless <- TRUE
         .tidyBin <- c(.tidyBin, "loess.ypc = TRUE")
       } else {
+        .tidyBin <- c(.tidyBin, paste0("bin=", deparse1(bins)))
         .tidyBin <- c(.tidyBin, paste0("nbins=n_bins"))
       }
     } else {
@@ -270,6 +273,12 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     if (!missing(show)) {
       warning("tidyvpc does not support showing specific percentiles, showing all", immediate.=TRUE,
               call.=FALSE)
+    }
+    if (log_y) {
+      .vpcGg <- .vpcGg + xgxr::xgx_scale_y_log10()
+    }
+    if (log_x) {
+      .vpcGg <- .vpcGg + xgxr::xgx_scale_x_log10()
     }
     .vpcGg
   } else {
