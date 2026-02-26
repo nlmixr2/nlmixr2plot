@@ -96,6 +96,9 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
   }
   .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, .obs)
+  if (any(names(.sim) == "evid")) {
+    .sim <- .sim[.sim$evid == 0,]
+  }
   if (cens & !tidyvpc) {
     if (is.null(lloq) && is.null(uloq)) {
       stop("this data is not censored")
@@ -219,10 +222,11 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .tidyObs <- str2lang(paste0("tidyvpc::observed(",
                                 paste(.tidyObs, collapse=", "),
                                 ")"))
-    .tidyObs <- eval(.tidyObs)
     .tidySim <- str2lang(paste0("tidyvpc::simulated(",
                                 paste(.tidySim, collapse=", "),
                                 ")"))
+
+    .tidyObs <- eval(.tidyObs)
     .tidySim <- eval(.tidySim)
 
     if (!is.null(stratify)) {
