@@ -277,9 +277,6 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     if (log_y) {
       .vpcGg <- .vpcGg + xgxr::xgx_scale_y_log10()
     }
-    if (log_x) {
-      .vpcGg <- .vpcGg + xgxr::xgx_scale_x_log10()
-    }
     .vpcGg
   } else {
     # use vpc
