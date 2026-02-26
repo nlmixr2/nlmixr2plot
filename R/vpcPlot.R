@@ -233,7 +233,6 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       .strat <- str2lang(paste0("tidyvpc::stratify(.tidySim, ~",
                                 paste(stratify, collapse="+"),
                                 ")"))
-      print(.strat)
       .tidySim <- eval(.strat)
     }
     .tidyBin <- ".tidySim"
@@ -242,7 +241,6 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       if (missing(n_bins)) {
         cli::cli_alert("tidyvpc does not support automatic binning, changing to binless")
         .binless <- TRUE
-        .tidyBin <- c(.tidyBin, "loess.ypc = TRUE")
       } else {
         .tidyBin <- c(.tidyBin, paste0("bin=", deparse1(bins)))
         .tidyBin <- c(.tidyBin, paste0("nbins=n_bins"))
@@ -261,10 +259,18 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       cli::cli_alert("tidyvpc does not support asymmetric confidence intervals, changing to symmetric")
       ci <- c(ci[1], 1-ci[1])
     }
-    .vpcStats <- eval(str2lang(paste0("tidyvpc::vpcstats(.tidyBin, qpred = c(", pi[1],
-                                      ", 0.5, ", pi[2],
-                                      "), conf.level=", ci[2], ")")))
-    .vpcGg <- plot(.vpcStats)
+    .vpcStats <- nlmixr2est::.collectWarn(eval(str2lang(paste0("tidyvpc::vpcstats(.tidyBin, qpred = c(", pi[1],
+                                                               ", 0.5, ", pi[2],
+                                                               "), conf.level=", ci[2], ")"))),
+                                          lst=TRUE)
+    .warn <- .vpcStats[[2]]
+    .warn <- .warn[.warn != "", drop=FALSE]
+    if (length(.warn) > 0L) {
+      lapply(.warn, function(w) {
+        warning(sub("\n+$", "", w), call.=FALSE)
+      })
+    }
+    .vpcGg <- plot(.vpcStats[[1]])
     if (!is.null(xlab)) {
       .vpcGg <- .vpcGg + xlab(xlab)
     }
