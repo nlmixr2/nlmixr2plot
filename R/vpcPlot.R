@@ -206,10 +206,10 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   if (tidyvpc) {
     rxode2::rxReq("tidyvpc")
     # Add arguments as needed
-    .tidyObs <- c(".obs", paste0("x=", .obsCols$dv), paste0("y=", .obsCols$idv))
+    .tidyObs <- c(".obs", paste0("x=", .obsCols$idv), paste0("y=", .obsCols$dv))
     .tidySim <- c(".tidyObs", ".sim",
-                  paste0("x=", .simCols$dv),
-                  paste0("y=", .simCols$idv))
+                  paste0("x=", .simCols$idv),
+                  paste0("y=", .simCols$dv))
     if (pred_corr) {
       .tidyObs <- c(.tidyObs, paste0("pred=", .obsCols$pred))
       .tidySim <- c(.tidySim, paste0("pred=", .simCols$pred))
