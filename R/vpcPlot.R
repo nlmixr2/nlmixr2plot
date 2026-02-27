@@ -15,6 +15,10 @@
 #'   traditional VPC plot (`vpcPlot()` and `vpcPlotTad()`).
 #' @inheritParams vpc::vpc
 #' @inheritParams rxode2::rxSolve
+#' @param method the method to use for VPC plotting; can be `"vpc"` (uses the
+#'   \pkg{vpc} package) or `"tidyvpc"` (uses the \pkg{tidyvpc} package).  By
+#'   default, `"vpc"` is used when the \pkg{vpc} package is available, otherwise
+#'   `"tidyvpc"` is used.
 #' @param ... Args sent to \code{\link[rxode2]{rxSolve}}
 #' @return Simulated dataset (invisibly)
 #' @author Matthew L. Fidler
