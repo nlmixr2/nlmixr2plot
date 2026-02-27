@@ -223,6 +223,13 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
         stop("pred_corr and tidyvpc don't seem to work together", call.=FALSE)
       }
       .w <- which(tolower(names(.obs)) == "cens")
+      if (length(.w) != 1L) {
+        stop(
+          "For 'cens = TRUE' and method = 'tidyvpc', the observed data must contain exactly one 'cens' column, ",
+          "encoded as 0 for non-censored, 1 for blq, and -1 for alq",
+          call. = FALSE
+        )
+      }
       .cens <- names(.obs)[.w]
       .censVals <- unique(.obs[[.w]])
       .obs$blq <- .obs[[.w]] == 1
