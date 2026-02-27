@@ -1,6 +1,6 @@
 Package: nlmixr2plot
 Title: Nonlinear Mixed Effects Models in Population PK/PD, Plot Functions
-Version: 5.0.0
+Version: 5.0.1
 Authors@R: c(
     person("Matthew", "Fidler", email="matthew.fidler@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0001-8538-6691")),
@@ -26,12 +26,13 @@ Imports:
     nlmixr2extra (>= 5.0.0),
     rxode2,
     utils,
-    vpc,
     xgxr
 Suggests:
     testthat (>= 3.0.0),
     dplyr,
     withr,
+    vpc,
+    tidyvpc,
     nlmixr2data
 Config/testthat/edition: 3
 Encoding: UTF-8

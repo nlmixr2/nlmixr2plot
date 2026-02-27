@@ -58,10 +58,17 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                     facet = "wrap", scales = "fixed", labeller = NULL, vpcdb = FALSE,
                     verbose = FALSE, ..., seed=1009,
                     idv="time", cens=FALSE,
-                    tidyvpc=TRUE) {
+                    method=c("vpc", "tidyvpc")) {
   force(idv)
-  rxode2::rxReq("vpc")
-    # Simulate with VPC
+  if (missing(method)) {
+    method <- ifelse(requireNamespace("vpc", quietly = TRUE), "vpc", "tidyvpc")
+  }
+  if (method == "vpc") {
+    tidyvpc <- FALSE
+  } else {
+    tidyvpc <- TRUE
+  }
+  # Simulate with VPC
   if (inherits(fit, "nlmixr2vpcSim")) {
     .sim <- fit
     .fit <- attr(class(.sim), "fit")
@@ -99,6 +106,15 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   if (any(names(.sim) == "evid")) {
     .sim <- .sim[.sim$evid == 0,]
   }
+  .evid <- which(tolower(names(.obs)) == "evid")
+  if (length(.evid) == 1L) {
+    .obs <- .obs[.obs[[.evid]] == 0,,drop=FALSE]
+  } else {
+    .mdv <- which(tolower(names(.obs)) == "mdv")
+    if (length(.mdv) == 1L) {
+      .obs <- .obs[.obs[[.mdv]] == 0,,drop=FALSE]
+    }
+  }
   if (cens & !tidyvpc) {
     if (is.null(lloq) && is.null(uloq)) {
       stop("this data is not censored")
@@ -114,6 +130,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .time <- .obs[, .w]
     .obs <- .obs[, -.w]
     .obs$TIME <- .time
+    rxode2::rxReq("vpc")
     return(vpc::vpc_cens(sim=.sim,
                          obs=.obs,
                          bins=bins, n_bins=n_bins, bin_mid=bin_mid,
@@ -187,6 +204,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   }
   # use tidyvpc
   if (tidyvpc) {
+    rxode2::rxReq("tidyvpc")
     # Add arguments as needed
     .tidyObs <- c(".obs", paste0("x=", .obsCols$dv), paste0("y=", .obsCols$idv))
     .tidySim <- c(".tidyObs", ".sim",
@@ -196,7 +214,10 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       .tidyObs <- c(.tidyObs, paste0("pred=", .obsCols$pred))
       .tidySim <- c(.tidySim, paste0("pred=", .simCols$pred))
     }
-    if (cens & tidyvpc) {
+    if (cens && tidyvpc) {
+      if (pred_corr) {
+        stop("pred_corr and tidyvpc don't seem to work together", call.=FALSE)
+      }
       .w <- which(tolower(names(.obs)) == "cens")
       .cens <- names(.obs)[.w]
       .censVals <- unique(.obs[[.w]])
@@ -238,23 +259,29 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .tidyBin <- ".tidySim"
     .binless <- FALSE
     if (inherits(bins, "character")) {
-      if (missing(n_bins)) {
-        cli::cli_alert("tidyvpc does not support automatic binning, changing to binless")
-        .binless <- TRUE
-      } else {
-        .tidyBin <- c(.tidyBin, paste0("bin=", deparse1(bins)))
-        .tidyBin <- c(.tidyBin, paste0("nbins=n_bins"))
+      if (is.character(n_bins) && length(n_bins) == 1L &&
+            n_bins == "auto") {
+        n_bins <- min(max(3, ceiling(nrow(.obs)/40)), 15)
+      }
+      if (is.numeric(n_bins) && length(n_bins) == 1L) {
+        if (n_bins < 1) {
+          .binless <- TRUE
+        } else {
+          .tidyBin <- c(.tidyBin, paste0("bin=", deparse1(bins)))
+          .tidyBin <- c(.tidyBin, paste0("nbins=n_bins"))
+        }
       }
     } else {
       .tinyBin <- c(.tidyBin, paste0("bin='breaks', breaks=", deparse1(bins)))
     }
     if (!.binless) {
-      .tidyBin <- c("n_bins=n_bins", "bin_mid=paste0(\"x\", bin_mid)")
+      .tidyBin <- c(.tidyBin, "bin_mid=paste0(\"x\", bin_mid)")
     }
-    .tidyBin <- eval(str2lang(paste0(ifelse(.binless, "tidyvpc::binless(",
-                                            "tidyvpc::binning("),
-                                     paste(.tidyBin, collapse=", "),
-                                     ")")))
+    .tidyBin <- str2lang(paste0(ifelse(.binless, "tidyvpc::binless(",
+                                       "tidyvpc::binning("),
+                                paste(.tidyBin, collapse=", "),
+                                ")"))
+    .tidyBin <- eval(.tidyBin)
     if (ci[2] != 1-ci[1]) {
       cli::cli_alert("tidyvpc does not support asymmetric confidence intervals, changing to symmetric")
       ci <- c(ci[1], 1-ci[1])
@@ -290,6 +317,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .vpcGg
   } else {
     # use vpc
+    rxode2::rxReq("vpc")
     vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
                  obs=.obs, obs_cols=.obsCols,
                  bins=bins, n_bins=n_bins, bin_mid=bin_mid,
