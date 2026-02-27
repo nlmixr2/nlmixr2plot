@@ -37,7 +37,8 @@ vpcPlot(
   ...,
   seed = 1009,
   idv = "time",
-  cens = FALSE
+  cens = FALSE,
+  method = c("vpc", "tidyvpc")
 )
 
 vpcPlotTad(..., idv = "tad")
@@ -56,9 +57,12 @@ this argument.}
 
 \item{n}{Number of VPC simulations}
 
-\item{bins}{either "density", "time", or "data", "none", or one of the approaches available in classInterval() such as "jenks" (default) or "pretty", or a numeric vector specifying the bin separators.}
+\item{bins}{either "density", "time", or "data", "none", or one of the
+approaches available in classInterval() such as "jenks" (default) or
+"pretty", or a numeric vector specifying the bin separators.}
 
-\item{n_bins}{when using the "auto" binning method, what number of bins to aim for}
+\item{n_bins}{when using the "auto" binning method, what number of bins to
+aim for}
 
 \item{bin_mid}{either "mean" for the mean of all timepoints (default) or "middle" to use the average of the bin boundaries.}
 
@@ -94,7 +98,9 @@ this argument.}
 
 \item{facet}{either "wrap", "columns", or "rows"}
 
-\item{scales}{either "fixed" (default), "free_y", "free_x" or "free"}
+\item{scales}{Are scales shared across all facets (the default,
+\code{"fixed"}), or do they vary across rows (\code{"free_x"}),
+columns (\code{"free_y"}), or both rows and columns (\code{"free"})?}
 
 \item{labeller}{ggplot2 labeller function to be passed to underlying ggplot object}
 
@@ -115,6 +121,11 @@ generator should be initialized}
 not.  When \code{cens=TRUE} this is actually a censoring vpc plot
 (with \code{vpcCens()} and \code{vpcCensTad()}).  When \code{cens=FALSE} this is
 traditional VPC plot (\code{vpcPlot()} and \code{vpcPlotTad()}).}
+
+\item{method}{the method to use for VPC plotting; can be \code{"vpc"} (uses the
+\pkg{vpc} package) or \code{"tidyvpc"} (uses the \pkg{tidyvpc} package).  By
+default, \code{"vpc"} is used when the \pkg{vpc} package is available, otherwise
+\code{"tidyvpc"} is used.}
 }
 \value{
 Simulated dataset (invisibly)
