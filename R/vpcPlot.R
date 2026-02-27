@@ -283,13 +283,14 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                                 ")"))
     .tidyBin <- eval(.tidyBin)
     if (ci[2] != 1-ci[1]) {
-      cli::cli_alert("tidyvpc does not support asymmetric confidence intervals, changing to symmetric")
+      warning("tidyvpc does not support asymmetric confidence intervals, changing to symmetric",
+              immediate.=TRUE, call.=FALSE)
       ci <- c(ci[1], 1-ci[1])
     }
     .vpcStats <- nlmixr2est::.collectWarn(eval(str2lang(paste0("tidyvpc::vpcstats(.tidyBin, qpred = c(", pi[1],
-                                                               ", 0.5, ", pi[2],
-                                                               "), conf.level=", ci[2], ")"))),
-                                          lst=TRUE)
+                                                              ", 0.5, ", pi[2],
+                                                              "), conf.level=", ci[2], ")"))),
+                                         lst=TRUE)
     .warn <- .vpcStats[[2]]
     .warn <- .warn[.warn != "", drop=FALSE]
     if (length(.warn) > 0L) {
