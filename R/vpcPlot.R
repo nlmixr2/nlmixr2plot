@@ -276,7 +276,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
         }
       }
     } else {
-      .tinyBin <- c(.tidyBin, paste0("bin='breaks', breaks=", deparse1(bins)))
+      .tidyBin <- c(.tidyBin, paste0("bin='breaks', breaks=", deparse1(bins)))
     }
     if (!.binless) {
       .tidyBin <- c(.tidyBin, "bin_mid=paste0(\"x\", bin_mid)")
