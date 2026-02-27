@@ -317,7 +317,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       .vpcGg <- .vpcGg + ylab(ylab)
     }
     if (!is.null(title)) {
-      .vpcGg <- .vpcGg + ggtitle(title)
+      .vpcGg <- .vpcGg + ggplot2::ggtitle(title)
     }
     if (!missing(show)) {
       warning("tidyvpc does not support showing specific percentiles, showing all", immediate.=TRUE,
