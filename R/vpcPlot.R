@@ -219,9 +219,6 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       .tidySim <- c(.tidySim, paste0("pred=", .simCols$pred))
     }
     if (cens && tidyvpc) {
-      if (pred_corr) {
-        stop("pred_corr and tidyvpc don't seem to work together", call.=FALSE)
-      }
       .w <- which(tolower(names(.obs)) == "cens")
       if (length(.w) != 1L) {
         stop(
@@ -297,6 +294,9 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       warning("tidyvpc does not support asymmetric confidence intervals, changing to symmetric",
               immediate.=TRUE, call.=FALSE)
       ci <- c(ci[1], 1-ci[1])
+    }
+    if (pred_corr) {
+      .tidyBin <- eval(str2lang(paste0("tidyvpc::predcorrect(.tidyBin)")))
     }
     .vpcStats <- nlmixr2est::.collectWarn(eval(str2lang(paste0("tidyvpc::vpcstats(.tidyBin, qpred = c(", pi[1],
                                                               ", 0.5, ", pi[2],
