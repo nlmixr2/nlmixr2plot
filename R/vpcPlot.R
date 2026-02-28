@@ -231,6 +231,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       }
       .cens <- names(.obs)[.w]
       .censVals <- unique(.obs[[.w]])
+      .censVals[is.na(.censVals)] <- 0
       .obs$blq <- .obs[[.w]] == 1
       .obs$alq <- .obs[[.w]] == -1
       .obs$lloq <- ifelse(.obs[[.w]] == 1, .obs[[.obsCols$dv]], NA_real_)
