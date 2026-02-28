@@ -54,7 +54,7 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header">
-<img src="logo.png" class="logo" alt=""><h1 id="nlmixr2plot-the-core-estimation-routines-for-nlmixr2">nlmixr2plot: The core estimation routines for nlmixr2<a class="anchor" aria-label="anchor" href="#nlmixr2plot-the-core-estimation-routines-for-nlmixr2"></a>
+<img src="logo.png" class="logo" alt=""><h1 id="nlmixr2plot-the-core-plotting-routines-for-nlmixr2">nlmixr2plot: The core plotting routines for nlmixr2<a class="anchor" aria-label="anchor" href="#nlmixr2plot-the-core-plotting-routines-for-nlmixr2"></a>
 </h1>
 </div>
 <!-- badges: start -->
@@ -103,6 +103,8 @@
 <span></span>
 <span><span class="co">## The fit is performed by the function nlmixr/nlmix2 specifying the model, data and estimate</span></span>
 <span><span class="va">fit</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://nlmixr2.github.io/nlmixr2est/reference/nlmixr2.html" class="external-link">nlmixr2</a></span><span class="op">(</span><span class="va">one.compartment</span>, <span class="va">theo_sd</span>,  est<span class="op">=</span><span class="st">"saem"</span>, <span class="fu"><a href="https://nlmixr2.github.io/nlmixr2est/reference/saemControl.html" class="external-link">saemControl</a></span><span class="op">(</span>print<span class="op">=</span><span class="fl">0</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; ℹ parameter labels from comments are typically ignored in non-interactive mode</span></span>
+<span><span class="co">#&gt; ℹ Need to run with the source intact to parse comments</span></span>
 <span><span class="co">#&gt; → loading into symengine environment...</span></span>
 <span><span class="co">#&gt; → pruning branches (`if`/`else`) of saem model...</span></span>
 <span><span class="co">#&gt; ✔ done</span></span>
@@ -111,23 +113,31 @@
 <span><span class="co">#&gt; → optimizing duplicate expressions in saem model...</span></span>
 <span><span class="co">#&gt; [====|====|====|====|====|====|====|====|====|====] 0:00:00</span></span>
 <span><span class="co">#&gt; ✔ done</span></span>
-<span><span class="co">#&gt; rxode2 2.0.11.9000 using 8 threads (see ?getRxThreads)</span></span>
+<span><span class="co">#&gt; ℹ calculate uninformed etas</span></span>
+<span><span class="co">#&gt; ℹ done</span></span>
+<span><span class="co">#&gt; rxode2 5.0.1 using 11 threads (see ?getRxThreads)</span></span>
 <span><span class="co">#&gt;   no cache: create with `rxCreateCache()`</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; Attaching package: 'rxode2'</span></span>
+<span><span class="co">#&gt; The following objects are masked from 'package:nlmixr2est':</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt;     boxCox, yeoJohnson</span></span>
 <span><span class="co">#&gt; Calculating covariance matrix</span></span>
+<span><span class="co">#&gt; [====|====|====|====|====|====|====|====|====|====] 0:00:00</span></span>
 <span><span class="co">#&gt; → loading into symengine environment...</span></span>
 <span><span class="co">#&gt; → pruning branches (`if`/`else`) of saem model...</span></span>
 <span><span class="co">#&gt; ✔ done</span></span>
 <span><span class="co">#&gt; → finding duplicate expressions in saem predOnly model 0...</span></span>
+<span><span class="co">#&gt; [====|====|====|====|====|====|====|====|====|====] 0:00:00</span></span>
 <span><span class="co">#&gt; → finding duplicate expressions in saem predOnly model 1...</span></span>
+<span><span class="co">#&gt; [====|====|====|====|====|====|====|====|====|====] 0:00:00</span></span>
 <span><span class="co">#&gt; → optimizing duplicate expressions in saem predOnly model 1...</span></span>
+<span><span class="co">#&gt; [====|====|====|====|====|====|====|====|====|====] 0:00:00</span></span>
 <span><span class="co">#&gt; → finding duplicate expressions in saem predOnly model 2...</span></span>
+<span><span class="co">#&gt; [====|====|====|====|====|====|====|====|====|====] 0:00:00</span></span>
 <span><span class="co">#&gt; ✔ done</span></span>
 <span><span class="co">#&gt; → Calculating residuals/tables</span></span>
 <span><span class="co">#&gt; ✔ done</span></span>
-<span><span class="co">#&gt; → compress origData in nlmixr2 object, save 5952</span></span>
-<span><span class="co">#&gt; → compress phiM in nlmixr2 object, save 62360</span></span>
-<span><span class="co">#&gt; → compress parHist in nlmixr2 object, save 9592</span></span>
-<span><span class="co">#&gt; → compress saem0 in nlmixr2 object, save 28760</span></span>
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span>
 <span><span class="co">#&gt; ── nlmixr² SAEM OBJF by FOCEi approximation ──</span></span>
@@ -137,16 +147,16 @@
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Time (sec $time): ──</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;         setup covariance saem table compress other</span></span>
-<span><span class="co">#&gt; elapsed 0.002       0.01 5.24   0.1     0.09 2.498</span></span>
+<span><span class="co">#&gt;            setup covariance  saem table    other</span></span>
+<span><span class="co">#&gt; elapsed 0.001322   0.006017 3.196 0.062 1.780661</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; ── Population Parameters ($parFixed or $parFixedDf): ──</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;        Parameter  Est.     SE %RSE Back-transformed(95%CI) BSV(CV%) Shrink(SD)%</span></span>
-<span><span class="co">#&gt; tka       Log Ka 0.454  0.196 43.1       1.57 (1.07, 2.31)     71.5   -0.0203% </span></span>
-<span><span class="co">#&gt; tcl       Log Cl  1.02 0.0853  8.4       2.76 (2.34, 3.26)     27.6      3.46% </span></span>
-<span><span class="co">#&gt; tv         Log V  3.45 0.0454 1.32       31.5 (28.8, 34.4)     13.4      9.89% </span></span>
-<span><span class="co">#&gt; add.sd           0.693                               0.693                     </span></span>
+<span><span class="co">#&gt; tka       Log Ka 0.464  0.195   42       1.59 (1.09, 2.33)     71.1   -0.0900% </span></span>
+<span><span class="co">#&gt; tcl       Log Cl  1.01  0.085 8.43       2.74 (2.32, 3.24)     27.4      4.80% </span></span>
+<span><span class="co">#&gt; tv         Log V  3.46 0.0447 1.29         31.7 (29, 34.6)     13.1      8.77% </span></span>
+<span><span class="co">#&gt; add.sd           0.696                               0.696                     </span></span>
 <span><span class="co">#&gt;  </span></span>
 <span><span class="co">#&gt;   Covariance Type ($covMethod): linFim</span></span>
 <span><span class="co">#&gt;   No correlations in between subject variability (BSV) matrix</span></span>
@@ -158,42 +168,57 @@
 <span><span class="co">#&gt; # A tibble: 132 × 19</span></span>
 <span><span class="co">#&gt;   ID     TIME    DV  PRED    RES IPRED   IRES  IWRES eta.ka eta.cl   eta.v    cp</span></span>
 <span><span class="co">#&gt;   &lt;fct&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;</span></span>
-<span><span class="co">#&gt; 1 1      0     0.74  0     0.74   0     0.74   1.07   0.103 -0.491 -0.0820  0   </span></span>
-<span><span class="co">#&gt; 2 1      0.25  2.84  3.27 -0.426  3.87 -1.03  -1.48   0.103 -0.491 -0.0820  3.87</span></span>
-<span><span class="co">#&gt; 3 1      0.57  6.57  5.85  0.723  6.82 -0.246 -0.356  0.103 -0.491 -0.0820  6.82</span></span>
-<span><span class="co">#&gt; # … with 129 more rows, and 7 more variables: depot &lt;dbl&gt;, center &lt;dbl&gt;,</span></span>
-<span><span class="co">#&gt; #   ka &lt;dbl&gt;, cl &lt;dbl&gt;, v &lt;dbl&gt;, tad &lt;dbl&gt;, dosenum &lt;dbl&gt;</span></span>
+<span><span class="co">#&gt; 1 1      0     0.74  0     0.74   0     0.74   1.06  0.0839 -0.477 -0.0849  0   </span></span>
+<span><span class="co">#&gt; 2 1      0.25  2.84  3.28 -0.437  3.83 -0.991 -1.42  0.0839 -0.477 -0.0849  3.83</span></span>
+<span><span class="co">#&gt; 3 1      0.57  6.57  5.86  0.715  6.76 -0.194 -0.278 0.0839 -0.477 -0.0849  6.76</span></span>
+<span><span class="co">#&gt; # ℹ 129 more rows</span></span>
+<span><span class="co">#&gt; # ℹ 7 more variables: depot &lt;dbl&gt;, center &lt;dbl&gt;, ka &lt;dbl&gt;, cl &lt;dbl&gt;, v &lt;dbl&gt;,</span></span>
+<span><span class="co">#&gt; #   tad &lt;dbl&gt;, dosenum &lt;dbl&gt;</span></span>
 <span></span>
 <span><span class="co"># this now gives the goodness of fit plots</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot</a></span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-1.png" width="100%"><img src="reference/figures/README-example-2.png" width="100%"></p>
-<div class="sourceCode" id="cb3"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous x-axis</span></span>
-<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous y-axis</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-3.png" width="100%"><img src="reference/figures/README-example-4.png" width="100%"></p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous x-axis</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-5.png" width="100%"><img src="reference/figures/README-example-6.png" width="100%"></p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous x-axis</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-7.png" width="100%"><img src="reference/figures/README-example-8.png" width="100%"></p>
-<div class="sourceCode" id="cb6"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous x-axis</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-9.png" width="100%"><img src="reference/figures/README-example-10.png" width="100%"></p>
-<div class="sourceCode" id="cb7"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous x-axis</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-11.png" width="100%"><img src="reference/figures/README-example-12.png" width="100%"></p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous x-axis</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-13.png" width="100%"><img src="reference/figures/README-example-14.png" width="100%"></p>
-<div class="sourceCode" id="cb9"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous x-axis</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-15.png" width="100%"><img src="reference/figures/README-example-16.png" width="100%"></p>
-<div class="sourceCode" id="cb10"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous x-axis</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-17.png" width="100%"><img src="reference/figures/README-example-18.png" width="100%"></p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous x-axis</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-19.png" width="100%"><img src="reference/figures/README-example-20.png" width="100%"></p>
-<div class="sourceCode" id="cb12"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous x-axis</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-21.png" width="100%"><img src="reference/figures/README-example-22.png" width="100%"></p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous x-axis</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-23.png" width="100%"><img src="reference/figures/README-example-24.png" width="100%"></p>
-<div class="sourceCode" id="cb14"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous x-axis</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-25.png" width="100%"><img src="reference/figures/README-example-26.png" width="100%"></p>
-<div class="sourceCode" id="cb15"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co">#&gt; Warning: Transformation introduced infinite values in continuous x-axis</span></span></code></pre></div>
-<p><img src="reference/figures/README-example-27.png" width="100%"><img src="reference/figures/README-example-28.png" width="100%"></p>
+<p><img src="reference/figures/README-example-1.png" alt="" width="100%"><img src="reference/figures/README-example-2.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb3-2"><a href="#cb3-2" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span>
+<span id="cb3-3"><a href="#cb3-3" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_y_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb3-4"><a href="#cb3-4" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-3.png" alt="" width="100%"><img src="reference/figures/README-example-4.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-5.png" alt="" width="100%"><img src="reference/figures/README-example-6.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb5-2"><a href="#cb5-2" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-7.png" alt="" width="100%"><img src="reference/figures/README-example-8.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb6-2"><a href="#cb6-2" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-9.png" alt="" width="100%"><img src="reference/figures/README-example-10.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb7-2"><a href="#cb7-2" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-11.png" alt="" width="100%"><img src="reference/figures/README-example-12.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb8-2"><a href="#cb8-2" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-13.png" alt="" width="100%"><img src="reference/figures/README-example-14.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb9-2"><a href="#cb9-2" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-15.png" alt="" width="100%"><img src="reference/figures/README-example-16.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb10-2"><a href="#cb10-2" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-17.png" alt="" width="100%"><img src="reference/figures/README-example-18.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb11-2"><a href="#cb11-2" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-19.png" alt="" width="100%"><img src="reference/figures/README-example-20.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb12-2"><a href="#cb12-2" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-21.png" alt="" width="100%"><img src="reference/figures/README-example-22.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb13-2"><a href="#cb13-2" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-23.png" alt="" width="100%"><img src="reference/figures/README-example-24.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb14-2"><a href="#cb14-2" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-25.png" alt="" width="100%"><img src="reference/figures/README-example-26.png" alt="" width="100%"></p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode R"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" tabindex="-1"></a><span class="co">#&gt; Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =</span></span>
+<span id="cb15-2"><a href="#cb15-2" tabindex="-1"></a><span class="co">#&gt; minor_breaks, : log-10 transformation introduced infinite values.</span></span></code></pre></div>
+<p><img src="reference/figures/README-example-27.png" alt="" width="100%"><img src="reference/figures/README-example-28.png" alt="" width="100%"></p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
