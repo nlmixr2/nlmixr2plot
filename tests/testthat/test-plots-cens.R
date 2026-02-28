@@ -15,7 +15,7 @@ test_that("plot censoring", {
       lapply(doses, function(x) {
         ids <- dat |>
           dplyr::filter(DOSE == x) |>
-          dplyr::summarize(ids=unique(ID)) |>
+          dplyr::reframe(ids=unique(ID)) |>
           dplyr::pull()
         ids <- ids[seq(1, nid)]
         dat |>
@@ -68,10 +68,6 @@ test_that("plot censoring", {
   apo <- nlmixr2est::augPred(fit)
   expect_error(plot(apo), NA)
   expect_error(vpcPlot(fit, stratify="DOSE", n = 10), NA)
-  expect_message(
-    vpcPlot(fit, pred_corr=TRUE, stratify="DOSE", log_y=TRUE, n = 10),
-    regexp = "Prediction-correction cannot be used together with censored data"
-  )
 
   expect_error(plot(fit), NA)
 

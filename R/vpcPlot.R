@@ -15,6 +15,10 @@
 #'   traditional VPC plot (`vpcPlot()` and `vpcPlotTad()`).
 #' @inheritParams vpc::vpc
 #' @inheritParams rxode2::rxSolve
+#' @param method the method to use for VPC plotting; can be `"vpc"` (uses the
+#'   \pkg{vpc} package) or `"tidyvpc"` (uses the \pkg{tidyvpc} package).  By
+#'   default, `"vpc"` is used when the \pkg{vpc} package is available, otherwise
+#'   `"tidyvpc"` is used.
 #' @param ... Args sent to \code{\link[rxode2]{rxSolve}}
 #' @return Simulated dataset (invisibly)
 #' @author Matthew L. Fidler
@@ -57,10 +61,20 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
                     xlab = NULL, ylab = NULL, title = NULL, smooth = TRUE, vpc_theme = NULL,
                     facet = "wrap", scales = "fixed", labeller = NULL, vpcdb = FALSE,
                     verbose = FALSE, ..., seed=1009,
-                    idv="time", cens=FALSE) {
+                    idv="time", cens=FALSE,
+                    method=c("vpc", "tidyvpc")) {
   force(idv)
-  rxode2::rxReq("vpc")
-    # Simulate with VPC
+  if (missing(method)) {
+    method <- ifelse(requireNamespace("vpc", quietly = TRUE), "vpc", "tidyvpc")
+  } else {
+    method <- match.arg(method)
+  }
+  if (method == "vpc") {
+    tidyvpc <- FALSE
+  } else {
+    tidyvpc <- TRUE
+  }
+  # Simulate with VPC
   if (inherits(fit, "nlmixr2vpcSim")) {
     .sim <- fit
     .fit <- attr(class(.sim), "fit")
@@ -95,18 +109,34 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
   }
   .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, .obs)
-  if (cens) {
+  if (any(names(.sim) == "evid")) {
+    .sim <- .sim[.sim$evid == 0,]
+  }
+  .evid <- which(tolower(names(.obs)) == "evid")
+  if (length(.evid) == 1L) {
+    .obs <- .obs[.obs[[.evid]] == 0,,drop=FALSE]
+  } else {
+    .mdv <- which(tolower(names(.obs)) == "mdv")
+    if (length(.mdv) == 1L) {
+      .obs <- .obs[.obs[[.mdv]] == 0,,drop=FALSE]
+    }
+  }
+  if (cens & !tidyvpc) {
     if (is.null(lloq) && is.null(uloq)) {
       stop("this data is not censored")
     }
     .sim$dv <- .sim$sim
     .sim$idv <- .sim[[idv]]
     .obs <- as.data.frame(fit)
+    # Make sure idv is not missing
+    #.obs <- .obs[!is.na(.obs[[idv]]), ]
+
     .obs$idv <- .obs[[idv]]
     .w <- which(tolower(names(.obs)) == idv)
     .time <- .obs[, .w]
     .obs <- .obs[, -.w]
     .obs$TIME <- .time
+    rxode2::rxReq("vpc")
     return(vpc::vpc_cens(sim=.sim,
                          obs=.obs,
                          bins=bins, n_bins=n_bins, bin_mid=bin_mid,
@@ -168,20 +198,150 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .obs <- .obs[, -.w]
   }
   .w <- which(tolower(names(.obs)) == "pred")
-  if (length(.w) > 0) {
+  if (!tidyvpc && length(.w) > 0) {
     .obs <- .obs[, -.w]
   }
   .obsCols$idv <- idv
   .w <- which(tolower(names(.sim)) == "id")
   names(.sim)[.w] <- "id"
-  vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
-               obs=.obs, obs_cols=.obsCols,
-               bins=bins, n_bins=n_bins, bin_mid=bin_mid,
-               show = show, stratify = stratify, pred_corr = pred_corr,
-               pred_corr_lower_bnd = pred_corr_lower_bnd, pi = pi, ci = ci,
-               uloq = uloq, lloq = lloq, log_y = log_y, log_y_min = log_y_min,
-               xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
-               facet = facet, scales=scales, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
+  if (idv == "tad") {
+    # drop values before TAD
+    .sim <- .sim[!is.na(.sim[[idv]]), ]
+  }
+  # use tidyvpc
+  if (tidyvpc) {
+    rxode2::rxReq("tidyvpc")
+    # Add arguments as needed
+    .tidyObs <- c(".obs", paste0("x=", .obsCols$idv), paste0("y=", .obsCols$dv))
+    .tidySim <- c(".tidyObs", ".sim",
+                  paste0("x=", .simCols$idv),
+                  paste0("y=", .simCols$dv))
+    if (pred_corr) {
+      .tidyObs <- c(.tidyObs, paste0("pred=", .obsCols$pred))
+      .tidySim <- c(.tidySim, paste0("pred=", .simCols$pred))
+    }
+    if (cens && tidyvpc) {
+      .w <- which(tolower(names(.obs)) == "cens")
+      if (length(.w) != 1L) {
+        stop(
+          "For 'cens = TRUE' and method = 'tidyvpc', the observed data must contain exactly one 'cens' column, ",
+          "encoded as 0 for non-censored, 1 for blq, and -1 for alq",
+          call. = FALSE
+        )
+      }
+      .cens <- names(.obs)[.w]
+      .censVals <- unique(.obs[[.w]])
+      .censVals[is.na(.censVals)] <- 0
+      .obs$blq <- .obs[[.w]] == 1
+      .obs$alq <- .obs[[.w]] == -1
+      .obs$lloq <- ifelse(.obs[[.w]] == 1, .obs[[.obsCols$dv]], NA_real_)
+      .obs$uloq <- ifelse(.obs[[.w]] == -1, .obs[[.obsCols$dv]], NA_real_)
+      .obs <- .obs |>
+        tidyr::fill(lloq, uloq, .direction="down")
+      # if there are only 0 and 1, then the data is blq
+      if (length(.censVals) == 2 && all(sort(.censVals) == c(0, 1))) {
+        .tidyObs <- c(.tidyObs, "blq=blq", "lloq=lloq")
+      } else if (length(.censVals) == 2 && all(sort(.censVals) == c(-1, 0))) {
+        .tidyObs <- c(.tidyObs, "alq=alq", "uloq = uloq")
+      } else if (length(.censVals) == 3 && all(sort(.censVals) == c(-1, 0, 1))) {
+        .tidyObs <- c(.tidyObs, "blq=blq", "alq=alq",
+                      "lloq=lloq", "uloq=uloq")
+      } else {
+        stop("it is unclear the censoring type of the data, please make sure the 'cens' column is coded as 0 for non-censored, 1 for blq, and -1 for alq",
+             call.=FALSE)
+      }
+    }
+    .tidyObs <- str2lang(paste0("tidyvpc::observed(",
+                                paste(.tidyObs, collapse=", "),
+                                ")"))
+    .tidySim <- str2lang(paste0("tidyvpc::simulated(",
+                                paste(.tidySim, collapse=", "),
+                                ")"))
+
+    .tidyObs <- eval(.tidyObs)
+    .tidySim <- eval(.tidySim)
+
+    if (!is.null(stratify)) {
+      .strat <- str2lang(paste0("tidyvpc::stratify(.tidySim, ~",
+                                paste(stratify, collapse="+"),
+                                ")"))
+      .tidySim <- eval(.strat)
+    }
+    .tidyBin <- ".tidySim"
+    .binless <- FALSE
+    if (inherits(bins, "character")) {
+      if (is.character(n_bins) && length(n_bins) == 1L &&
+            n_bins == "auto") {
+        n_bins <- min(max(3, ceiling(nrow(.obs)/40)), 15)
+      }
+      if (is.numeric(n_bins) && length(n_bins) == 1L) {
+        if (n_bins < 1) {
+          .binless <- TRUE
+        } else {
+          .tidyBin <- c(.tidyBin, paste0("bin=", deparse1(bins)))
+          .tidyBin <- c(.tidyBin, paste0("nbins=n_bins"))
+        }
+      }
+    } else {
+      .tidyBin <- c(.tidyBin, paste0("bin='breaks', breaks=", deparse1(bins)))
+    }
+    if (!.binless) {
+      .tidyBin <- c(.tidyBin, "bin_mid=paste0(\"x\", bin_mid)")
+    }
+    .tidyBin <- str2lang(paste0(ifelse(.binless, "tidyvpc::binless(",
+                                       "tidyvpc::binning("),
+                                paste(.tidyBin, collapse=", "),
+                                ")"))
+    .tidyBin <- eval(.tidyBin)
+    if (ci[2] != 1-ci[1]) {
+      warning("tidyvpc does not support asymmetric confidence intervals, changing to symmetric",
+              immediate.=TRUE, call.=FALSE)
+      ci <- c(ci[1], 1-ci[1])
+    }
+    if (pred_corr) {
+      .tidyBin <- eval(str2lang(paste0("tidyvpc::predcorrect(.tidyBin)")))
+    }
+    .vpcStats <- nlmixr2est::.collectWarn(eval(str2lang(paste0("tidyvpc::vpcstats(.tidyBin, qpred = c(", pi[1],
+                                                              ", 0.5, ", pi[2],
+                                                              "), conf.level=", ci[2], ")"))),
+                                         lst=TRUE)
+    .warn <- .vpcStats[[2]]
+    .warn <- .warn[.warn != "", drop=FALSE]
+    if (length(.warn) > 0L) {
+      lapply(.warn, function(w) {
+        warning(sub("\n+$", "", w), call.=FALSE)
+      })
+    }
+    .vpcGg <- plot(.vpcStats[[1]])
+    if (!is.null(xlab)) {
+      .vpcGg <- .vpcGg + ggplot2::xlab(xlab)
+    }
+    if (!is.null(ylab)) {
+      .vpcGg <- .vpcGg + ggplot2::ylab(ylab)
+    }
+    if (!is.null(title)) {
+      .vpcGg <- .vpcGg + ggplot2::ggtitle(title)
+    }
+    if (!missing(show)) {
+      warning("tidyvpc does not support showing specific percentiles, showing all", immediate.=TRUE,
+              call.=FALSE)
+    }
+    if (log_y) {
+      .vpcGg <- .vpcGg + xgxr::xgx_scale_y_log10()
+    }
+    .vpcGg
+  } else {
+    # use vpc
+    rxode2::rxReq("vpc")
+    vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
+                 obs=.obs, obs_cols=.obsCols,
+                 bins=bins, n_bins=n_bins, bin_mid=bin_mid,
+                 show = show, stratify = stratify, pred_corr = pred_corr,
+                 pred_corr_lower_bnd = pred_corr_lower_bnd, pi = pi, ci = ci,
+                 uloq = uloq, lloq = lloq, log_y = log_y, log_y_min = log_y_min,
+                 xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
+                 facet = facet, scales=scales, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
+  }
 }
 
 #' @rdname vpcPlot
