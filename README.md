@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file -->
 
-# nlmixr2plot: The core estimation routines for nlmixr2
+# nlmixr2plot: The core plotting routines for nlmixr2
 
 <!-- badges: start -->
 
@@ -66,6 +66,8 @@ one.compartment <- function() {
 
 ## The fit is performed by the function nlmixr/nlmix2 specifying the model, data and estimate
 fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
+#> ℹ parameter labels from comments are typically ignored in non-interactive mode
+#> ℹ Need to run with the source intact to parse comments
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
 #> ✔ done
@@ -74,23 +76,31 @@ fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
 #> → optimizing duplicate expressions in saem model...
 #> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> ✔ done
-#> rxode2 2.0.11.9000 using 8 threads (see ?getRxThreads)
+#> ℹ calculate uninformed etas
+#> ℹ done
+#> rxode2 5.0.1 using 11 threads (see ?getRxThreads)
 #>   no cache: create with `rxCreateCache()`
+#> 
+#> Attaching package: 'rxode2'
+#> The following objects are masked from 'package:nlmixr2est':
+#> 
+#>     boxCox, yeoJohnson
 #> Calculating covariance matrix
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
 #> ✔ done
 #> → finding duplicate expressions in saem predOnly model 0...
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> → finding duplicate expressions in saem predOnly model 1...
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> → optimizing duplicate expressions in saem predOnly model 1...
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> → finding duplicate expressions in saem predOnly model 2...
+#> [====|====|====|====|====|====|====|====|====|====] 0:00:00
 #> ✔ done
 #> → Calculating residuals/tables
 #> ✔ done
-#> → compress origData in nlmixr2 object, save 5952
-#> → compress phiM in nlmixr2 object, save 62360
-#> → compress parHist in nlmixr2 object, save 9592
-#> → compress saem0 in nlmixr2 object, save 28760
 
 print(fit)
 #> ── nlmixr² SAEM OBJF by FOCEi approximation ──
@@ -100,16 +110,16 @@ print(fit)
 #> 
 #> ── Time (sec $time): ──
 #> 
-#>         setup covariance saem table compress other
-#> elapsed 0.002       0.01 5.24   0.1     0.09 2.498
+#>            setup covariance  saem table    other
+#> elapsed 0.001322   0.006017 3.196 0.062 1.780661
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
 #>        Parameter  Est.     SE %RSE Back-transformed(95%CI) BSV(CV%) Shrink(SD)%
-#> tka       Log Ka 0.454  0.196 43.1       1.57 (1.07, 2.31)     71.5   -0.0203% 
-#> tcl       Log Cl  1.02 0.0853  8.4       2.76 (2.34, 3.26)     27.6      3.46% 
-#> tv         Log V  3.45 0.0454 1.32       31.5 (28.8, 34.4)     13.4      9.89% 
-#> add.sd           0.693                               0.693                     
+#> tka       Log Ka 0.464  0.195   42       1.59 (1.09, 2.33)     71.1   -0.0900% 
+#> tcl       Log Cl  1.01  0.085 8.43       2.74 (2.32, 3.24)     27.4      4.80% 
+#> tv         Log V  3.46 0.0447 1.29         31.7 (29, 34.6)     13.1      8.77% 
+#> add.sd           0.696                               0.696                     
 #>  
 #>   Covariance Type ($covMethod): linFim
 #>   No correlations in between subject variability (BSV) matrix
@@ -121,67 +131,82 @@ print(fit)
 #> # A tibble: 132 × 19
 #>   ID     TIME    DV  PRED    RES IPRED   IRES  IWRES eta.ka eta.cl   eta.v    cp
 #>   <fct> <dbl> <dbl> <dbl>  <dbl> <dbl>  <dbl>  <dbl>  <dbl>  <dbl>   <dbl> <dbl>
-#> 1 1      0     0.74  0     0.74   0     0.74   1.07   0.103 -0.491 -0.0820  0   
-#> 2 1      0.25  2.84  3.27 -0.426  3.87 -1.03  -1.48   0.103 -0.491 -0.0820  3.87
-#> 3 1      0.57  6.57  5.85  0.723  6.82 -0.246 -0.356  0.103 -0.491 -0.0820  6.82
-#> # … with 129 more rows, and 7 more variables: depot <dbl>, center <dbl>,
-#> #   ka <dbl>, cl <dbl>, v <dbl>, tad <dbl>, dosenum <dbl>
+#> 1 1      0     0.74  0     0.74   0     0.74   1.06  0.0839 -0.477 -0.0849  0   
+#> 2 1      0.25  2.84  3.28 -0.437  3.83 -0.991 -1.42  0.0839 -0.477 -0.0849  3.83
+#> 3 1      0.57  6.57  5.86  0.715  6.76 -0.194 -0.278 0.0839 -0.477 -0.0849  6.76
+#> # ℹ 129 more rows
+#> # ℹ 7 more variables: depot <dbl>, center <dbl>, ka <dbl>, cl <dbl>, v <dbl>,
+#> #   tad <dbl>, dosenum <dbl>
 
 # this now gives the goodness of fit plots
 plot(fit)
 ```
 
-<img src="man/figures/README-example-1.png" width="100%" /><img src="man/figures/README-example-2.png" width="100%" />
+<img src="man/figures/README-example-1.png" alt="" width="100%" /><img src="man/figures/README-example-2.png" alt="" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
-    #> Warning: Transformation introduced infinite values in continuous y-axis
+    #> Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
+    #> Warning in ggplot2::scale_y_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
 
-<img src="man/figures/README-example-3.png" width="100%" /><img src="man/figures/README-example-4.png" width="100%" />
+<img src="man/figures/README-example-3.png" alt="" width="100%" /><img src="man/figures/README-example-4.png" alt="" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+    #> Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
 
-<img src="man/figures/README-example-5.png" width="100%" /><img src="man/figures/README-example-6.png" width="100%" />
+<img src="man/figures/README-example-5.png" alt="" width="100%" /><img src="man/figures/README-example-6.png" alt="" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+    #> Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
 
-<img src="man/figures/README-example-7.png" width="100%" /><img src="man/figures/README-example-8.png" width="100%" />
+<img src="man/figures/README-example-7.png" alt="" width="100%" /><img src="man/figures/README-example-8.png" alt="" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+    #> Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
 
-<img src="man/figures/README-example-9.png" width="100%" /><img src="man/figures/README-example-10.png" width="100%" />
+<img src="man/figures/README-example-9.png" alt="" width="100%" /><img src="man/figures/README-example-10.png" alt="" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+    #> Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
 
-<img src="man/figures/README-example-11.png" width="100%" /><img src="man/figures/README-example-12.png" width="100%" />
+<img src="man/figures/README-example-11.png" alt="" width="100%" /><img src="man/figures/README-example-12.png" alt="" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+    #> Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
 
-<img src="man/figures/README-example-13.png" width="100%" /><img src="man/figures/README-example-14.png" width="100%" />
+<img src="man/figures/README-example-13.png" alt="" width="100%" /><img src="man/figures/README-example-14.png" alt="" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+    #> Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
 
-<img src="man/figures/README-example-15.png" width="100%" /><img src="man/figures/README-example-16.png" width="100%" />
+<img src="man/figures/README-example-15.png" alt="" width="100%" /><img src="man/figures/README-example-16.png" alt="" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+    #> Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
 
-<img src="man/figures/README-example-17.png" width="100%" /><img src="man/figures/README-example-18.png" width="100%" />
+<img src="man/figures/README-example-17.png" alt="" width="100%" /><img src="man/figures/README-example-18.png" alt="" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+    #> Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
 
-<img src="man/figures/README-example-19.png" width="100%" /><img src="man/figures/README-example-20.png" width="100%" />
+<img src="man/figures/README-example-19.png" alt="" width="100%" /><img src="man/figures/README-example-20.png" alt="" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+    #> Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
 
-<img src="man/figures/README-example-21.png" width="100%" /><img src="man/figures/README-example-22.png" width="100%" />
+<img src="man/figures/README-example-21.png" alt="" width="100%" /><img src="man/figures/README-example-22.png" alt="" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+    #> Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
 
-<img src="man/figures/README-example-23.png" width="100%" /><img src="man/figures/README-example-24.png" width="100%" />
+<img src="man/figures/README-example-23.png" alt="" width="100%" /><img src="man/figures/README-example-24.png" alt="" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+    #> Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
 
-<img src="man/figures/README-example-25.png" width="100%" /><img src="man/figures/README-example-26.png" width="100%" />
+<img src="man/figures/README-example-25.png" alt="" width="100%" /><img src="man/figures/README-example-26.png" alt="" width="100%" />
 
-    #> Warning: Transformation introduced infinite values in continuous x-axis
+    #> Warning in ggplot2::scale_x_log10(..., breaks = breaks, minor_breaks =
+    #> minor_breaks, : log-10 transformation introduced infinite values.
 
-<img src="man/figures/README-example-27.png" width="100%" /><img src="man/figures/README-example-28.png" width="100%" />
+<img src="man/figures/README-example-27.png" alt="" width="100%" /><img src="man/figures/README-example-28.png" alt="" width="100%" />

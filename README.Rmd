@@ -13,7 +13,7 @@ knitr::opts_chunk$set(
 )
 ```
 
-# nlmixr2plot: The core estimation routines for nlmixr2
+# nlmixr2plot: The core plotting routines for nlmixr2
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/nlmixr2/nlmixr2plot/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/nlmixr2/nlmixr2plot/actions/workflows/R-CMD-check.yaml)
