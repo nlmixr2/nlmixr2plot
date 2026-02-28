@@ -35,7 +35,8 @@ vpcPlot(
   ...,
   seed = 1009,
   idv = "time",
-  cens = FALSE
+  cens = FALSE,
+  method = c("vpc", "tidyvpc")
 )
 
 vpcPlotTad(..., idv = "tad")
@@ -150,7 +151,9 @@ vpcCens(..., cens = TRUE, idv = "time")
 
 - scales:
 
-  either "fixed" (default), "free_y", "free_x" or "free"
+  Are scales shared across all facets (the default, `"fixed"`), or do
+  they vary across rows (`"free_x"`), columns (`"free_y"`), or both rows
+  and columns (`"free"`)?
 
 - labeller:
 
@@ -186,6 +189,13 @@ vpcCens(..., cens = TRUE, idv = "time")
   `cens=TRUE` this is actually a censoring vpc plot (with `vpcCens()`
   and `vpcCensTad()`). When `cens=FALSE` this is traditional VPC plot
   (`vpcPlot()` and `vpcPlotTad()`).
+
+- method:
+
+  the method to use for VPC plotting; can be `"vpc"` (uses the vpc
+  package) or `"tidyvpc"` (uses the tidyvpc package). By default,
+  `"vpc"` is used when the vpc package is available, otherwise
+  `"tidyvpc"` is used.
 
 ## Value
 
@@ -251,14 +261,19 @@ fit <-
 #>  
 #> → Calculating residuals/tables
 #> ✔ done
+#> → compress origData in nlmixr2 object, save 6584
+#> → compress parHistData in nlmixr2 object, save 8280
+#> → compress phiM in nlmixr2 object, save 312896
 
 vpcPlot(fit)
 #>  
 #>  
-#> Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
-#> ℹ Please use `linewidth` instead.
-#> ℹ The deprecated feature was likely used in the vpc package.
-#>   Please report the issue to the authors.
+#> Warning: No software packages matched for filtering values, not filtering.
+#>  Object class: other, data.frame
+#>  Available filters: phoenix, nonmem
+#> Warning: No software packages matched for filtering values, not filtering.
+#>  Object class: other, nlmixr2vpcSim, data.frame
+#>  Available filters: phoenix, nonmem
 
 # }
 ```

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">nlmixr2plot</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.0.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.0.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -68,7 +68,8 @@
 <span>  <span class="va">...</span>,</span>
 <span>  seed <span class="op">=</span> <span class="fl">1009</span>,</span>
 <span>  idv <span class="op">=</span> <span class="st">"time"</span>,</span>
-<span>  cens <span class="op">=</span> <span class="cn">FALSE</span></span>
+<span>  cens <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  method <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"vpc"</span>, <span class="st">"tidyvpc"</span><span class="op">)</span></span>
 <span><span class="op">)</span></span>
 <span></span>
 <span><span class="fu">vpcPlotTad</span><span class="op">(</span><span class="va">...</span>, idv <span class="op">=</span> <span class="st">"tad"</span><span class="op">)</span></span>
@@ -98,11 +99,14 @@ this argument.</p></dd>
 
 
 <dt id="arg-bins">bins<a class="anchor" aria-label="anchor" href="#arg-bins"></a></dt>
-<dd><p>either "density", "time", or "data", "none", or one of the approaches available in classInterval() such as "jenks" (default) or "pretty", or a numeric vector specifying the bin separators.</p></dd>
+<dd><p>either "density", "time", or "data", "none", or one of the
+approaches available in classInterval() such as "jenks" (default) or
+"pretty", or a numeric vector specifying the bin separators.</p></dd>
 
 
 <dt id="arg-n-bins">n_bins<a class="anchor" aria-label="anchor" href="#arg-n-bins"></a></dt>
-<dd><p>when using the "auto" binning method, what number of bins to aim for</p></dd>
+<dd><p>when using the "auto" binning method, what number of bins to
+aim for</p></dd>
 
 
 <dt id="arg-bin-mid">bin_mid<a class="anchor" aria-label="anchor" href="#arg-bin-mid"></a></dt>
@@ -174,7 +178,9 @@ this argument.</p></dd>
 
 
 <dt id="arg-scales">scales<a class="anchor" aria-label="anchor" href="#arg-scales"></a></dt>
-<dd><p>either "fixed" (default), "free_y", "free_x" or "free"</p></dd>
+<dd><p>Are scales shared across all facets (the default,
+<code>"fixed"</code>), or do they vary across rows (<code>"free_x"</code>),
+columns (<code>"free_y"</code>), or both rows and columns (<code>"free"</code>)?</p></dd>
 
 
 <dt id="arg-labeller">labeller<a class="anchor" aria-label="anchor" href="#arg-labeller"></a></dt>
@@ -209,6 +215,13 @@ generator should be initialized</p></dd>
 not.  When <code>cens=TRUE</code> this is actually a censoring vpc plot
 (with <code>vpcCens()</code> and <code>vpcCensTad()</code>).  When <code>cens=FALSE</code> this is
 traditional VPC plot (<code>vpcPlot()</code> and <code>vpcPlotTad()</code>).</p></dd>
+
+
+<dt id="arg-method">method<a class="anchor" aria-label="anchor" href="#arg-method"></a></dt>
+<dd><p>the method to use for VPC plotting; can be <code>"vpc"</code> (uses the
+<span class="pkg">vpc</span> package) or <code>"tidyvpc"</code> (uses the <span class="pkg">tidyvpc</span> package).  By
+default, <code>"vpc"</code> is used when the <span class="pkg">vpc</span> package is available, otherwise
+<code>"tidyvpc"</code> is used.</p></dd>
 
 </dl></div>
     <div class="section level2">
@@ -275,14 +288,19 @@ traditional VPC plot (<code>vpcPlot()</code> and <code>vpcPlotTad()</code>).</p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> → Calculating residuals/tables</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> done</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> → compress origData in nlmixr2 object, save 6584</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> → compress parHistData in nlmixr2 object, save 8280</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> → compress phiM in nlmixr2 object, save 312896</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="fu">vpcPlot</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Please use `linewidth` instead.</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> The deprecated feature was likely used in the <span style="color: #0000BB;">vpc</span> package.</span>
-<span class="r-wrn co"><span class="r-pr">#&gt;</span>   Please report the issue to the authors.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>No software packages matched for filtering values, not filtering.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span>  Object class: other, data.frame</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span>  Available filters: phoenix, nonmem</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>No software packages matched for filtering values, not filtering.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span>  Object class: other, nlmixr2vpcSim, data.frame</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span>  Available filters: phoenix, nonmem</span>
 <span class="r-plt img"><img src="vpcPlot-1.png" alt="" width="700" height="433"></span>
 <span class="r-in"><span><span class="co"># }</span></span></span>
 </code></pre></div>
