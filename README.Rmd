@@ -24,7 +24,7 @@ knitr::opts_chunk$set(
 [![codecov](https://codecov.io/gh/nlmixr2/nlmixr2plot/branch/main/graph/badge.svg)](https://app.codecov.io/gh/nlmixr2/nlmixr2plot)
 <!-- badges: end -->
 
-The goal of nlmixr2plot is to provide the nlmixr2 core estimation routines.
+The goal of nlmixr2plot is to provide the nlmixr2 core plotting routines.
 
 ## Installation
 

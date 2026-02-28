@@ -16,7 +16,7 @@ downloads](https://cranlogs.r-pkg.org/badges/nlmixr2plot)](https://cran.r-projec
 [![codecov](https://codecov.io/gh/nlmixr2/nlmixr2plot/branch/main/graph/badge.svg)](https://app.codecov.io/gh/nlmixr2/nlmixr2plot)
 <!-- badges: end -->
 
-The goal of nlmixr2plot is to provide the nlmixr2 core estimation
+The goal of nlmixr2plot is to provide the nlmixr2 core plotting
 routines.
 
 ## Installation
@@ -110,8 +110,8 @@ print(fit)
 #> 
 #> ── Time (sec $time): ──
 #> 
-#>            setup covariance  saem table    other
-#> elapsed 0.001322   0.006017 3.196 0.062 1.780661
+#>            setup covariance  saem table   other
+#> elapsed 0.001367   0.008013 3.257 0.061 1.77462
 #> 
 #> ── Population Parameters ($parFixed or $parFixedDf): ──
 #> 
