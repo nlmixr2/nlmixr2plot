@@ -66,6 +66,8 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   force(idv)
   if (missing(method)) {
     method <- ifelse(requireNamespace("vpc", quietly = TRUE), "vpc", "tidyvpc")
+  } else {
+    method <- match.arg(method)
   }
   if (method == "vpc") {
     tidyvpc <- FALSE
@@ -311,10 +313,10 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     }
     .vpcGg <- plot(.vpcStats[[1]])
     if (!is.null(xlab)) {
-      .vpcGg <- .vpcGg + xlab(xlab)
+      .vpcGg <- .vpcGg + ggplot2::xlab(xlab)
     }
     if (!is.null(ylab)) {
-      .vpcGg <- .vpcGg + ylab(ylab)
+      .vpcGg <- .vpcGg + ggplot2::ylab(ylab)
     }
     if (!is.null(title)) {
       .vpcGg <- .vpcGg + ggplot2::ggtitle(title)
