@@ -2,6 +2,8 @@
 
 ## nlmixr2plot 5.0.1
 
+CRAN release: 2026-02-28
+
 - Updated nlmixr2 to optionally use the `tidyvpc` package
 
 ## nlmixr2plot 5.0.0
