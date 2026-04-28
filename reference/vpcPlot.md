@@ -256,14 +256,17 @@ fit <-
 #> → finding duplicate expressions in saem predOnly model 0...
 #> → finding duplicate expressions in saem predOnly model 1...
 #> → finding duplicate expressions in saem predOnly model 2...
+#> → optimizing duplicate expressions in saem predOnly model 2...
 #> ✔ done
 #>  
 #>  
 #> → Calculating residuals/tables
 #> ✔ done
-#> → compress origData in nlmixr2 object, save 6592
+#> → compress origData in nlmixr2 object, save 6584
 #> → compress parHistData in nlmixr2 object, save 8296
-#> → compress phiM in nlmixr2 object, save 312904
+#> → compress phiM in nlmixr2 object, save 429424
+#> Warning:  mu-reference transform (exp) for `tcl` lost since bounded (and performance degraded)
+#> Warning: to keep mu-referencing remove bounds or use control=list(boundedTransform=FALSE)
 
 vpcPlot(fit)
 #>  
