@@ -263,10 +263,8 @@ fit <-
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8296
+#> → compress parHistData in nlmixr2 object, save 8280
 #> → compress phiM in nlmixr2 object, save 429424
-#> Warning:  mu-reference transform (exp) for `tcl` lost since bounded (and performance degraded)
-#> Warning: to keep mu-referencing remove bounds or use control=list(boundedTransform=FALSE)
 
 vpcPlot(fit)
 #>  

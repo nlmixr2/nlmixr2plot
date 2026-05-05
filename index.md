@@ -9,6 +9,7 @@ You can install the development version of nlmixr2plot from
 [GitHub](https://github.com/) with:
 
 ``` r
+
 # install.packages("remotes")
 remotes::install_github("nlmixr2/nlmixr2data")
 remotes::install_github("nlmixr2/lotri")
@@ -21,6 +22,7 @@ remotes::install_github("nlmixr2/nlmixr2plot")
 For most people, using nlmixr2 directly would be likely easier.
 
 ``` r
+
 library(nlmixr2est)
 #> Loading required package: nlmixr2data
 library(nlmixr2plot)
