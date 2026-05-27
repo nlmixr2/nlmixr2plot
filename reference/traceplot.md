@@ -89,9 +89,6 @@ fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
 #>  
 #> → Calculating residuals/tables
 #> ✔ done
-#> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8344
-#> → compress phiM in nlmixr2 object, save 312080
 
 # This shows the traceplot of the fit (useful for saem)
 traceplot(fit)
