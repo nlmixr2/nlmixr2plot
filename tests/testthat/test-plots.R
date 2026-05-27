@@ -145,3 +145,37 @@ test_that("test plots with vdiffr", {
     #}
   })
 })
+
+test_that("plot works for models without compartments (issue #33)", {
+  poisModel <- function() {
+    ini({
+      tlambda <- log(2)
+      eta.lambda ~ 0.1
+    })
+    model({
+      lambda <- exp(tlambda + eta.lambda)
+      DV ~ dpois(lambda)
+    })
+  }
+
+  d <- data.frame(
+    ID = rep(1:5, each = 4),
+    TIME = rep(0:3, 5),
+    DV = c(1, 2, 3, 2, 0, 1, 2, 3, 2, 1, 3, 2, 1, 2, 1, 0, 3, 2, 4, 1)
+  )
+
+  suppressMessages(
+    fit <- try(
+      nlmixr2est::nlmixr(
+        poisModel, d,
+        est = "focei",
+        control = nlmixr2est::foceiControl(print = 0, eval.max = 1, maxOuterIterations = 0)
+      ),
+      silent = TRUE
+    )
+  )
+  skip_if(inherits(fit, "try-error"))
+
+  expect_error(plotted <- plot(fit), NA)
+  expect_true("All Data" %in% names(plotted))
+})
