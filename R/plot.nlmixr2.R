@@ -15,7 +15,7 @@
     }
   }
   if (!.doCmt) {
-    .dat$CMT <- factor("All Data")
+    .dat$CMT <- factor(rep("All Data", nrow(.dat)), levels = "All Data")
   } else {
     levels(.dat$CMT) <- paste("Endpoint: ", levels(.dat$CMT))
   }
