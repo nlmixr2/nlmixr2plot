@@ -75,7 +75,7 @@ fit <- nlmixr2est::nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(pr
 #> ✔ done
 #> ℹ calculate uninformed etas
 #> ℹ done
-#> rxode2 5.1.1 using 2 threads (see ?getRxThreads)
+#> rxode2 5.1.2 using 2 threads (see ?getRxThreads)
 #>   no cache: create with `rxCreateCache()`
 #> 
 #> Attaching package: ‘rxode2’
@@ -95,6 +95,9 @@ fit <- nlmixr2est::nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(pr
 #>  
 #> → Calculating residuals/tables
 #> ✔ done
+#> → compress origData in nlmixr2 object, save 6584
+#> → compress parHistData in nlmixr2 object, save 8344
+#> → compress phiM in nlmixr2 object, save 312080
 
 # augPred shows more points for the fit:
 
