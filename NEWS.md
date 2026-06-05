@@ -1,6 +1,6 @@
 # nlmixr2plot 5.0.2
 
-- Fix plot error for model without compartments
+* Fixed an error when plotting models without compartments (#33)
 
 # nlmixr2plot 5.0.1
 
