@@ -14,6 +14,6 @@ These objects are imported from other packages. Follow the links
 below to see their documentation.
 
 \describe{
-  \item{rxode2}{\code{\link[rxode2:stat_amt]{geom_amt}}, \code{\link[rxode2:stat_cens]{geom_cens}}, \code{\link[rxode2]{stat_amt}}, \code{\link[rxode2]{stat_cens}}}
+  \item{rxode2}{\code{\link[rxode2:geom_amt]{geom_amt()}}, \code{\link[rxode2:geom_cens]{geom_cens()}}, \code{\link[rxode2:stat_amt]{stat_amt()}}, \code{\link[rxode2:stat_cens]{stat_cens()}}}
 }}
 

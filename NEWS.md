@@ -1,3 +1,7 @@
+# nlmixr2plot 5.0.2
+
+- Fix plot error for model without compartments
+
 # nlmixr2plot 5.0.1
 
 * Updated nlmixr2 to optionally use the `tidyvpc` package
