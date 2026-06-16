@@ -2,6 +2,8 @@
 
 ## nlmixr2plot 5.0.2
 
+CRAN release: 2026-06-11
+
 - Fixed an error when plotting models without compartments
   ([\#33](https://github.com/nlmixr2/nlmixr2plot/issues/33))
 
