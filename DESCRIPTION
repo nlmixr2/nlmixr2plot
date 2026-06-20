@@ -25,7 +25,7 @@ Depends:
 Imports:
     ggforce,
     ggplot2 (>= 3.4.0),
-    ggtibble (>= 1.1.0),
+    ggtibble (>= 1.0.3.9000),
     nlmixr2est,
     nlmixr2extra (>= 5.0.0),
     rxode2,

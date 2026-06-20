@@ -9,8 +9,8 @@
   `ggtibble` for reporting with `ggtibble::as_ggtibble()`.
 * Individual/`augPred` plots are now paginated with
   `ggforce::facet_wrap_paginate()`, removing the hand-written 16-IDs-per-page
-  chunking.  Requires `ggtibble (>= 1.1.0)` and `ggforce`; the minimum R version
-  is now 4.3.
+  chunking.  Requires `ggtibble (>= 1.0.3.9000)` and `ggforce`; the minimum R
+  version is now 4.3.
 
 # nlmixr2plot 5.0.2
 
