@@ -177,8 +177,6 @@ plot.nlmixr2FitData <- function(x, ...) {
     .lst[[.cmt]] <- plotCmt(.dat, cmt = .cmt)
   }
 
-  # A named, nested `gglist`: top-level entries are the traceplot/bootplot (single
-  # ggplots) and one nested `gglist` per compartment/endpoint (from `plotCmt()`).
   ggtibble::new_gglist(.lst)
 }
 
@@ -259,9 +257,6 @@ plotCmt <- function(x, cmt) {
         }
       }
     }
-    # Individual plots: 16 IDs (4x4) per page.  Build one paginated plot and let
-    # `ggtibble::as_gglist()` expand it into one element per page, then re-add the
-    # "(j of n)" page counter to each page's title.
     .pIndividual <- ggplot2::ggplot(.datCmt, ggplot2::aes(x = .data$TIME, y = .data$DV)) +
       ggplot2::geom_point() +
       ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$IPRED), col = "red", linewidth = 1.2)

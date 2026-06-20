@@ -52,9 +52,6 @@
 #' @importFrom ggplot2 .data
 plot.nlmixr2AugPred <- function(x, y, ...) {
   if (any(names(x) == "Endpoint")) {
-    # Flatten the per-endpoint page plots into one `gglist`.  Accumulate into a
-    # plain list and build the `gglist` once so that no concatenation (and hence
-    # no `vctrs` dependency) is needed here.
     .ret <- list()
     for (.tmp in levels(x$Endpoint)) {
       utils::assignInMyNamespace(".augPredEndpoint", .tmp)
@@ -68,8 +65,6 @@ plot.nlmixr2AugPred <- function(x, y, ...) {
   } else {
     dobs <- x[x$ind == "Observed", ]
     dpred <- x[x$ind != "Observed", ]
-    # 16 IDs (4x4) per page; `as_gglist()` expands the paginated plot into one
-    # element per page (each carrying the endpoint title).
     .p <-
       ggplot2::ggplot(x, ggplot2::aes(.data$time, .data$values, col = .data$ind)) +
       ggplot2::geom_line(data = dpred, linewidth = 1.2) +
