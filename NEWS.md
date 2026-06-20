@@ -1,3 +1,11 @@
+# nlmixr2plot 5.0.2.9000
+
+* Removed obsolete `rxode2::.linCmtSensB()` test guards. That internal
+  was removed from `rxode2` in 2025, so the `try()`/`skip_if_not()`
+  checks always fell through and never skipped. `linCmt()` gradients are
+  now always available, so the guards are unnecessary and the tests run
+  unconditionally.
+
 # nlmixr2plot 5.0.2
 
 * Fixed an error when plotting models without compartments (#33)
