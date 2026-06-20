@@ -11,6 +11,11 @@
   `ggforce::facet_wrap_paginate()`, removing the hand-written 16-IDs-per-page
   chunking.  Requires `ggtibble (>= 1.0.3.9000)` and `ggforce`; the minimum R
   version is now 4.3.
+* Removed obsolete `rxode2::.linCmtSensB()` test guards. That internal
+  was removed from `rxode2` in 2025, so the `try()`/`skip_if_not()`
+  checks always fell through and never skipped. `linCmt()` gradients are
+  now always available, so the guards are unnecessary and the tests run
+  unconditionally.
 
 # nlmixr2plot 5.0.2
 
