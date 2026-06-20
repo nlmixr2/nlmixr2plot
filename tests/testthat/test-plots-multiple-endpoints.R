@@ -1,5 +1,8 @@
 test_that("multiple endpoint plots", {
   skip_on_cran()
+  skip_if_not_installed("nlmixr2data")
+  skip_if_not_installed("vpc")
+  skip_if_not_installed("tidyvpc")
 
   pk.turnover.emax3 <- function() {
     ini({

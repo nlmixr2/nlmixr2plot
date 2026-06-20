@@ -12,8 +12,8 @@
 \item{...}{additional arguments (currently ignored)}
 }
 \value{
-An \code{nlmixr2PlotList} object (a list of ggplot2 objects with easier
-plotting for all of them at the same time)
+A named, nested \code{ggtibble::gglist} object (a list of ggplot2 objects
+with easier plotting of all of them at the same time)
 }
 \description{
 Plot some standard goodness of fit plots for the focei fitted object

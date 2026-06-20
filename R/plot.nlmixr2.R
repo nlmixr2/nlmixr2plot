@@ -127,8 +127,8 @@
 #'
 #' @param x a focei fit object
 #' @param ... additional arguments (currently ignored)
-#' @return An `nlmixr2PlotList` object (a list of ggplot2 objects with easier
-#'   plotting for all of them at the same time)
+#' @return A named, nested `ggtibble::gglist` object (a list of ggplot2 objects
+#'   with easier plotting of all of them at the same time)
 #' @author Wenping Wang & Matthew Fidler
 #' @examples
 #' \donttest{
@@ -177,8 +177,9 @@ plot.nlmixr2FitData <- function(x, ...) {
     .lst[[.cmt]] <- plotCmt(.dat, cmt = .cmt)
   }
 
-  class(.lst) <- "nlmixr2PlotList"
-  .lst
+  # A named, nested `gglist`: top-level entries are the traceplot/bootplot (single
+  # ggplots) and one nested `gglist` per compartment/endpoint (from `plotCmt()`).
+  ggtibble::new_gglist(.lst)
 }
 
 #' Plot data from one compartment
@@ -258,54 +259,32 @@ plotCmt <- function(x, cmt) {
         }
       }
     }
-    # .idPlot <- try(plot.nlmixr2AugPred(nlmixr2AugPred(object)));
-    # if (inherits(.idPlot, "try-error")){
-    .ids <- unique(.datCmt$ID)
-    .s <- seq(1, length(.ids), by = 16)
-    .j <- 0
-    for (i in .s) {
-      .j <- .j + 1
-      .tmp <- .ids[seq(i, i + 15)]
-      .tmp <- .tmp[!is.na(.tmp)]
-      .d1 <- .datCmt[.datCmt$ID %in% .tmp, ]
-
-      .pIndividual <- ggplot2::ggplot(.d1, ggplot2::aes(x = .data$TIME, y = .data$DV)) +
-        ggplot2::geom_point() +
-        ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$IPRED), col = "red", linewidth = 1.2)
-      if (any(names(.d1) == "PRED")) {
-        .pIndividual <- .pIndividual + ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$PRED), col = "blue", linewidth = 1.2)
-      }
-      .pIndividual <- .pIndividual + ggplot2::facet_wrap(~ID) +
-        ggplot2::ggtitle(cmt, sprintf("Individual Plots (%s of %s)", .j, length(.s))) +
-        rxode2::rxTheme()
-      if (any(names(.d1) == "lowerLim")) {
-        .pIndividual <-
-          .pIndividual +
-          geom_cens(ggplot2::aes(lower = .data$lowerLim, upper = .data$upperLim), fill = "purple")
-      }
-      .lst[[paste("individual", i, sep = "_")]] <- .pIndividual
+    # Individual plots: 16 IDs (4x4) per page.  Build one paginated plot and let
+    # `ggtibble::as_gglist()` expand it into one element per page, then re-add the
+    # "(j of n)" page counter to each page's title.
+    .pIndividual <- ggplot2::ggplot(.datCmt, ggplot2::aes(x = .data$TIME, y = .data$DV)) +
+      ggplot2::geom_point() +
+      ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$IPRED), col = "red", linewidth = 1.2)
+    if (any(names(.datCmt) == "PRED")) {
+      .pIndividual <- .pIndividual +
+        ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$PRED), col = "blue", linewidth = 1.2)
     }
-    .datCmt$id2 <- factor(paste0("id: ", .datCmt$ID, "; dose#: ", .datCmt$dosenum))
-    .ids <- unique(.datCmt$id2)
-    .s <- seq(1, length(.ids), by = 16)
-    .j <- 0
+    if (any(names(.datCmt) == "lowerLim")) {
+      .pIndividual <- .pIndividual +
+        geom_cens(ggplot2::aes(lower = .data$lowerLim, upper = .data$upperLim), fill = "purple")
+    }
+    .pIndividual <- .pIndividual +
+      ggforce::facet_wrap_paginate(~ID, nrow = 4, ncol = 4, page = 1) +
+      rxode2::rxTheme()
+    .pages <- ggtibble::as_gglist(.pIndividual)
+    .nPages <- length(.pages)
+    for (.j in seq_len(.nPages)) {
+      .lst[[paste("individual", .j, sep = "_")]] <-
+        .pages[[.j]] +
+        ggplot2::ggtitle(cmt, sprintf("Individual Plots (%s of %s)", .j, .nPages))
+    }
   }
-  class(.lst) <- "nlmixr2PlotList"
-  .lst
-}
-
-#' @export
-plot.nlmixr2PlotList <- function(x, y, ...) {
-  .x <- x
-  class(.x) <- NULL
-  for (.i in seq_along(.x)) {
-    try(plot(.x[[.i]]))
-  }
-}
-
-#' @export
-print.nlmixr2PlotList <- function(x, ...) {
-  plot.nlmixr2PlotList(x, ...)
+  ggtibble::new_gglist(.lst)
 }
 
 #' @export

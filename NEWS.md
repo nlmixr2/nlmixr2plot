@@ -1,3 +1,17 @@
+# nlmixr2plot 5.0.3
+
+* Plot collections returned by `plot()` (for fits and `augPred` objects) are now
+  `gglist` objects from the `ggtibble` package instead of the internal
+  `nlmixr2PlotList` class.  They still print/plot all figures at once and support
+  broadcasting `ggplot2` additions (e.g. `plot(fit) + ggplot2::theme_bw()`), and
+  the top-level object remains a named, nested collection
+  (`plot(fit)[["Endpoint: ..."]]`).  The collection can also be converted to a
+  `ggtibble` for reporting with `ggtibble::as_ggtibble()`.
+* Individual/`augPred` plots are now paginated with
+  `ggforce::facet_wrap_paginate()`, removing the hand-written 16-IDs-per-page
+  chunking.  Requires `ggtibble (>= 1.1.0)` and `ggforce`; the minimum R version
+  is now 4.3.
+
 # nlmixr2plot 5.0.2
 
 * Fixed an error when plotting models without compartments (#33)

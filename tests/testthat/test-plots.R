@@ -1,4 +1,8 @@
 test_that("test plots with vdiffr", {
+  skip_if_not_installed("nlmixr2data")
+  skip_if_not_installed("withr")
+  skip_if_not_installed("vpc")
+  skip_if_not_installed("tidyvpc")
 
   one.cmt <- function() {
     ini({
