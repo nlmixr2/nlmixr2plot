@@ -4,10 +4,16 @@
 \alias{plot.nlmixr2FitData}
 \title{Plot a nlmixr2 data object}
 \usage{
-\method{plot}{nlmixr2FitData}(x, ...)
+\method{plot}{nlmixr2FitData}(x, covariate = NULL, ...)
 }
 \arguments{
 \item{x}{a focei fit object}
+
+\item{covariate}{Optional character vector of covariate column names (from the
+model input data) to plot against each between-subject variability (BSV)
+parameter. Default \code{NULL} (no covariate plots). The first row per individual
+is used, so covariates are assumed time-invariant (a time-varying covariate
+is represented by its baseline value).}
 
 \item{...}{additional arguments (currently ignored)}
 }
@@ -16,7 +22,12 @@ A named, nested \code{ggtibble::gglist} object (a list of ggplot2 objects
 with easier plotting of all of them at the same time)
 }
 \description{
-Plot some standard goodness of fit plots for the focei fitted object
+Plot some standard goodness of fit plots for the focei fitted object.  When
+the model has between-subject variability (BSV), the returned collection also
+includes a nested \code{"bsv"} element (inside each data/compartment group) with
+QQ plots for each BSV parameter, BSV-BSV correlation plots (when more than one
+BSV parameter is present) and, when \code{covariate} is supplied, BSV-by-covariate
+plots.
 }
 \examples{
 \donttest{

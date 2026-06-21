@@ -123,9 +123,19 @@
 
 #' Plot a nlmixr2 data object
 #'
-#' Plot some standard goodness of fit plots for the focei fitted object
+#' Plot some standard goodness of fit plots for the focei fitted object.  When
+#' the model has between-subject variability (BSV), the returned collection also
+#' includes a nested `"bsv"` element (inside each data/compartment group) with
+#' QQ plots for each BSV parameter, BSV-BSV correlation plots (when more than one
+#' BSV parameter is present) and, when `covariate` is supplied, BSV-by-covariate
+#' plots.
 #'
 #' @param x a focei fit object
+#' @param covariate Optional character vector of covariate column names (from the
+#'   model input data) to plot against each between-subject variability (BSV)
+#'   parameter. Default `NULL` (no covariate plots). The first row per individual
+#'   is used, so covariates are assumed time-invariant (a time-varying covariate
+#'   is represented by its baseline value).
 #' @param ... additional arguments (currently ignored)
 #' @return A named, nested `ggtibble::gglist` object (a list of ggplot2 objects
 #'   with easier plotting of all of them at the same time)
@@ -161,7 +171,7 @@
 #' plot(fit)
 #' }
 #' @export
-plot.nlmixr2FitData <- function(x, ...) {
+plot.nlmixr2FitData <- function(x, covariate = NULL, ...) {
   .lst <- list()
   object <- x
   .tp <- traceplot(x)
@@ -172,9 +182,14 @@ plot.nlmixr2FitData <- function(x, ...) {
     .bp <- nlmixr2extra::bootplot(x)
     .lst[["bootplot"]] <- .bp
   }
+  # Between-subject variability plots are model-level (etas are shared across
+  # endpoints), so build them once and attach them to the first data group only.
+  .bsv <- .bsvPlots(x, covariate = covariate)
   .dat <- .setupPlotData(x)
-  for (.cmt in levels(.dat$CMT)) {
-    .lst[[.cmt]] <- plotCmt(.dat, cmt = .cmt)
+  .cmts <- levels(.dat$CMT)
+  for (.i in seq_along(.cmts)) {
+    .cmt <- .cmts[.i]
+    .lst[[.cmt]] <- plotCmt(.dat, cmt = .cmt, bsv = if (.i == 1L) .bsv else NULL)
   }
 
   ggtibble::new_gglist(.lst)
@@ -184,9 +199,11 @@ plot.nlmixr2FitData <- function(x, ...) {
 #'
 #' @inheritParams plot.nlmixr2FitData
 #' @param cmt The value of the current compartment
+#' @param bsv Optional nested `ggtibble::gglist` of between-subject variability
+#'   plots to append to this compartment's plots (or `NULL` for none)
 #' @return A list of ggplot2 objects
 #' @noRd
-plotCmt <- function(x, cmt) {
+plotCmt <- function(x, cmt, bsv = NULL) {
   .lst <- list()
   .hasCwres <- any(names(x) == "CWRES")
   .hasNpde <- any(names(x) == "NPD")
@@ -278,6 +295,9 @@ plotCmt <- function(x, cmt) {
         .pages[[.j]] +
         ggplot2::ggtitle(cmt, sprintf("Individual Plots (%s of %s)", .j, .nPages))
     }
+  }
+  if (!is.null(bsv)) {
+    .lst[["bsv"]] <- bsv
   }
   ggtibble::new_gglist(.lst)
 }
