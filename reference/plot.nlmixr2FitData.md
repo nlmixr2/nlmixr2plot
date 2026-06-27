@@ -21,8 +21,10 @@ plot(x, ...)
 
 ## Value
 
-An `nlmixr2PlotList` object (a list of ggplot2 objects with easier
-plotting for all of them at the same time)
+A named, nested
+[`ggtibble::gglist`](https://humanpred.github.io/ggtibble/reference/gglist.html)
+object (a list of ggplot2 objects with easier plotting of all of them at
+the same time)
 
 ## Author
 
@@ -86,8 +88,8 @@ fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0, nBurn
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 2584
-#> → compress phiM in nlmixr2 object, save 15072
+#> → compress parHistData in nlmixr2 object, save 2576
+#> → compress phiM in nlmixr2 object, save 15088
 
 # This shows many goodness of fit plots
 plot(fit)

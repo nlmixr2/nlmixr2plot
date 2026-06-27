@@ -2,6 +2,21 @@
 
 ## nlmixr2plot 5.0.2.9000
 
+- Plot collections returned by
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) (for fits and
+  `augPred` objects) are now `gglist` objects from the `ggtibble`
+  package instead of the internal `nlmixr2PlotList` class. They still
+  print/plot all figures at once and support broadcasting `ggplot2`
+  additions (e.g. `plot(fit) + ggplot2::theme_bw()`), and the top-level
+  object remains a named, nested collection
+  (`plot(fit)[["Endpoint: ..."]]`). The collection can also be converted
+  to a `ggtibble` for reporting with
+  [`ggtibble::as_ggtibble()`](https://humanpred.github.io/ggtibble/reference/as_ggtibble.html).
+- Individual/`augPred` plots are now paginated with
+  [`ggforce::facet_wrap_paginate()`](https://ggforce.data-imaginist.com/reference/facet_wrap_paginate.html),
+  removing the hand-written 16-IDs-per-page chunking. Requires
+  `ggtibble (>= 1.0.3.9000)` and `ggforce`; the minimum R version is now
+  4.3.
 - Removed obsolete `rxode2::.linCmtSensB()` test guards. That internal
   was removed from `rxode2` in 2025, so the
   [`try()`](https://rdrr.io/r/base/try.html)/`skip_if_not()` checks

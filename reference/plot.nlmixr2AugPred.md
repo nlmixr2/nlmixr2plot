@@ -25,7 +25,9 @@ plot(x, y, ...)
 
 ## Value
 
-Nothing called for side effects
+A
+[`ggtibble::gglist`](https://humanpred.github.io/ggtibble/reference/gglist.html)
+object (a list of ggplot2 objects, one per page of individual plots)
 
 ## Examples
 
@@ -96,8 +98,8 @@ fit <- nlmixr2est::nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(pr
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8320
-#> → compress phiM in nlmixr2 object, save 312080
+#> → compress parHistData in nlmixr2 object, save 8328
+#> → compress phiM in nlmixr2 object, save 312064
 
 # augPred shows more points for the fit:
 
