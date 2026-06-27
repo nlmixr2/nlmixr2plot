@@ -2,6 +2,16 @@
 
 ## nlmixr2plot 5.0.2.9000
 
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) on a fit with
+  between-subject variability (BSV) now adds a nested `"bsv"` section
+  (inside each data/compartment group) with QQ plots for each BSV
+  parameter, BSV-BSV correlation plots (when more than one BSV parameter
+  is present) and, via the new `covariate` argument, BSV-by-covariate
+  plots (box-and-whisker for categorical or low-cardinality covariates,
+  scatter plus a linear trend with confidence interval for continuous
+  ones). Covariate values are taken from each subject’s first record, so
+  they are assumed time-invariant
+  ([\#51](https://github.com/nlmixr2/nlmixr2plot/issues/51)).
 - Plot collections returned by
   [`plot()`](https://rdrr.io/r/graphics/plot.default.html) (for fits and
   `augPred` objects) are now `gglist` objects from the `ggtibble`

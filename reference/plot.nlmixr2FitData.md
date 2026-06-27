@@ -1,12 +1,17 @@
 # Plot a nlmixr2 data object
 
-Plot some standard goodness of fit plots for the focei fitted object
+Plot some standard goodness of fit plots for the focei fitted object.
+When the model has between-subject variability (BSV), the returned
+collection also includes a nested `"bsv"` element (inside each
+data/compartment group) with QQ plots for each BSV parameter, BSV-BSV
+correlation plots (when more than one BSV parameter is present) and,
+when `covariate` is supplied, BSV-by-covariate plots.
 
 ## Usage
 
 ``` r
 # S3 method for class 'nlmixr2FitData'
-plot(x, ...)
+plot(x, covariate = NULL, ...)
 ```
 
 ## Arguments
@@ -14,6 +19,14 @@ plot(x, ...)
 - x:
 
   a focei fit object
+
+- covariate:
+
+  Optional character vector of covariate column names (from the model
+  input data) to plot against each between-subject variability (BSV)
+  parameter. Default `NULL` (no covariate plots). The first row per
+  individual is used, so covariates are assumed time-invariant (a
+  time-varying covariate is represented by its baseline value).
 
 - ...:
 
@@ -133,6 +146,12 @@ plot(fit)
 
 
 #> Warning: log-10 transformation introduced infinite values.
+
+
+
+
+
+
 
 
 # }
