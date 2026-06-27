@@ -21,9 +21,11 @@ URL: https://github.com/nlmixr2/nlmixr2plot,
     https://nlmixr2.github.io/nlmixr2plot/
 BugReports: https://github.com/nlmixr2/nlmixr2plot/issues/
 Depends:
-    R (>= 4.1.0)
+    R (>= 4.3.0)
 Imports:
+    ggforce,
     ggplot2 (>= 3.4.0),
+    ggtibble (>= 1.0.3.9000),
     nlmixr2est,
     nlmixr2extra (>= 5.0.0),
     rxode2,

@@ -1,5 +1,9 @@
 test_that("plot censoring", {
   skip_on_cran()
+  skip_if_not_installed("dplyr")
+  skip_if_not_installed("nlmixr2data")
+  skip_if_not_installed("vpc")
+  skip_if_not_installed("tidyvpc")
 
   dat <-
     xgxr::case1_pkpd |>

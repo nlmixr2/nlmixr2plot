@@ -7,7 +7,8 @@
 #'
 #' @param ... Other arguments (ignored)
 #'
-#' @return Nothing called for side effects
+#' @return A `ggtibble::gglist` object (a list of ggplot2 objects, one per page
+#'   of individual plots)
 #'
 #' @examples
 #' \donttest{
@@ -51,34 +52,26 @@
 #' @importFrom ggplot2 .data
 plot.nlmixr2AugPred <- function(x, y, ...) {
   if (any(names(x) == "Endpoint")) {
-    .ret <- NULL
+    .ret <- list()
     for (.tmp in levels(x$Endpoint)) {
       utils::assignInMyNamespace(".augPredEndpoint", .tmp)
       .x <- x[x$Endpoint == .tmp, names(x) != "Endpoint"]
       .r <- plot.nlmixr2AugPred(.x)
-      class(.r) <- NULL
-      .ret <- c(.ret, .r)
+      for (.k in seq_along(.r)) {
+        .ret[[length(.ret) + 1L]] <- .r[[.k]]
+      }
     }
-    class(.ret) <- "nlmixr2PlotList"
-    return(.ret)
+    return(ggtibble::new_gglist(.ret))
   } else {
-    ids <- unique(x$id)
-    .ret <- lapply(seq(1, length(ids), by = 16), function(i) {
-      tmp <- ids[seq(i, i + 15)]
-      tmp <- tmp[!is.na(tmp)]
-      d1 <- x[x$id %in% tmp, ]
-      dobs <- d1[d1$ind == "Observed", ]
-      dpred <- d1[d1$ind != "Observed", ]
-      p3 <-
-        ggplot2::ggplot(d1, ggplot2::aes(.data$time, .data$values, col = .data$ind)) +
-        ggplot2::geom_line(data = dpred, linewidth = 1.2) +
-        ggplot2::geom_point(data = dobs) +
-        ggplot2::facet_wrap(~id) +
-        rxode2::rxTheme() +
-        ggplot2::ggtitle(label=.augPredEndpoint)
-      p3
-    })
-    class(.ret) <- "nlmixr2PlotList"
-    return(.ret)
+    dobs <- x[x$ind == "Observed", ]
+    dpred <- x[x$ind != "Observed", ]
+    .p <-
+      ggplot2::ggplot(x, ggplot2::aes(.data$time, .data$values, col = .data$ind)) +
+      ggplot2::geom_line(data = dpred, linewidth = 1.2) +
+      ggplot2::geom_point(data = dobs) +
+      ggforce::facet_wrap_paginate(~id, nrow = 4, ncol = 4, page = 1) +
+      rxode2::rxTheme() +
+      ggplot2::ggtitle(label = .augPredEndpoint)
+    return(ggtibble::as_gglist(.p))
   }
 }

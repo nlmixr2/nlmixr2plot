@@ -14,7 +14,8 @@
 \item{...}{Other arguments (ignored)}
 }
 \value{
-Nothing called for side effects
+A \code{ggtibble::gglist} object (a list of ggplot2 objects, one per page
+of individual plots)
 }
 \description{
 Plot a nlmixr2 augPred object
