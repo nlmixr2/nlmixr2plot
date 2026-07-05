@@ -111,4 +111,9 @@ test_that("plot censoring", {
                  est = "focei", control=nlmixr2est::foceiControl(print=0),
                  table = nlmixr2est::tableControl(npde = TRUE, censMethod = "cdf"))
   expect_error(vpcPlot(fit = fit1), NA)
+
+  # nlmixr2#390: prediction-corrected VPC on censored data must not crash
+  # with a quantile() NA error
+  expect_error(vpcPlot(fit = fit1, pred_corr = TRUE, n = 10), NA)
+  expect_error(vpcPlotTad(fit = fit1, pred_corr = TRUE, n = 10), NA)
 })

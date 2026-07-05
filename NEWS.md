@@ -1,5 +1,10 @@
 # nlmixr2plot 5.0.2.9000
 
+* Fixed a `quantile()` "missing values and NaN's not allowed" error in
+  prediction-corrected `vpcPlot()`/`vpcPlotTad()` on censored (LLOQ/ULOQ) fits;
+  censored records are now dropped before the pred-corrected VPC (which is shown
+  for non-censored data only), matching the `vpc` package's stated behavior
+  (nlmixr2#390).
 * `plot()` on a fit with between-subject variability (BSV) now adds a nested
   `"bsv"` section (inside each data/compartment group) with QQ plots for each
   BSV parameter, BSV-BSV correlation plots (when more than one BSV parameter is
