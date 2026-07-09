@@ -126,19 +126,22 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       stop("this data is not censored")
     }
     .sim$dv <- .sim$sim
-    .sim$idv <- .sim[[idv]]
     .obs <- as.data.frame(fit)
-    # Make sure idv is not missing
-    #.obs <- .obs[!is.na(.obs[[idv]]), ]
-
-    .obs$idv <- .obs[[idv]]
-    .w <- which(tolower(names(.obs)) == idv)
-    .time <- .obs[, .w]
-    .obs <- .obs[, -.w]
-    .obs$TIME <- .time
+    # Pass the column mappings explicitly (as in the non-censored vpc path)
+    # instead of letting vpc_cens guess them.  Guessing maps idv to "TIME"/"time"
+    # and, when idv is "tad", left an extra "idv" column that collided with vpc's
+    # internal standardized names (nlmixr2#390).
+    .simCens <- list(
+      id=names(.sim)[which(tolower(names(.sim)) == "id")],
+      dv="dv",
+      idv=names(.sim)[which(tolower(names(.sim)) == idv)])
+    .obsCens <- list(
+      id=names(.obs)[which(tolower(names(.obs)) == "id")],
+      dv=names(.obs)[which(tolower(names(.obs)) == "dv")],
+      idv=names(.obs)[which(tolower(names(.obs)) == idv)])
     rxode2::rxReq("vpc")
-    return(vpc::vpc_cens(sim=.sim,
-                         obs=.obs,
+    return(vpc::vpc_cens(sim=.sim, sim_cols=.simCens,
+                         obs=.obs, obs_cols=.obsCens,
                          bins=bins, n_bins=n_bins, bin_mid=bin_mid,
                          show = show, stratify = stratify, ci = ci,
                          uloq = uloq, lloq = lloq,

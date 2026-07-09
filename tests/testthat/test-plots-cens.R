@@ -111,4 +111,13 @@ test_that("plot censoring", {
                  est = "focei", control=nlmixr2est::foceiControl(print=0),
                  table = nlmixr2est::tableControl(npde = TRUE, censMethod = "cdf"))
   expect_error(vpcPlot(fit = fit1), NA)
+
+  # nlmixr2#390: censored VPC with a non-time idv (tad) must not error with
+  # "object of type 'closure' is not subsettable"
+  expect_error(vpcCens(fit1, cens = TRUE), NA)
+  expect_error(vpcCensTad(fit1, cens = TRUE, idv = "tad"), NA)
+  # also works when passing a pre-computed vpcSim object
+  sim390 <- nlmixr2est::vpcSim(fit1, n = 10, pred = TRUE)
+  expect_error(vpcCens(sim390, cens = TRUE), NA)
+  expect_error(vpcCensTad(sim390, cens = TRUE, idv = "tad"), NA)
 })

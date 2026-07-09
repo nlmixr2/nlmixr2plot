@@ -1,5 +1,10 @@
 # nlmixr2plot 5.0.2.9000
 
+* Fixed a "object of type 'closure' is not subsettable" error in `vpcCensTad()`
+  (and `vpcCens()`/`vpcPlot()`/`vpcPlotTad()` with `cens = TRUE` and a non-time
+  `idv`); the censored VPC now passes the `sim`/`obs` column mappings to
+  `vpc::vpc_cens()` explicitly instead of relying on column guessing
+  (nlmixr2#390).
 * `plot()` on a fit with between-subject variability (BSV) now adds a nested
   `"bsv"` section (inside each data/compartment group) with QQ plots for each
   BSV parameter, BSV-BSV correlation plots (when more than one BSV parameter is
