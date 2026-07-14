@@ -101,8 +101,8 @@ fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0, nBurn
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 2576
-#> → compress phiM in nlmixr2 object, save 15088
+#> → compress parHistData in nlmixr2 object, save 2688
+#> → compress phiM in nlmixr2 object, save 15016
 
 # This shows many goodness of fit plots
 plot(fit)
