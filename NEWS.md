@@ -1,6 +1,6 @@
 # nlmixr2plot 5.0.2.9000
 
-* Fixed a "object of type 'closure' is not subsettable" error in `vpcCensTad()`
+* Fixed an "object of type 'closure' is not subsettable" error in `vpcCensTad()`
   (and `vpcCens()`/`vpcPlot()`/`vpcPlotTad()` with `cens = TRUE` and a non-time
   `idv`); the censored VPC now passes the `sim`/`obs` column mappings to
   `vpc::vpc_cens()` explicitly instead of relying on column guessing

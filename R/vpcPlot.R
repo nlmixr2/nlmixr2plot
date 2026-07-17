@@ -131,14 +131,26 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     # instead of letting vpc_cens guess them.  Guessing maps idv to "TIME"/"time"
     # and, when idv is "tad", left an extra "idv" column that collided with vpc's
     # internal standardized names (nlmixr2#390).
+    # Look up each column, erroring early on a missing/ambiguous match (as
+    # .vpcUiSetupObservationData() does) so we never pass character(0) or
+    # multiple matches into vpc::vpc_cens().
+    .vpcCensCol <- function(data, col, what) {
+      .wo <- which(tolower(names(data)) == tolower(col))
+      if (length(.wo) != 1) {
+        stop("cannot find a unique '", col, "' column in the ", what,
+             " data for the censored VPC",
+             call.=FALSE)
+      }
+      names(data)[.wo]
+    }
     .simCens <- list(
-      id=names(.sim)[which(tolower(names(.sim)) == "id")],
+      id=.vpcCensCol(.sim, "id", "simulated"),
       dv="dv",
-      idv=names(.sim)[which(tolower(names(.sim)) == idv)])
+      idv=.vpcCensCol(.sim, idv, "simulated"))
     .obsCens <- list(
-      id=names(.obs)[which(tolower(names(.obs)) == "id")],
-      dv=names(.obs)[which(tolower(names(.obs)) == "dv")],
-      idv=names(.obs)[which(tolower(names(.obs)) == idv)])
+      id=.vpcCensCol(.obs, "id", "observed"),
+      dv=.vpcCensCol(.obs, "dv", "observed"),
+      idv=.vpcCensCol(.obs, idv, "observed"))
     rxode2::rxReq("vpc")
     return(vpc::vpc_cens(sim=.sim, sim_cols=.simCens,
                          obs=.obs, obs_cols=.obsCens,
