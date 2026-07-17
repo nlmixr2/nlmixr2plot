@@ -152,7 +152,13 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   if (pred_corr) {
     .simCols <- c(.simCols, list(pred="pred"))
     .si <- nlmixr2est::.nlmixr2estLastPredSimulationInfo()
-    .si$keep <- unique(c(stratify, .obsCols$dv))
+    .keep <- c(stratify, .obsCols$dv)
+    if (cens && tidyvpc) {
+      # keep the censoring column through the pred-corrected obs rebuild so the
+      # tidyvpc cens=TRUE path can still find it
+      .keep <- c(.keep, names(.obs)[tolower(names(.obs)) == "cens"])
+    }
+    .si$keep <- unique(.keep)
     .si$addDosing <- FALSE
     .si$subsetNonmem <- TRUE
     .obs1 <- .obs
@@ -340,14 +346,16 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       # computes simulated quantiles without na.rm, so any censored point makes
       # quantile() error.  vpc only shows non-censored data for a pred-corrected
       # censored VPC, so drop the censored rows here and disable vpc's loq
-      # handling to avoid the NA-driven crash.
+      # handling to avoid the NA-driven crash.  Censored records are encoded at
+      # the censoring limit (DV == lloq/uloq), so use strict comparisons to drop
+      # those boundary rows as well.
       if (!is.null(lloq)) {
-        .obs <- .obs[!is.na(.obs[[.obsCols$dv]]) & .obs[[.obsCols$dv]] >= lloq, , drop=FALSE]
-        .sim <- .sim[!is.na(.sim[[.simCols$dv]]) & .sim[[.simCols$dv]] >= lloq, , drop=FALSE]
+        .obs <- .obs[!is.na(.obs[[.obsCols$dv]]) & .obs[[.obsCols$dv]] > lloq, , drop=FALSE]
+        .sim <- .sim[!is.na(.sim[[.simCols$dv]]) & .sim[[.simCols$dv]] > lloq, , drop=FALSE]
       }
       if (!is.null(uloq)) {
-        .obs <- .obs[!is.na(.obs[[.obsCols$dv]]) & .obs[[.obsCols$dv]] <= uloq, , drop=FALSE]
-        .sim <- .sim[!is.na(.sim[[.simCols$dv]]) & .sim[[.simCols$dv]] <= uloq, , drop=FALSE]
+        .obs <- .obs[!is.na(.obs[[.obsCols$dv]]) & .obs[[.obsCols$dv]] < uloq, , drop=FALSE]
+        .sim <- .sim[!is.na(.sim[[.simCols$dv]]) & .sim[[.simCols$dv]] < uloq, , drop=FALSE]
       }
       .lloq <- NULL
       .uloq <- NULL

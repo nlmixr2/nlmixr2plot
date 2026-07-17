@@ -9,7 +9,7 @@
 ^README\.Rmd$
 ^pkgdown$
 ^logo.png$
-
-
+^.git$
+^.vexp$
 ^cran-comments\.md$
 ^CRAN-SUBMISSION$

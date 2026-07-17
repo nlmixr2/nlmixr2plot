@@ -116,4 +116,11 @@ test_that("plot censoring", {
   # with a quantile() NA error
   expect_error(vpcPlot(fit = fit1, pred_corr = TRUE, n = 10), NA)
   expect_error(vpcPlotTad(fit = fit1, pred_corr = TRUE, n = 10), NA)
+  if (requireNamespace("tidyvpc", quietly = TRUE)) {
+    expect_error(
+      vpcPlot(fit = fit1, pred_corr = TRUE, n = 10, method = "tidyvpc"), NA)
+    expect_error(
+      vpcPlot(fit = fit1, pred_corr = TRUE, n = 10, method = "tidyvpc",
+              cens = TRUE), NA)
+  }
 })
