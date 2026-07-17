@@ -74,7 +74,8 @@ test_that("multiple endpoint plots", {
   # rest of the plotting surface below.
   apo <- tryCatch(nlmixr2est::augPred(fit), error = function(e) e)
   if (inherits(apo, "error")) {
-    message("skipping augPred plot (augPred unavailable): ", conditionMessage(apo))
+    message("skipping augPred plot (augPred unavailable): ",
+            conditionMessage(apo))
   } else {
     expect_error(plot(apo), NA)
   }
