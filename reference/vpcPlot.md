@@ -249,6 +249,7 @@ fit <-
 #> ✔ done
 #> ℹ calculate uninformed etas
 #> ℹ done
+#> covMethod="sa" could not be computed; using the linearized FIM
 #> Calculating covariance matrix
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
@@ -263,8 +264,8 @@ fit <-
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8848
-#> → compress phiM in nlmixr2 object, save 443520
+#> → compress parHistData in nlmixr2 object, save 8592
+#> → compress phiM in nlmixr2 object, save 446912
 
 vpcPlot(fit)
 #>  
