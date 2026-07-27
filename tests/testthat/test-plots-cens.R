@@ -116,7 +116,9 @@ test_that("plot censoring", {
   # "object of type 'closure' is not subsettable"
   expect_error(vpcCens(fit1, cens = TRUE, n = 10), NA)
   expect_error(vpcCensTad(fit1, cens = TRUE, idv = "tad", n = 10), NA)
-  # also works when passing a pre-computed vpcSim object
+  # also works when an nlmixr2vpcSim object is passed instead of a fit (note
+  # vpcPlot() currently re-simulates rather than reusing it, so this only covers
+  # the entry point, not the supplied simulation)
   sim390 <- nlmixr2est::vpcSim(fit1, n = 10, pred = TRUE)
   expect_error(vpcCens(sim390, cens = TRUE), NA)
   expect_error(vpcCensTad(sim390, cens = TRUE, idv = "tad"), NA)
