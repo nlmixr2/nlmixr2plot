@@ -125,32 +125,52 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     if (is.null(lloq) && is.null(uloq)) {
       stop("this data is not censored")
     }
-    .sim$dv <- .sim$sim
     .obs <- as.data.frame(fit)
     # Pass the column mappings explicitly (as in the non-censored vpc path)
     # instead of letting vpc_cens guess them.  Guessing maps idv to "TIME"/"time"
     # and, when idv is "tad", left an extra "idv" column that collided with vpc's
     # internal standardized names (nlmixr2#390).
-    # Look up each column, erroring early on a missing/ambiguous match (as
-    # .vpcUiSetupObservationData() does) so we never pass character(0) or
-    # multiple matches into vpc::vpc_cens().
+    # Prefer an exact name match, falling back to a case-insensitive one, and
+    # error early on a missing/ambiguous match (as .vpcUiSetupObservationData()
+    # does) so character(0) or multiple matches are never passed to vpc.
     .vpcCensCol <- function(data, col, what) {
-      .wo <- which(tolower(names(data)) == tolower(col))
+      .wo <- which(names(data) == col)
+      if (length(.wo) != 1) {
+        .wo <- which(tolower(names(data)) == tolower(col))
+      }
       if (length(.wo) != 1) {
         stop("cannot find a unique '", col, "' column in the ", what,
              " data for the censored VPC",
+             if (length(.wo) == 0) "" else
+               paste0(" (matched: ", paste(names(data)[.wo], collapse=", "), ")"),
              call.=FALSE)
       }
       names(data)[.wo]
     }
+    # Map dv to the simulated "sim" column instead of copying it into a new "dv"
+    # column; vpc renames the mapped column to "dv", and a leftover "sim" column
+    # makes vpc:::add_sim_index_number() use the simulated values themselves as
+    # the replicate index (giving one "replicate" per row).
     .simCens <- list(
       id=.vpcCensCol(.sim, "id", "simulated"),
-      dv="dv",
+      dv=.vpcCensCol(.sim, "sim", "simulated"),
       idv=.vpcCensCol(.sim, idv, "simulated"))
     .obsCens <- list(
       id=.vpcCensCol(.obs, "id", "observed"),
       dv=.vpcCensCol(.obs, "dv", "observed"),
       idv=.vpcCensCol(.obs, idv, "observed"))
+    # vpc renames the mapped columns to "id"/"dv"/"idv"; an unrelated column
+    # already using one of those names sends vpc::standardize_column() down the
+    # rename branch that is broken in vpc 1.2.4.  Drop those strays, keeping the
+    # mapped and stratify columns.
+    .vpcCensDropStray <- function(data, cols) {
+      .stray <- setdiff(intersect(names(cols), names(data)),
+                        c(unlist(cols), stratify))
+      if (length(.stray) == 0L) return(data)
+      data[, setdiff(names(data), .stray), drop=FALSE]
+    }
+    .sim <- .vpcCensDropStray(.sim, .simCens)
+    .obs <- .vpcCensDropStray(.obs, .obsCens)
     rxode2::rxReq("vpc")
     return(vpc::vpc_cens(sim=.sim, sim_cols=.simCens,
                          obs=.obs, obs_cols=.obsCens,

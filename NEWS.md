@@ -5,6 +5,10 @@
   `idv`); the censored VPC now passes the `sim`/`obs` column mappings to
   `vpc::vpc_cens()` explicitly instead of relying on column guessing
   (nlmixr2#390).
+* Fixed the censored VPC confidence band, which was computed as if every
+  simulated row were its own replicate.  The simulated `dv` is now mapped to the
+  `sim` column instead of being copied into a new `dv` column, so `vpc` groups
+  the simulated data by replicate as it does for the uncensored VPC.
 * `plot()` on a fit with between-subject variability (BSV) now adds a nested
   `"bsv"` section (inside each data/compartment group) with QQ plots for each
   BSV parameter, BSV-BSV correlation plots (when more than one BSV parameter is
