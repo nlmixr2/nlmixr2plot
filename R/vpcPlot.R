@@ -371,13 +371,6 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   vpcPlot(..., cens=cens, idv=idv)
 }
 
-#' Setup Observation data for VPC
-#'
-#' @param fit nlmixr2 fit
-#' @param data replacement data
-#' @return List with `namesObs`, `namesObsLower`, `obs` and `obsCols`
-#' @author Matthew L. Fidler
-#' @noRd
 #' Find the column `col` maps to for a censored VPC
 #'
 #' Prefers an exact name match and falls back to a case-insensitive one, so an
@@ -425,6 +418,13 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   data[, setdiff(names(data), .stray), drop=FALSE]
 }
 
+#' Setup Observation data for VPC
+#'
+#' @param fit nlmixr2 fit
+#' @param data replacement data
+#' @return List with `namesObs`, `namesObsLower`, `obs` and `obsCols`
+#' @author Matthew L. Fidler
+#' @noRd
 .vpcUiSetupObservationData <- function(fit, data=NULL, idv="time", cens=FALSE) {
   if (!is.null(data)) {
     .obs <- data
