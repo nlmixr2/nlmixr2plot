@@ -67,14 +67,14 @@ fit <- nlmixr2est::nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(pr
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
-#>  
-#>  
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
 #> ✔ done
 #> → finding duplicate expressions in saem model...
 #> → optimizing duplicate expressions in saem model...
 #> ✔ done
+#>  
+#>  
 #> ℹ calculate uninformed etas
 #> ℹ done
 #> rxode2 5.1.5 using 2 threads (see ?getRxThreads)
@@ -98,7 +98,7 @@ fit <- nlmixr2est::nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(pr
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8344
+#> → compress parHistData in nlmixr2 object, save 8544
 #> → compress phiM in nlmixr2 object, save 313000
 
 # augPred shows more points for the fit:
