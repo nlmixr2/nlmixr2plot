@@ -1,6 +1,6 @@
 # Changelog
 
-## nlmixr2plot 5.0.2.9000
+## nlmixr2plot 5.1.0
 
 - Fixed an “object of type ‘closure’ is not subsettable” error in
   [`vpcCensTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
@@ -15,6 +15,18 @@
   to the `sim` column instead of being copied into a new `dv` column, so
   `vpc` groups the simulated data by replicate as it does for the
   uncensored VPC.
+- Fixed a [`quantile()`](https://rdrr.io/r/stats/quantile.html) “missing
+  values and NaNs not allowed” error in prediction-corrected
+  [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/[`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
+  on censored (LLOQ/ULOQ) fits with the `vpc` backend; censored records
+  are now dropped before the pred-corrected VPC (which is shown for
+  non-censored data only), matching the `vpc` package’s stated behavior
+  (nlmixr2#390).
+- Fixed prediction-corrected
+  [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/[`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
+  with `method = "tidyvpc", cens = TRUE`, which previously errored that
+  the observed data had no `cens` column; the censoring column is now
+  retained when the observed dataset is rebuilt for pred-correction.
 - [`plot()`](https://rdrr.io/r/graphics/plot.default.html) on a fit with
   between-subject variability (BSV) now adds a nested `"bsv"` section
   (inside each data/compartment group) with QQ plots for each BSV
