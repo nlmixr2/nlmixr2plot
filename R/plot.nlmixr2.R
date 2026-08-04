@@ -285,10 +285,13 @@ plotCmt <- function(x, cmt, bsv = NULL) {
       .pIndividual <- .pIndividual +
         geom_cens(ggplot2::aes(lower = .data$lowerLim, upper = .data$upperLim), fill = "purple")
     }
+    .facet <- function(page) {
+      ggforce::facet_wrap_paginate(~ID, nrow = 4, ncol = 4, page = page)
+    }
     .pIndividual <- .pIndividual +
-      ggforce::facet_wrap_paginate(~ID, nrow = 4, ncol = 4, page = 1) +
+      .facet(1L) +
       rxode2::rxTheme()
-    .pages <- ggtibble::as_gglist(.pIndividual)
+    .pages <- .paginate(.pIndividual, .facet)
     .nPages <- length(.pages)
     for (.j in seq_len(.nPages)) {
       .lst[[paste("individual", .j, sep = "_")]] <-
@@ -345,7 +348,8 @@ plot.nlmixr2FitCoreSilent <- plot.nlmixr2FitCore
 #' }
 #'
 #' ## The fit is performed by the function nlmixr/nlmix2 specifying the model, data and estimate
-#' fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
+#' fit <- nlmixr2(one.compartment, theo_sd,  est="saem",
+#'                saemControl(print=0, nBurn = 10, nEm = 20))
 #'
 #' # This shows the traceplot of the fit (useful for saem)
 #' traceplot(fit)

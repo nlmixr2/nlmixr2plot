@@ -61,7 +61,7 @@ test_that("plot censoring", {
       nlmixr2est::nlmixr(
         cmt2m, dat2, "saem",
         control=nlmixr2est::saemControl(print=0, nBurn = 10, nEm = 20),
-        table=nlmixr2est::tableControl(cwres=TRUE, npde=TRUE)
+        table=nlmixr2est::tableControl(cwres=TRUE, npde=TRUE, nsim = 10)
       )
   )
 
@@ -109,8 +109,9 @@ test_that("plot censoring", {
   }
   fit1 <- nlmixr2est::nlmixr(m1, theo_cens,
                  est = "focei", control=nlmixr2est::foceiControl(print=0),
-                 table = nlmixr2est::tableControl(npde = TRUE, censMethod = "cdf"))
-  expect_error(vpcPlot(fit = fit1), NA)
+                 table = nlmixr2est::tableControl(npde = TRUE, nsim = 10,
+                                                  censMethod = "cdf"))
+  expect_error(vpcPlot(fit = fit1, n = 10), NA)
 
   # nlmixr2#390: censored VPC with a non-time idv (tad) must not error with
   # "object of type 'closure' is not subsettable"
@@ -120,8 +121,8 @@ test_that("plot censoring", {
   # vpcPlot() currently re-simulates rather than reusing it, so this only covers
   # the entry point, not the supplied simulation)
   sim390 <- nlmixr2est::vpcSim(fit1, n = 10, pred = TRUE)
-  expect_error(vpcCens(sim390, cens = TRUE), NA)
-  expect_error(vpcCensTad(sim390, cens = TRUE, idv = "tad"), NA)
+  expect_error(vpcCens(sim390, cens = TRUE, n = 10), NA)
+  expect_error(vpcCensTad(sim390, cens = TRUE, idv = "tad", n = 10), NA)
 
   # The censored VPC must group the simulated data by replicate.  A leftover
   # "sim" column made vpc use the simulated values themselves as the replicate

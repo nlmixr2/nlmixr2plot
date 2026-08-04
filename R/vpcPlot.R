@@ -47,10 +47,10 @@
 #'     one.cmt,
 #'     data = nlmixr2data::theo_sd,
 #'     est = "saem",
-#'     control = list(print = 0)
+#'     control = nlmixr2est::saemControl(print = 0, nBurn = 10, nEm = 20)
 #'   )
 #'
-#' vpcPlot(fit)
+#' vpcPlot(fit, n = 100)
 #' }
 #' @export
 vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",

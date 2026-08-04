@@ -48,7 +48,8 @@ one.compartment <- function() {
 }
 
 ## The fit is performed by the function nlmixr/nlmix2 specifying the model, data and estimate
-fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
+fit <- nlmixr2(one.compartment, theo_sd,  est="saem",
+               saemControl(print=0, nBurn = 10, nEm = 20))
 
 # This shows the traceplot of the fit (useful for saem)
 traceplot(fit)

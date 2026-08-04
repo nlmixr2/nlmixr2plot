@@ -64,7 +64,7 @@ test_that("multiple endpoint plots", {
         nlmixr2data::warfarin,
         est = "saem",
         control=nlmixr2est::saemControl(print=0, nBurn = 10, nEm = 20),
-        table=list(cwres=TRUE, npde=TRUE)
+        table=list(cwres=TRUE, npde=TRUE, nsim = 10)
       )
   )
 

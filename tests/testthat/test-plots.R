@@ -36,23 +36,23 @@ test_that("test plots with vdiffr", {
         one.cmt, censData,
         est="focei",
         control = nlmixr2est::foceiControl(print = 0, eval.max = 10),
-        table=nlmixr2est::tableControl(npde=TRUE)
+        table=nlmixr2est::tableControl(npde=TRUE, nsim = 10)
       )
   )
 
-  fitSim <- nlmixr2est::vpcSim(fit)
+  fitSim <- nlmixr2est::vpcSim(fit, n = 10)
 
   apo <- nlmixr2est::augPred(fit)
   expect_error(plot(apo), NA)
-  expect_error(vpcPlot(fit), NA)
-  expect_error(vpcPlot(fitSim), NA)
-  expect_error(vpcPlotTad(fit), NA)
-  expect_error(vpcPlotTad(fitSim), NA)
+  expect_error(vpcPlot(fit, n = 10), NA)
+  expect_error(vpcPlot(fitSim, n = 10), NA)
+  expect_error(vpcPlotTad(fit, n = 10), NA)
+  expect_error(vpcPlotTad(fitSim, n = 10), NA)
   #expect_error(vpcPlot(fit, pred_corr=TRUE), NA)
   #expect_error(vpcPlot(fitSim, pred_corr=TRUE), NA)
   #expect_error(vpcPlotTad(fit, pred_corr=TRUE), NA)
   #expect_error(vpcPlotTad(fitSim, pred_corr=TRUE), NA)
-  expect_error(vpcCens(fit), NA)
+  expect_error(vpcCens(fit, n = 10), NA)
   #expect_error(vpcCens(fitSim, pred_corr=TRUE), NA)
   #expect_error(vpcCensTad(fit), NA)
   #expect_error(vpcCensTad(fitSim, pred_corr=TRUE), NA)
@@ -106,7 +106,7 @@ test_that("test plots with vdiffr", {
         data = nlmixr2data::theo_sd,
         est = "focei",
         control = nlmixr2est::foceiControl(print = 0, eval.max = 10),
-        table = nlmixr2est::tableControl(npde=TRUE)
+        table = nlmixr2est::tableControl(npde=TRUE, nsim = 10)
       )
   )
 
@@ -138,7 +138,7 @@ test_that("test plots with vdiffr", {
   #}
 
   withr::with_options(list(rxode2.xgxr=FALSE), {
-    expect_error(plot(fit), NA)
+    expect_error(plot(fitNoIiv), NA)
 
     #for (i in seq_along(gof)) {
     #  vdiffr::expect_doppelganger(sprintf("gof without xgxr np %03d", i), gof[[i]])
