@@ -1,6 +1,6 @@
 Package: nlmixr2plot
 Title: Nonlinear Mixed Effects Models in Population PK/PD, Plot Functions
-Version: 5.0.2.9000
+Version: 5.1.0
 Authors@R: c(
     person("Matthew", "Fidler", email="matthew.fidler@gmail.com", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0001-8538-6691")),
@@ -25,7 +25,7 @@ Depends:
 Imports:
     ggforce,
     ggplot2 (>= 3.4.0),
-    ggtibble (>= 1.0.3.9000),
+    ggtibble (>= 1.0.4),
     nlmixr2est,
     nlmixr2extra (>= 5.0.0),
     rxode2,

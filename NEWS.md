@@ -1,4 +1,4 @@
-# nlmixr2plot 5.0.2.9000
+# nlmixr2plot 5.1.0
 
 * Fixed an "object of type 'closure' is not subsettable" error in `vpcCensTad()`
   (and `vpcCens()`/`vpcPlot()`/`vpcPlotTad()` with `cens = TRUE` and a non-time
