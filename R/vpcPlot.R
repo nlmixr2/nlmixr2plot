@@ -160,7 +160,13 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   if (pred_corr) {
     .simCols <- c(.simCols, list(pred="pred"))
     .si <- nlmixr2est::.nlmixr2estLastPredSimulationInfo()
-    .si$keep <- unique(c(stratify, .obsCols$dv))
+    .keep <- c(stratify, .obsCols$dv)
+    if (cens && tidyvpc) {
+      # keep the censoring column through the pred-corrected obs rebuild so the
+      # tidyvpc cens=TRUE path can still find it
+      .keep <- c(.keep, names(.obs)[tolower(names(.obs)) == "cens"])
+    }
+    .si$keep <- unique(.keep)
     .si$addDosing <- FALSE
     .si$subsetNonmem <- TRUE
     .obs1 <- .obs
@@ -341,12 +347,33 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   } else {
     # use vpc
     rxode2::rxReq("vpc")
+    .lloq <- lloq
+    .uloq <- uloq
+    if (pred_corr && (!is.null(lloq) || !is.null(uloq))) {
+      # vpc's pred-correction NAs out censored values (obs and sim) but then
+      # computes simulated quantiles without na.rm, so any censored point makes
+      # quantile() error.  vpc only shows non-censored data for a pred-corrected
+      # censored VPC, so drop the censored rows here and disable vpc's loq
+      # handling to avoid the NA-driven crash.  Censored records are encoded at
+      # the censoring limit (DV == lloq/uloq), so use strict comparisons to drop
+      # those boundary rows as well.
+      if (!is.null(lloq)) {
+        .obs <- .obs[!is.na(.obs[[.obsCols$dv]]) & .obs[[.obsCols$dv]] > lloq, , drop=FALSE]
+        .sim <- .sim[!is.na(.sim[[.simCols$dv]]) & .sim[[.simCols$dv]] > lloq, , drop=FALSE]
+      }
+      if (!is.null(uloq)) {
+        .obs <- .obs[!is.na(.obs[[.obsCols$dv]]) & .obs[[.obsCols$dv]] < uloq, , drop=FALSE]
+        .sim <- .sim[!is.na(.sim[[.simCols$dv]]) & .sim[[.simCols$dv]] < uloq, , drop=FALSE]
+      }
+      .lloq <- NULL
+      .uloq <- NULL
+    }
     vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
                  obs=.obs, obs_cols=.obsCols,
                  bins=bins, n_bins=n_bins, bin_mid=bin_mid,
                  show = show, stratify = stratify, pred_corr = pred_corr,
                  pred_corr_lower_bnd = pred_corr_lower_bnd, pi = pi, ci = ci,
-                 uloq = uloq, lloq = lloq, log_y = log_y, log_y_min = log_y_min,
+                 uloq = .uloq, lloq = .lloq, log_y = log_y, log_y_min = log_y_min,
                  xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
                  facet = facet, scales=scales, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
   }

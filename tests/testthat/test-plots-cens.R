@@ -133,4 +133,16 @@ test_that("plot censoring", {
     # values that used to be left in that column
     expect_equal(sort(unique(.db$sim$sim)), 1:10)
   }
+
+  # nlmixr2#390: prediction-corrected VPC on censored data must not crash
+  # with a quantile() NA error
+  expect_error(vpcPlot(fit = fit1, pred_corr = TRUE, n = 10), NA)
+  expect_error(vpcPlotTad(fit = fit1, pred_corr = TRUE, n = 10), NA)
+  if (requireNamespace("tidyvpc", quietly = TRUE)) {
+    expect_error(
+      vpcPlot(fit = fit1, pred_corr = TRUE, n = 10, method = "tidyvpc"), NA)
+    expect_error(
+      vpcPlot(fit = fit1, pred_corr = TRUE, n = 10, method = "tidyvpc",
+              cens = TRUE), NA)
+  }
 })

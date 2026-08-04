@@ -9,6 +9,15 @@
   simulated row were its own replicate.  The simulated `dv` is now mapped to the
   `sim` column instead of being copied into a new `dv` column, so `vpc` groups
   the simulated data by replicate as it does for the uncensored VPC.
+* Fixed a `quantile()` "missing values and NaNs not allowed" error in
+  prediction-corrected `vpcPlot()`/`vpcPlotTad()` on censored (LLOQ/ULOQ) fits
+  with the `vpc` backend; censored records are now dropped before the
+  pred-corrected VPC (which is shown for non-censored data only), matching the
+  `vpc` package's stated behavior (nlmixr2#390).
+* Fixed prediction-corrected `vpcPlot()`/`vpcPlotTad()` with
+  `method = "tidyvpc", cens = TRUE`, which previously errored that the observed
+  data had no `cens` column; the censoring column is now retained when the
+  observed dataset is rebuilt for pred-correction.
 * `plot()` on a fit with between-subject variability (BSV) now adds a nested
   `"bsv"` section (inside each data/compartment group) with QQ plots for each
   BSV parameter, BSV-BSV correlation plots (when more than one BSV parameter is
