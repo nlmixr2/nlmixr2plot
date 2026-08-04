@@ -99,7 +99,7 @@ fit <- nlmixr2est::nlmixr2(one.compartment, theo_sd,  est="saem",
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 2960
+#> → compress parHistData in nlmixr2 object, save 2968
 #> → compress phiM in nlmixr2 object, save 15080
 
 # augPred shows more points for the fit:
