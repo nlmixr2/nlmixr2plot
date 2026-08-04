@@ -2,6 +2,19 @@
 
 ## nlmixr2plot 5.0.2.9000
 
+- Fixed an “object of type ‘closure’ is not subsettable” error in
+  [`vpcCensTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
+  (and
+  [`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/[`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/[`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
+  with `cens = TRUE` and a non-time `idv`); the censored VPC now passes
+  the `sim`/`obs` column mappings to
+  [`vpc::vpc_cens()`](https://rdrr.io/pkg/vpc/man/vpc_cens.html)
+  explicitly instead of relying on column guessing (nlmixr2#390).
+- Fixed the censored VPC confidence band, which was computed as if every
+  simulated row were its own replicate. The simulated `dv` is now mapped
+  to the `sim` column instead of being copied into a new `dv` column, so
+  `vpc` groups the simulated data by replicate as it does for the
+  uncensored VPC.
 - [`plot()`](https://rdrr.io/r/graphics/plot.default.html) on a fit with
   between-subject variability (BSV) now adds a nested `"bsv"` section
   (inside each data/compartment group) with QQ plots for each BSV
