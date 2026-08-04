@@ -60,7 +60,8 @@ one.compartment <- function() {
 }
 
 ## The fit is performed by the function nlmixr/nlmix2 specifying the model, data and estimate
-fit <- nlmixr2est::nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0))
+fit <- nlmixr2est::nlmixr2(one.compartment, theo_sd,  est="saem",
+                           saemControl(print=0, nBurn = 10, nEm = 20))
 #>  
 #>  
 #>  
@@ -98,8 +99,8 @@ fit <- nlmixr2est::nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(pr
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8544
-#> → compress phiM in nlmixr2 object, save 313000
+#> → compress parHistData in nlmixr2 object, save 2960
+#> → compress phiM in nlmixr2 object, save 15080
 
 # augPred shows more points for the fit:
 

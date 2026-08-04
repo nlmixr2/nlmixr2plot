@@ -52,6 +52,15 @@
   removing the hand-written 16-IDs-per-page chunking. Requires
   `ggtibble (>= 1.0.3.9000)` and `ggforce`; the minimum R version is now
   4.3.
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) on a fit (and
+  on an `augPred` object) is now about 3x faster. The paginated
+  individual plots were expanded one-per-page with
+  [`ggtibble::as_gglist()`](https://humanpred.github.io/ggtibble/reference/as_gglist.html),
+  which deep-copies the plot through
+  [`serialize()`](https://rdrr.io/r/base/serialize.html)/[`unserialize()`](https://rdrr.io/r/base/serialize.html);
+  because those plots are built inside functions that hold the whole
+  fit, each copy walked the entire fit object. The pages are now
+  produced by re-adding the paginated facet for each page instead.
 - Removed obsolete `rxode2::.linCmtSensB()` test guards. That internal
   was removed from `rxode2` in 2025, so the
   [`try()`](https://rdrr.io/r/base/try.html)/`skip_if_not()` checks

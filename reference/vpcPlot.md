@@ -232,7 +232,7 @@ fit <-
     one.cmt,
     data = nlmixr2data::theo_sd,
     est = "saem",
-    control = list(print = 0)
+    control = nlmixr2est::saemControl(print = 0, nBurn = 10, nEm = 20)
   )
 #>  
 #>  
@@ -249,7 +249,6 @@ fit <-
 #> ✔ done
 #> ℹ calculate uninformed etas
 #> ℹ done
-#> covMethod="sa" could not be computed; using the linearized FIM
 #> Calculating covariance matrix
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
@@ -264,10 +263,10 @@ fit <-
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 8800
-#> → compress phiM in nlmixr2 object, save 446912
+#> → compress parHistData in nlmixr2 object, save 2912
+#> → compress phiM in nlmixr2 object, save 21072
 
-vpcPlot(fit)
+vpcPlot(fit, n = 100)
 #>  
 #>  
 #> Warning: No software packages matched for filtering values, not filtering.

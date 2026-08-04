@@ -259,7 +259,7 @@ default, <code>"vpc"</code> is used when the <span class="pkg">vpc</span> packag
 <span class="r-in"><span>    <span class="va">one.cmt</span>,</span></span>
 <span class="r-in"><span>    data <span class="op">=</span> <span class="fu">nlmixr2data</span><span class="fu">::</span><span class="va"><a href="https://nlmixr2.github.io/nlmixr2data/reference/theo_sd.html" class="external-link">theo_sd</a></span>,</span></span>
 <span class="r-in"><span>    est <span class="op">=</span> <span class="st">"saem"</span>,</span></span>
-<span class="r-in"><span>    control <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>print <span class="op">=</span> <span class="fl">0</span><span class="op">)</span></span></span>
+<span class="r-in"><span>    control <span class="op">=</span> <span class="fu">nlmixr2est</span><span class="fu">::</span><span class="fu"><a href="https://nlmixr2.github.io/nlmixr2est/reference/saemControl.html" class="external-link">saemControl</a></span><span class="op">(</span>print <span class="op">=</span> <span class="fl">0</span>, nBurn <span class="op">=</span> <span class="fl">10</span>, nEm <span class="op">=</span> <span class="fl">20</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  <span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
@@ -276,7 +276,6 @@ default, <code>"vpc"</code> is used when the <span class="pkg">vpc</span> packag
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> done</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> calculate uninformed etas</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> done</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> covMethod="sa" could not be computed; using the linearized FIM</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> Calculating covariance matrix</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> → loading into <span style="color: #0000BB;">symengine</span> environment...</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> → pruning branches (`if`/`else`) of saem model...</span>
@@ -291,10 +290,10 @@ default, <code>"vpc"</code> is used when the <span class="pkg">vpc</span> packag
 <span class="r-msg co"><span class="r-pr">#&gt;</span> → Calculating residuals/tables</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> done</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> → compress origData in nlmixr2 object, save 6584</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → compress parHistData in nlmixr2 object, save 8800</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> → compress phiM in nlmixr2 object, save 446912</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> → compress parHistData in nlmixr2 object, save 2912</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> → compress phiM in nlmixr2 object, save 21072</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="fu">vpcPlot</span><span class="op">(</span><span class="va">fit</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu">vpcPlot</span><span class="op">(</span><span class="va">fit</span>, n <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span></span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span>  </span>
 <span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>No software packages matched for filtering values, not filtering.</span>
