@@ -1,40 +1,53 @@
+## Resubmission
+
+This is a resubmission.  The previous submission was rejected for
+
+    Check: Overall checktime, Result: NOTE
+      Overall checktime 12 min > 10 min
+
+with the follow-up note that this came mainly from
+
+    * checking tests ... [594s] OK
+
+and the suggestion to use small toy data, few iterations, or to run less
+important tests conditionally.  Thank you -- all three apply here, and
+the test time is down by a factor of three.
+
+On our reference check (Ubuntu 24.04, R 4.6.1, restricted to two cores
+with `OMP_THREAD_LIMIT=2` and `_R_CHECK_LIMIT_CORES_=TRUE`):
+
+                            before   after
+    tests               258s     ->   87s
+    donttest examples   108s     ->   75s
+    total               6m56s    ->  3m30s
+
+What changed:
+
+* Most of it was a performance bug in the package itself, so the fix
+  helps users as well as the check.  `plot()` expanded its paginated
+  individual plots one-per-page with `ggtibble::as_gglist()`, which
+  deep-copies the plot through `serialize()`/`unserialize()`.  Those
+  plots are built inside functions that hold the whole nlmixr2 fit, so
+  their aes environments capture it and every page copy walked the entire
+  fit object -- 42% of `plot()`'s runtime.  The pages are now built by
+  re-adding the paginated facet for each page, taking `plot()` from 5-7s
+  to about 2s.
+
+* Fewer iterations: the examples fit with `nBurn = 10, nEm = 20` rather
+  than the default 200/300 SAEM iterations.
+
+* Smaller simulations: the tests simulate 10 replicates for the VPC and
+  NPDE calculations instead of the default 300.  They assert on plot
+  structure rather than on simulated quantiles, so this exercises the
+  same code.
+
+* Conditional tests: the two most expensive test files (multiple-endpoint
+  PK/PD and censored VPC plots) already run under `skip_on_cran()` and so
+  are not part of the check above; they run in our own CI.
+
 ## R CMD check results
 
 0 errors | 0 warnings | 0 notes
-
-Checked with `R CMD check --as-cran` (which runs the `\donttest{}`
-examples) on Ubuntu 24.04, R 4.6.1, with the check restricted to two
-cores (`OMP_THREAD_LIMIT=2`, `_R_CHECK_LIMIT_CORES_=TRUE`).
-
-## Resubmission
-
-This is a resubmission.  The previous submission was rejected because the
-overall check time was over 10 minutes.  The check time has been cut by
-half; on our two-core reference check it went from 6m56s to 3m30s:
-
-                            before   after
-    donttest examples   108s     ->   75s
-    tests               258s     ->   87s
-    total               6m56s    ->  3m30s
-
-The reduction comes from three changes, none of which drops test or
-example coverage:
-
-* A performance fix in the package itself.  `plot()` expanded its
-  paginated individual plots one-per-page with `ggtibble::as_gglist()`,
-  which deep-copies the plot through `serialize()`/`unserialize()`.
-  Those plots are built inside functions that hold the whole nlmixr2 fit,
-  so every copy walked the entire fit object.  The pages are now built by
-  re-adding the paginated facet for each page, which makes `plot()` about
-  three times faster for users as well as in the check.
-
-* The examples fit their models with a small number of SAEM iterations
-  (`nBurn = 10, nEm = 20`) rather than the default 200/300.  The fits are
-  still real fits and still produce the figures being documented.
-
-* The tests simulate 10 replicates for VPC and NPDE calculations instead
-  of the default 300.  The tests assert on plot structure, not on the
-  simulated quantiles, so the smaller simulations exercise the same code.
 
 ## Changes in this release
 
