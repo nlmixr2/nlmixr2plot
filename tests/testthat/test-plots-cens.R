@@ -111,4 +111,26 @@ test_that("plot censoring", {
                  est = "focei", control=nlmixr2est::foceiControl(print=0),
                  table = nlmixr2est::tableControl(npde = TRUE, censMethod = "cdf"))
   expect_error(vpcPlot(fit = fit1), NA)
+
+  # nlmixr2#390: censored VPC with a non-time idv (tad) must not error with
+  # "object of type 'closure' is not subsettable"
+  expect_error(vpcCens(fit1, cens = TRUE, n = 10), NA)
+  expect_error(vpcCensTad(fit1, cens = TRUE, idv = "tad", n = 10), NA)
+  # also works when an nlmixr2vpcSim object is passed instead of a fit (note
+  # vpcPlot() currently re-simulates rather than reusing it, so this only covers
+  # the entry point, not the supplied simulation)
+  sim390 <- nlmixr2est::vpcSim(fit1, n = 10, pred = TRUE)
+  expect_error(vpcCens(sim390, cens = TRUE), NA)
+  expect_error(vpcCensTad(sim390, cens = TRUE, idv = "tad"), NA)
+
+  # The censored VPC must group the simulated data by replicate.  A leftover
+  # "sim" column made vpc use the simulated values themselves as the replicate
+  # index, giving one "replicate" per row and a meaningless confidence band.
+  for (.idv in c("time", "tad")) {
+    .db <- vpcPlot(fit1, cens = TRUE, idv = .idv, n = 10, vpcdb = TRUE)
+    expect_true(all(c("id", "dv", "idv") %in% names(.db$sim)))
+    # "sim" is vpc's replicate index, so it must be 1..n, not the simulated
+    # values that used to be left in that column
+    expect_equal(sort(unique(.db$sim$sim)), 1:10)
+  }
 })

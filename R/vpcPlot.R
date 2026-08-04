@@ -125,20 +125,28 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     if (is.null(lloq) && is.null(uloq)) {
       stop("this data is not censored")
     }
-    .sim$dv <- .sim$sim
-    .sim$idv <- .sim[[idv]]
     .obs <- as.data.frame(fit)
-    # Make sure idv is not missing
-    #.obs <- .obs[!is.na(.obs[[idv]]), ]
-
-    .obs$idv <- .obs[[idv]]
-    .w <- which(tolower(names(.obs)) == idv)
-    .time <- .obs[, .w]
-    .obs <- .obs[, -.w]
-    .obs$TIME <- .time
+    # Pass the column mappings explicitly (as in the non-censored vpc path)
+    # instead of letting vpc_cens guess them.  Guessing maps idv to "TIME"/"time"
+    # and, when idv is "tad", left an extra "idv" column that collided with vpc's
+    # internal standardized names (nlmixr2#390).
+    # Map dv to the simulated "sim" column instead of copying it into a new "dv"
+    # column; vpc renames the mapped column to "dv", and a leftover "sim" column
+    # makes vpc:::add_sim_index_number() use the simulated values themselves as
+    # the replicate index (giving one "replicate" per row).
+    .simCens <- list(
+      id=.vpcCensCol(.sim, "id", "simulated"),
+      dv=.vpcCensCol(.sim, "sim", "simulated"),
+      idv=.vpcCensCol(.sim, idv, "simulated"))
+    .obsCens <- list(
+      id=.vpcCensCol(.obs, "id", "observed"),
+      dv=.vpcCensCol(.obs, "dv", "observed"),
+      idv=.vpcCensCol(.obs, idv, "observed"))
+    .sim <- .vpcCensDropStray(.sim, .simCens, stratify)
+    .obs <- .vpcCensDropStray(.obs, .obsCens, stratify)
     rxode2::rxReq("vpc")
-    return(vpc::vpc_cens(sim=.sim,
-                         obs=.obs,
+    return(vpc::vpc_cens(sim=.sim, sim_cols=.simCens,
+                         obs=.obs, obs_cols=.obsCens,
                          bins=bins, n_bins=n_bins, bin_mid=bin_mid,
                          show = show, stratify = stratify, ci = ci,
                          uloq = uloq, lloq = lloq,
@@ -361,6 +369,53 @@ vpcCensTad <- function(..., cens=TRUE, idv="tad") {
 #' @export
 vpcCens <- function(..., cens=TRUE, idv="time") {
   vpcPlot(..., cens=cens, idv=idv)
+}
+
+#' Find the column `col` maps to for a censored VPC
+#'
+#' Prefers an exact name match and falls back to a case-insensitive one, so an
+#' expanded simulation carrying both "TIME" and "time" resolves to the exact
+#' match instead of being rejected as ambiguous.  Errors on a missing or
+#' ambiguous match (as `.vpcUiSetupObservationData()` does) so `character(0)` or
+#' several matches are never handed to `vpc`.
+#'
+#' @param data data frame to look in
+#' @param col column name to find
+#' @param what "simulated" or "observed", used in the error message
+#' @return the matching name in `data`
+#' @noRd
+.vpcCensCol <- function(data, col, what) {
+  .wo <- which(names(data) == col)
+  if (length(.wo) != 1) {
+    .wo <- which(tolower(names(data)) == tolower(col))
+  }
+  if (length(.wo) != 1) {
+    stop("cannot find a unique '", col, "' column in the ", what,
+         " data for the censored VPC",
+         if (length(.wo) == 0) "" else
+           paste0(" (matched: ", paste(names(data)[.wo], collapse=", "), ")"),
+         call.=FALSE)
+  }
+  names(data)[.wo]
+}
+
+#' Drop columns that collide with vpc's standardized names
+#'
+#' `vpc` renames the mapped columns to "id"/"dv"/"idv"; an unrelated column
+#' already using one of those names sends `vpc::standardize_column()` down the
+#' rename branch that is broken in vpc 1.2.4 ("object of type 'closure' is not
+#' subsettable").  Drop those strays, keeping the mapped and stratify columns.
+#'
+#' @param data data frame to clean
+#' @param cols list of `id`/`dv`/`idv` mappings for `data`
+#' @param stratify stratification columns to keep (may be `NULL`)
+#' @return `data` without the colliding columns
+#' @noRd
+.vpcCensDropStray <- function(data, cols, stratify=NULL) {
+  .stray <- setdiff(intersect(names(cols), names(data)),
+                    c(unlist(cols), stratify))
+  if (length(.stray) == 0L) return(data)
+  data[, setdiff(names(data), .stray), drop=FALSE]
 }
 
 #' Setup Observation data for VPC
