@@ -78,7 +78,7 @@ fit <- nlmixr2est::nlmixr2(one.compartment, theo_sd,  est="saem",
 #> ✔ done
 #> ℹ calculate uninformed etas
 #> ℹ done
-#> rxode2 5.1.6 using 2 threads (see ?getRxThreads)
+#> rxode2 5.1.7 using 2 threads (see ?getRxThreads)
 #>   no cache: create with `rxCreateCache()`
 #> 
 #> Attaching package: ‘rxode2’
