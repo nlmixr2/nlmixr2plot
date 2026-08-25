@@ -249,6 +249,7 @@ fit <-
 #> ✔ done
 #> ℹ calculate uninformed etas
 #> ℹ done
+#> covMethod="sa" could not be computed; using the linearized FIM
 #> Calculating covariance matrix
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
