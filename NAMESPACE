@@ -16,7 +16,9 @@ export(vpcCensTad)
 export(vpcPlot)
 export(vpcPlotTad)
 importFrom(ggplot2,.data)
-importFrom(rxode2,geom_amt)
-importFrom(rxode2,geom_cens)
-importFrom(rxode2,stat_amt)
-importFrom(rxode2,stat_cens)
+importFrom(rxode2,
+  geom_amt,
+  geom_cens,
+  stat_amt,
+  stat_cens
+)
