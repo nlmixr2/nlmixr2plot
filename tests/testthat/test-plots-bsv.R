@@ -5,6 +5,54 @@
   vapply(p$layers, function(.l) class(.l$geom)[1], character(1))
 }
 
+test_that("BSV plots survive a model with between-occasion variability", {
+  skip_if_not_installed("nlmixr2data")
+
+  # A model with more than one variance level reports `omega` as a list of one
+  # matrix per level rather than as a single matrix, which is what regressed
+  # here: `nrow()` of that list is NULL, so the BSV guard evaluated to NA and
+  # plot() stopped with "missing value where TRUE/FALSE needed".
+  d <- nlmixr2data::pheno_sd
+  d$OCC <- unsplit(lapply(split(d$EVID, d$ID), function(e) cumsum(e != 0)), d$ID)
+  d$OCC <- pmax(d$OCC, 1L)
+
+  iov <- function() {
+    ini({
+      lcl <- log(0.008)
+      lvc <- log(0.6)
+      etaCl ~ 0.1
+      etaVcOcc ~ 0.1 | OCC
+      cpaddSd <- 0.1
+    })
+    model({
+      cl <- exp(lcl + etaCl)
+      vc <- exp(lvc + etaVcOcc)
+      kel <- cl / vc
+      d / dt(central) <- -kel * central
+      cp <- central / vc
+      cp ~ add(cpaddSd)
+    })
+  }
+
+  fit <-
+    suppressMessages(nlmixr2est::nlmixr(
+      iov, d, est = "saem",
+      control = nlmixr2est::saemControl(nBurn = 5L, nEm = 5L, print = 0L)
+    ))
+
+  # Pin the shape that caused the regression, so a change upstream is visible
+  # here rather than only through a failing plot.
+  expect_true(is.list(fit$omega))
+  expect_null(nrow(fit$omega))
+  expect_true(nlmixr2plot:::.bsvHasBsv(fit))
+
+  p <- plot(fit)
+  expect_s3_class(p, "gglist")
+  expect_true("bsv" %in% names(p[["All Data"]]))
+  # Only subject-level etas are plotted; the occasion eta is not a BSV term.
+  expect_setequal(nlmixr2plot:::.bsvEtas(fit), "etaCl")
+})
+
 test_that("BSV plots: multi-eta fit gives QQ, correlation, and covariate plots", {
   skip_if_not_installed("nlmixr2data")
 

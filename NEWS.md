@@ -1,5 +1,13 @@
 # nlmixr2plot 5.1.0.9000
 
+* `plot()` no longer fails on a fit with more than one variance level. A model
+  with between-occasion variability reports `omega` as a list holding one matrix
+  per level rather than as a single matrix, and the between-subject-variability
+  guard tested `nrow(omega) > 0`, which is `NA` for a list, so `plot()` stopped
+  with "missing value where TRUE/FALSE needed" before drawing anything. The
+  guard now asks whether the fit reports any between-subject eta, which is what
+  the BSV plots need and does not depend on the number of variance levels.
+
 * Fixed the confidence-band width (and its legend label) for `vpcPlot()`/
   `vpcPlotTad()` with the `tidyvpc` backend; `ci = c(lower, upper)` was passed
   to `tidyvpc::vpcstats()` as `conf.level = ci[2]` instead of the actual

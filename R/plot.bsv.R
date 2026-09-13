@@ -1,11 +1,20 @@
 #' Does a fit have estimated between-subject variability (BSV)?
 #'
 #' @param x A nlmixr2 fit object
-#' @return `TRUE` when the model has a non-empty omega (BSV) matrix
+#' @return `TRUE` when the fit reports at least one between-subject eta
 #' @noRd
 .bsvHasBsv <- function(x) {
-  .omega <- x$omega
-  !is.null(.omega) && nrow(.omega) > 0L
+  # `omega` is a matrix for a single-level model, but a list holding one matrix
+  # per level once the model has between-occasion variability (named for the
+  # levels, e.g. `id` and `OCC`).  `nrow()` of that list is NULL, so testing the
+  # shape of `omega` yields NA rather than TRUE and stops the plot.  These plots
+  # draw the eta columns `.bsvEtas()` reports, so ask that question instead: it
+  # is what the plots actually need and it does not depend on how many variance
+  # levels the model has.
+  if (is.null(x$omega)) {
+    return(FALSE)
+  }
+  length(.bsvEtas(x)) > 0L
 }
 
 #' Names of the BSV eta columns for a fit
