@@ -146,38 +146,46 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
   }
 
   # Code the endpoints by `cmt` (not `dvid`), so the compartment factor also
-  # has levels for the unobserved states depot and center
+  # has levels for the unobserved states depot and center.  Use both labels
+  # and the numeric compartment codes (depot = 1, center = 2, cp = 3, pca = 4)
   d <- nlmixr2data::warfarin
-  d$cmt <- ifelse(d$evid != 0, "depot", as.character(d$dvid))
+  .cmtLabel <- ifelse(d$evid != 0, "depot", as.character(d$dvid))
   d$dvid <- NULL
-
-  suppressMessages(suppressWarnings(
-    fit <- nlmixr2est::nlmixr(
-      pk.emax, d, est = "saem",
-      control = nlmixr2est::saemControl(print = 0, nBurn = 10, nEm = 20)
-    )
-  ))
-  expect_true(all(c("depot", "center") %in% levels(fit$CMT)))
-
-  suppressWarnings(.names <- names(plot(fit)))
-  expect_equal(grep("^Endpoint:", .names, value = TRUE),
-               c("Endpoint:  cp", "Endpoint:  pca"))
-
-  .panels <- function(p) {
-    as.character(ggplot2::ggplot_build(p)$layout$layout$cmt)
-  }
-  for (.method in c("vpc", "tidyvpc")) {
-    for (.pc in c(FALSE, TRUE)) {
-      suppressWarnings(
-        .p <- vpcPlot(fit, n = 10, pred_corr = .pc, method = .method)
-      )
-      expect_equal(.panels(.p), c("cp", "pca"),
-                   info = paste(.method, "pred_corr =", .pc))
-    }
-  }
-  # the censored vpc path stratifies by the observed endpoints too
-  suppressWarnings(
-    .p <- vpcPlot(fit, n = 10, cens = TRUE, lloq = 2, method = "vpc")
+  .coding <- list(
+    character = .cmtLabel,
+    numeric = c(depot = 1L, cp = 3L, pca = 4L)[.cmtLabel]
   )
-  expect_equal(.panels(.p), c("cp", "pca"))
+  for (.c in names(.coding)) {
+    d$cmt <- unname(.coding[[.c]])
+
+    suppressMessages(suppressWarnings(
+      fit <- nlmixr2est::nlmixr(
+        pk.emax, d, est = "saem",
+        control = nlmixr2est::saemControl(print = 0, nBurn = 10, nEm = 20)
+      )
+    ))
+    expect_true(all(c("depot", "center") %in% levels(fit$CMT)))
+
+    suppressWarnings(.names <- names(plot(fit)))
+    expect_equal(grep("^Endpoint:", .names, value = TRUE),
+                 c("Endpoint:  cp", "Endpoint:  pca"))
+
+    .panels <- function(p) {
+      as.character(ggplot2::ggplot_build(p)$layout$layout$cmt)
+    }
+    for (.method in c("vpc", "tidyvpc")) {
+      for (.pc in c(FALSE, TRUE)) {
+        suppressWarnings(
+          .p <- vpcPlot(fit, n = 10, pred_corr = .pc, method = .method)
+        )
+        expect_equal(.panels(.p), c("cp", "pca"),
+                     info = paste(.c, .method, "pred_corr =", .pc))
+      }
+    }
+    # the censored vpc path stratifies by the observed endpoints too
+    suppressWarnings(
+      .p <- vpcPlot(fit, n = 10, cens = TRUE, lloq = 2, method = "vpc")
+    )
+    expect_equal(.panels(.p), c("cp", "pca"), info = paste(.c, "cens"))
+  }
 })

@@ -466,10 +466,12 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
           !any(names(obs) == "CMT") || !any(names(sim) == .n)) {
       next
     }
-    .cmt <- droplevels(as.factor(obs$CMT))
-    .lvl <- levels(.cmt)
-    obs[[.n]] <- .cmt
-    sim[[.n]] <- factor(as.character(sim[[.n]]), levels=.lvl)
+    .cmt <- as.factor(obs$CMT)
+    .lvl <- levels(droplevels(.cmt))
+    obs[[.n]] <- factor(as.character(.cmt), levels=.lvl)
+    # simulated endpoints may be integer compartment codes or labels
+    .sim <- .vpcMatchFactor(sim[[.n]], .cmt)
+    sim[[.n]] <- factor(as.character(.sim), levels=.lvl)
   }
   list(obs=obs, sim=sim)
 }
