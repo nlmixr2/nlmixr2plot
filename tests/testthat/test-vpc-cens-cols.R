@@ -65,6 +65,9 @@ test_that(".vpcCensAddStratify copies stratify columns by original-data row", {
   expect_equal(.res$SEX, c("f", "m", "f", "m"))
   # columns already present and NULL stratify are left alone
   .obs$WT <- 1
+  .part <- nlmixr2plot:::.vpcCensAddStratify(.obs, .fit, c("WT", "SEX"))
+  expect_equal(.part$WT, rep(1, 4))
+  expect_equal(.part$SEX, c("f", "m", "f", "m"))
   expect_equal(nlmixr2plot:::.vpcCensAddStratify(.obs, .fit, "WT"), .obs)
   expect_equal(nlmixr2plot:::.vpcCensAddStratify(.obs, .fit, NULL), .obs)
 })
@@ -78,10 +81,12 @@ test_that(".vpcCensAddStratify errors instead of misaligning rows", {
     nlmixr2plot:::.vpcCensAddStratify(.obs, list(origData=.orig,
                                                  env=list(.rownum=2)), "WT"),
     "cannot align")
-  expect_error(
-    nlmixr2plot:::.vpcCensAddStratify(.obs, list(origData=.orig,
-                                                 env=list(.rownum=c(2, 9))), "WT"),
-    "cannot align")
+  for (.rn in list(c(2, 9), c(0, 2), c(2, NA))) {
+    expect_error(
+      nlmixr2plot:::.vpcCensAddStratify(.obs, list(origData=.orig,
+                                                   env=list(.rownum=.rn)), "WT"),
+      "cannot align")
+  }
   expect_error(
     nlmixr2plot:::.vpcCensAddStratify(.obs, list(origData=.orig,
                                                  env=list(.rownum=c(2, 3))), "AGE"),
