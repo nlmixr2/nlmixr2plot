@@ -1,3 +1,13 @@
+# nlmixr2plot (development version)
+
+* The censored VPC (`vpcCens()`, `vpcCensTad()`, or `vpcPlot()` with
+  `cens = TRUE` and the `vpc` backend) now honours the `data` argument; it
+  previously always used the fitted data, whatever `data` was supplied (#55).
+  The observed data now comes from the original (or supplied) dataset instead of
+  the fit, so censored records are identified from the `CENS` column rather than
+  from the fit's imputed `DV` (which, for `censMethod = "cdf"`, could land above
+  the limit and be counted as uncensored).
+
 # nlmixr2plot 5.1.0
 
 * Fixed an "object of type 'closure' is not subsettable" error in `vpcCensTad()`

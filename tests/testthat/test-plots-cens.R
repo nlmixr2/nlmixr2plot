@@ -135,6 +135,18 @@ test_that("plot censoring", {
     expect_equal(sort(unique(.db$sim$sim)), 1:10)
   }
 
+  # #55: the censored VPC must honour `data` (it used to always use the fit)
+  .od <- fit1$origData
+  .half <- .od[.od$ID %in% unique(.od$ID)[1:4], ]
+  .nObs <- function(d) sum(d$AMT == 0 & !is.na(d$DV))
+  .all <- vpcCens(fit1, cens = TRUE, n = 5, vpcdb = TRUE)
+  .sub <- vpcCens(fit1, data = .half, cens = TRUE, n = 5, vpcdb = TRUE)
+  expect_equal(nrow(.all$obs), .nObs(.od))
+  expect_equal(nrow(.sub$obs), .nObs(.half))
+  # censored records (CENS == 1, DV at the limit) count as below the limit
+  expect_equal(sum(is.na(.all$obs$dv)), sum(.od$cens == 1 & .od$AMT == 0))
+  expect_equal(sum(is.na(.sub$obs$dv)), sum(.half$cens == 1 & .half$AMT == 0))
+
   # nlmixr2#390: prediction-corrected VPC on censored data must not crash
   # with a quantile() NA error
   expect_error(vpcPlot(fit = fit1, pred_corr = TRUE, n = 10), NA)

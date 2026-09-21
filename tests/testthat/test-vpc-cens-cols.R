@@ -49,3 +49,14 @@ test_that(".vpcCensDropStray keeps stratify columns", {
   expect_true("dv" %in% names(.res))
   expect_false("idv" %in% names(.res))
 })
+
+test_that(".vpcCensObs sets censored dv to NA (#55)", {
+  .d <- data.frame(ID=1, TIME=1:4, DV=c(1, 2, 1, 5), CENS=c(1, 0, NA, -1))
+  .res <- nlmixr2plot:::.vpcCensObs(.d)
+  expect_equal(.res$DV, c(NA, 2, 1, NA))
+  expect_equal(.res[, c("ID", "TIME", "CENS")], .d[, c("ID", "TIME", "CENS")])
+
+  # without a cens column the data is returned unchanged
+  .d2 <- .d[, c("ID", "TIME", "DV")]
+  expect_equal(nlmixr2plot:::.vpcCensObs(.d2), .d2)
+})
