@@ -481,18 +481,31 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
                    .lorig[!(.lorig %in% .lorig[duplicated(.lorig)])])
   .key <- function(d, lower) {
     do.call(paste, c(lapply(.by, function(n) {
-      x <- d[[which(lower == n)]]
-      if (is.double(x)) sprintf("%.17g", x) else as.character(x)
+      # as.character() so numbers read in as text still match
+      as.character(d[[which(lower == n)]])
     }), sep="\r"))
   }
+  .amb <- rep(FALSE, nrow(obs))
   if (all(c("id", "time") %in% .by)) {
     .ko <- .key(obs, .lo)
     .korig <- .key(.orig, .lorig)
     # prefer the fitted rows so an observation cannot pick up an identical-
     # looking dose row when the columns telling them apart were dropped
     .fitRows <- fit$env$.rownum
-    .m <- .fitRows[match(.ko, .korig[.fitRows])]
-    .w <- which(is.na(.m))
+    .kfit <- .korig[.fitRows]
+    .m <- .fitRows[match(.ko, .kfit)]
+    # fitted rows that look identical on the shared columns but have different
+    # values cannot be told apart, so do not guess between them
+    .dup <- unique(.kfit[duplicated(.kfit)])
+    if (length(.dup) > 0L) {
+      .in <- .kfit %in% .dup
+      .nv <- tapply(.val[.in], .kfit[.in], function(v) {
+        length(unique(v))
+      })
+      .amb <- .ko %in% names(.nv)[.nv > 1L]
+      .m[.amb] <- NA_integer_
+    }
+    .w <- which(is.na(.m) & !.amb)
     .m[.w] <- match(.ko[.w], .korig)
   } else {
     .m <- rep(NA_integer_, nrow(obs))
@@ -505,7 +518,14 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
     .isObs <- if (length(.w) == 1L) obs[[.w]] == 0 else rep(TRUE, nrow(obs))
   }
   .isObs <- !is.na(.isObs) & .isObs
-  .n <- sum(.isObs & is.na(.m))
+  .n <- sum(.isObs & .amb)
+  if (.n > 0) {
+    warning(.n, " observation(s) in 'data' match several fitted rows with ",
+            "different '", col, "' values so '", col, "' is NA for them; keep ",
+            "the columns that tell them apart (like 'cmt') or add a '", col,
+            "' column to 'data' to supply it", call.=FALSE)
+  }
+  .n <- sum(.isObs & is.na(.m) & !.amb)
   if (.n > 0) {
     warning(.n, " observation(s) in 'data' do not match the fitted data so '",
             col, "' is NA for them; add a '", col, "' column to 'data' to ",

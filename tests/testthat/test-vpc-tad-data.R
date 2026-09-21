@@ -84,9 +84,46 @@ test_that("supplied data gets the fitted tad by content, not row number (#60)", 
   expect_warning(.vpcUiSetupObservationData(fit, data=sub7, idv="tad"),
                  "1 observation\\(s\\) in 'data' do not match")
 
+  # numbers supplied as text still match
+  sub8 <- sub
+  sub8$TIME <- as.character(sub8$TIME)
+  .o <- .vpcUiSetupObservationData(fit, data=sub8, idv="tad")
+  expect_equal(.o$obs$tad, .ref)
+
   # a supplied tad column is used as-is
   sub4 <- sub
   sub4$tad <- 42
   .o <- .vpcUiSetupObservationData(fit, data=sub4, idv="tad")
   expect_true(all(.o$obs$tad == 42))
+})
+
+test_that(".vpcFitColForData does not guess between identical-looking fitted rows (#60)", {
+  local_mocked_bindings(vpcNameDataCmts=function(object, data) data,
+                        .package="nlmixr2est")
+  # two observations at the same time in different compartments with
+  # different tad; row 1 is a dose
+  .orig <- data.frame(ID=1, TIME=c(0, 5, 5, 6), DV=c(NA, 0, 0, 1),
+                      CMT=c(1, 2, 3, 2), EVID=c(1, 0, 0, 0))
+  .fit <- list(origData=.orig, tad=c(5, 2, 6), env=list(.rownum=2:4))
+
+  # with cmt kept each row gets its own tad
+  expect_equal(.vpcFitColForData(.fit, .orig[4:2, ], "tad", supplied=TRUE),
+               c(6, 2, 5))
+
+  # without cmt the two time-5 rows cannot be told apart
+  .sub <- .orig[2:4, c("ID", "TIME", "DV", "EVID")]
+  expect_warning(.r <- .vpcFitColForData(.fit, .sub, "tad", supplied=TRUE),
+                 "2 observation\\(s\\) in 'data' match several fitted rows")
+  expect_equal(.r, c(NA, NA, 6))
+
+  # identical-looking rows with the same value are not ambiguous
+  .fit$tad <- c(5, 5, 6)
+  expect_warning(.r <- .vpcFitColForData(.fit, .sub, "tad", supplied=TRUE), NA)
+  expect_equal(.r, c(5, 5, 6))
+
+  # an observation never picks up an identical-looking (unfitted) dose row
+  .orig2 <- data.frame(ID=1, TIME=c(0, 0), DV=c(0, 0), EVID=c(1, 0))
+  .fit2 <- list(origData=.orig2, tad=0, env=list(.rownum=2L))
+  expect_equal(.vpcFitColForData(.fit2, .orig2[2, c("ID", "TIME", "DV")],
+                                 "tad", supplied=TRUE), 0)
 })
