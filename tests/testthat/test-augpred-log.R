@@ -66,6 +66,33 @@ test_that("plot(augPred) supports log axes (#32)", {
   expect_equal(length(unique(b$data[[1]]$group)), 2L)
   expect_equal(nrow(b$data[[2]]), 2L)
 
+  # unsorted rows and several subjects: breaks are found in time order and
+  # per subject
+  d4 <- data.frame(
+    id = factor(c(2, 1, 2, 1, 2, 1, 2, 1)),
+    time = c(3, 3, 1, 1, 2, 2, 4, 4),
+    values = c(1, 1, 2, 2, -1, 3, 1, 4),
+    ind = factor(rep("Pred", 8), c("Pred", "Observed"))
+  )
+  class(d4) <- class(d)
+  withr::with_options(list(rxode2.xgxr = FALSE), {
+    b <- ggplot2::ggplot_build(plot(d4, log = "y")[[1]])
+  })
+  .l <- b$data[[1]]
+  .ng <- tapply(.l$group, .l$PANEL, function(g) length(unique(g)))
+  # panel 1 (id 1) is one unbroken line; panel 2 (id 2) breaks at time 2
+  expect_equal(as.vector(.ng), c(1L, 2L))
+  expect_equal(.l$x[.l$PANEL == 1], c(1, 2, 3, 4))
+
+  # missing times are dropped and break the line
+  d5 <- d3
+  d5$time[2] <- NA
+  withr::with_options(list(rxode2.xgxr = FALSE), {
+    expect_no_warning(b <- ggplot2::ggplot_build(plot(d5, log = "y")[[1]]))
+  })
+  expect_equal(nrow(b$data[[1]]), 2L)
+  expect_equal(length(unique(b$data[[1]]$group)), 2L)
+
   expect_error(plot(d, log = FALSE), NA)
   expect_error(plot(d, log = "z"), "log")
   expect_error(plot(d, log = TRUE), "log")

@@ -129,13 +129,13 @@ plot.nlmixr2AugPred <- function(x, y, ..., log = "") {
     dpred <- x[x$ind != "Observed", ]
     .lineAes <- NULL
     if (.log$x || .log$y) {
-      # Non-positive values cannot be drawn on a log axis.  Drop them, but
+      # Non-positive (and missing) values cannot be drawn on a log axis.  Drop them, but
       # start a new line group after each dropped prediction so the line
       # breaks at the gap instead of bridging it.
       .ok <- function(d) {
-        .r <- rep(TRUE, nrow(d))
-        if (.log$x) .r <- .r & !is.na(d$time) & d$time > 0
-        if (.log$y) .r <- .r & !is.na(d$values) & d$values > 0
+        .r <- !is.na(d$time) & !is.na(d$values)
+        if (.log$x) .r <- .r & d$time > 0
+        if (.log$y) .r <- .r & d$values > 0
         .r
       }
       dobs <- dobs[.ok(dobs), ]
