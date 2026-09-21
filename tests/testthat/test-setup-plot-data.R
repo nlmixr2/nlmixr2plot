@@ -19,6 +19,24 @@ test_that(".setupPlotData drops compartments without observations (#44)", {
   .d2 <- .d
   .d2$IRES[.d2$CMT == "csf"] <- NA
   expect_equal(levels(.setupPlotData(.d2)$CMT), "All Data")
+
+  # Character compartments are handled like factors
+  .d3 <- .d
+  .d3$CMT <- as.character(.d3$CMT)
+  expect_equal(levels(.setupPlotData(.d3)$CMT), c("Endpoint:  Cc", "Endpoint:  csf"))
+})
+
+test_that(".vpcMatchFactor recodes integer and character columns (#44)", {
+  .ref <- factor(c("cp", "pca"), levels = c("depot", "center", "cp", "pca"))
+  expect_equal(.vpcMatchFactor(c("pca", "cp"), .ref),
+               factor(c("pca", "cp"), levels = levels(.ref)))
+  expect_equal(.vpcMatchFactor(c(3L, 4L), .ref),
+               factor(c("cp", "pca"), levels = levels(.ref)))
+  expect_equal(.vpcMatchFactor(c(3, 4), .ref),
+               factor(c("cp", "pca"), levels = levels(.ref)))
+  # unchanged when the reference is not a factor or x is already a factor
+  expect_identical(.vpcMatchFactor(1:2, 1:2), 1:2)
+  expect_identical(.vpcMatchFactor(.ref, factor("a")), .ref)
 })
 
 test_that("plot.nlmixr2AugPred skips endpoints without data (#44)", {
@@ -34,4 +52,10 @@ test_that("plot.nlmixr2AugPred skips endpoints without data (#44)", {
   .p <- plot(.x)
   .titles <- vapply(.p, function(p) p$labels$title, character(1))
   expect_equal(.titles, c("Cc", "csf"))
+
+  # NA endpoints do not create all-NA rows in any endpoint's plot
+  .x$Endpoint[2] <- NA
+  .p <- plot(.x)
+  expect_length(.p, 2L)
+  expect_false(anyNA(.p[[1]]$data$values))
 })

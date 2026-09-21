@@ -213,7 +213,7 @@ plotCmt <- function(x, cmt, bsv = NULL) {
   .hasNpde <- any(names(x) == "NPD")
   .hasPred <- any(names(x) == "PRED")
   .hasIpred <- any(names(x) == "IPRED")
-  .datCmt <- x[x$CMT == cmt,, drop = FALSE]
+  .datCmt <- x[which(x$CMT == cmt),, drop = FALSE]
   if (nrow(.datCmt) > 0) {
     if (.hasPred & .hasIpred) {
       .lst[["dv_pred_ipred_linear"]] <-

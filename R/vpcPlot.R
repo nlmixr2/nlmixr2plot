@@ -173,12 +173,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .obs <- do.call(rxode2::rxSolve, .si)
     .both <- intersect(names(.obs1), names(.obs))
     for (.n in .both) {
-      if (inherits(.obs1[[.n]], "factor") && !inherits(.obs[[.n]], "factor")) {
-        .tmp <- as.integer(.obs[[.n]])
-        attr(.tmp, "levels") <- attr(.obs1[[.n]], "levels")
-        class(.tmp) <- "factor"
-        .obs[[.n]] <- .tmp
-      }
+      .obs[[.n]] <- .vpcMatchFactor(.obs[[.n]], .obs1[[.n]])
     }
     .no <- names(.obs)
     .w <- which(.no == "sim")
@@ -192,11 +187,15 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
    }
   .both <- intersect(names(.sim), names(.obs))
   for (.n in .both) {
-    if (inherits(.obs[[.n]], "factor") && !inherits(.sim[[.n]], "factor")) {
-      .tmp <- as.integer(.sim[[.n]])
-      attr(.tmp, "levels") <- attr(.obs[[.n]], "levels")
-      class(.tmp) <- "factor"
-      .sim[[.n]] <- .tmp
+    .sim[[.n]] <- .vpcMatchFactor(.sim[[.n]], .obs[[.n]])
+  }
+  # Stratify only by levels that are actually observed, so unobserved
+  # compartments (like depot) do not become endpoints (#44)
+  for (.n in intersect(stratify, .both)) {
+    if (inherits(.obs[[.n]], "factor")) {
+      .lvl <- levels(droplevels(.obs[[.n]]))
+      .obs[[.n]] <- factor(as.character(.obs[[.n]]), levels=.lvl)
+      .sim[[.n]] <- factor(as.character(.sim[[.n]]), levels=.lvl)
     }
   }
   .w <- which(tolower(names(.obs)) == "evid")
@@ -443,6 +442,28 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
                     c(unlist(cols), stratify))
   if (length(.stray) == 0L) return(data)
   data[, setdiff(names(data), .stray), drop=FALSE]
+}
+
+#' Recode a column to match a reference factor
+#'
+#' Simulated and pred-corrected data can return a stratification column (like
+#' `cmt`) as an integer code or as character labels, while the observed data
+#' has it as a factor.  Integer codes are taken as level indices and character
+#' values are matched by label (#44).
+#'
+#' @param x column to recode
+#' @param ref reference column
+#' @return `x` as a factor with the levels of `ref`, or `x` unchanged when
+#'   `ref` is not a factor or `x` already is one
+#' @noRd
+.vpcMatchFactor <- function(x, ref) {
+  if (!inherits(ref, "factor") || inherits(x, "factor")) return(x)
+  .lvl <- levels(ref)
+  if (is.character(x)) return(factor(x, levels=.lvl))
+  .tmp <- as.integer(x)
+  attr(.tmp, "levels") <- .lvl
+  class(.tmp) <- "factor"
+  .tmp
 }
 
 #' Setup Observation data for VPC

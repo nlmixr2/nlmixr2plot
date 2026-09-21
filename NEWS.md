@@ -4,6 +4,10 @@
   "Endpoint: " groups for state compartments without observations (like
   `depot` or `central`); only observed endpoints are plotted.  `plot()` of an
   `augPred()` object likewise skips endpoints without data (#44).
+* `vpcPlot()`/`vpcPlotTad()` of a multiple-endpoint fit whose data codes the
+  endpoints with `cmt` no longer shows an extra `NA` panel (or a single `NA`
+  panel with `pred_corr = TRUE`); the simulated compartment labels are now
+  matched to the observed ones by name (#44).
 
 # nlmixr2plot 5.1.0
 
