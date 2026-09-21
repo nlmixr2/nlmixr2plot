@@ -451,9 +451,15 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
          "stratification column(s): ", paste(.miss, collapse=", "),
          call.=FALSE)
   }
+  # match exactly: vpcSimExpand() and vpc_cens() both need the exact name, so
+  # a case-insensitive match here would only move the error into vpc
+  .notFound <- setdiff(.miss, names(.src))
+  if (length(.notFound) > 0L) {
+    stop("stratification column(s) not found in the data: ",
+         paste(.notFound, collapse=", "), call.=FALSE)
+  }
   for (.s in .miss) {
-    .col <- .vpcCensCol(.src, .s, "original")
-    obs[[.s]] <- .src[[.col]][.rn]
+    obs[[.s]] <- .src[[.s]][.rn]
   }
   obs
 }

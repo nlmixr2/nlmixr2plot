@@ -139,7 +139,11 @@ test_that("plot censoring", {
   # (as.data.frame(fit) drops it) and assign it to the right rows
   .db <- vpcCens(fit1, cens = TRUE, n = 5, stratify = "WT", vpcdb = TRUE)
   .wt <- unique(fit1$origData[, c("ID", "WT")])
-  expect_equal(nlevels(factor(.db$obs$strat)), nrow(unique(.wt["WT"])))
+  # WT is constant within ID here, so each observed row's stratum must be its
+  # subject's WT
+  expect_equal(as.character(.db$obs$strat),
+               as.character(.wt$WT[match(as.character(.db$obs$id),
+                                         as.character(.wt$ID))]))
   # check the row alignment on a column that varies within ID: drop TIME from
   # the fit table, carry it back from the original data and compare
   .fitDf <- as.data.frame(fit1)

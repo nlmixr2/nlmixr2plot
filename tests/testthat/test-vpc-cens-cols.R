@@ -60,10 +60,9 @@ test_that(".vpcCensAddStratify copies stratify columns by original-data row", {
   # within ID so a merge by ID (rather than by row) would give wrong values
   .fit <- list(origData=.orig, env=list(.rownum=c(6, 2, 5, 3)))
   .obs <- data.frame(ID=c(2, 1, 2, 1), DV=1:4)
-  .res <- nlmixr2plot:::.vpcCensAddStratify(.obs, .fit, c("WT", "sex"))
+  .res <- nlmixr2plot:::.vpcCensAddStratify(.obs, .fit, c("WT", "SEX"))
   expect_equal(.res$WT, c(82, 71, 81, 72))
-  # case-insensitive fallback, kept under the requested name
-  expect_equal(.res$sex, c("f", "m", "f", "m"))
+  expect_equal(.res$SEX, c("f", "m", "f", "m"))
   # columns already present and NULL stratify are left alone
   .obs$WT <- 1
   expect_equal(nlmixr2plot:::.vpcCensAddStratify(.obs, .fit, "WT"), .obs)
@@ -86,5 +85,10 @@ test_that(".vpcCensAddStratify errors instead of misaligning rows", {
   expect_error(
     nlmixr2plot:::.vpcCensAddStratify(.obs, list(origData=.orig,
                                                  env=list(.rownum=c(2, 3))), "AGE"),
-    "cannot find a unique 'AGE' column in the original data")
+    "stratification column\\(s\\) not found in the data: AGE")
+  # names must match exactly, as vpcSimExpand() and vpc_cens() require
+  expect_error(
+    nlmixr2plot:::.vpcCensAddStratify(.obs, list(origData=.orig,
+                                                 env=list(.rownum=c(2, 3))), "wt"),
+    "not found in the data: wt")
 })
