@@ -456,7 +456,8 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' uncensored.  Move the flagged records past their limit instead: `-Inf` for
 #' below the limit (`CENS == 1`) and `Inf` for above it (`CENS == -1`), so each
 #' is counted only on its own side of the censoring.  Without a `CENS` column
-#' `vpc` relies on the `dv`/limit comparison alone.
+#' `vpc` relies on the `dv`/limit comparison alone, so warn: records encoded at
+#' the limit are then counted as uncensored.
 #'
 #' `vpc` also counts a missing `dv` as censored, so records without an
 #' observation (e.g. a missed sample) are dropped first, as the fitted data does.
@@ -468,8 +469,14 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 .vpcCensObs <- function(obs) {
   .wd <- .vpcCensCol(obs, "dv", "observed")
   obs <- obs[!is.na(obs[[.wd]]), , drop=FALSE]
-  if (!any(tolower(names(obs)) == "cens")) return(obs)
+  if (!any(tolower(names(obs)) == "cens")) {
+    warning("the observed data has no 'cens' column; censoring for the VPC is ",
+            "judged by comparing 'dv' to the limit, so records at the limit ",
+            "count as uncensored", call.=FALSE)
+    return(obs)
+  }
   .cens <- obs[[.vpcCensCol(obs, "cens", "observed")]]
+  if (is.factor(.cens)) .cens <- as.numeric(as.character(.cens))
   .dv <- obs[[.wd]]
   .dv[!is.na(.cens) & .cens == 1] <- -Inf
   .dv[!is.na(.cens) & .cens == -1] <- Inf

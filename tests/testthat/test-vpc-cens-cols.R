@@ -56,9 +56,15 @@ test_that(".vpcCensObs moves censored dv past its limit (#55)", {
   expect_equal(.res$DV, c(-Inf, 2, 1, Inf))
   expect_equal(.res[, c("ID", "TIME", "CENS")], .d[, c("ID", "TIME", "CENS")])
 
-  # without a cens column the data is returned unchanged
+  # a factor cens column is read by its values, not its codes
+  .df <- .d
+  .df$CENS <- factor(.df$CENS)
+  expect_equal(nlmixr2plot:::.vpcCensObs(.df)$DV, c(-Inf, 2, 1, Inf))
+
+  # without a cens column the data is returned unchanged, with a warning
   .d2 <- .d[, c("ID", "TIME", "DV")]
-  expect_equal(nlmixr2plot:::.vpcCensObs(.d2), .d2)
+  expect_warning(.res2 <- nlmixr2plot:::.vpcCensObs(.d2), "no 'cens' column")
+  expect_equal(.res2, .d2)
 })
 
 test_that(".vpcCensObs drops missing observations (#55)", {
@@ -69,7 +75,8 @@ test_that(".vpcCensObs drops missing observations (#55)", {
   expect_equal(.res$DV, c(2, -Inf))
 
   # also without a cens column
-  .res2 <- nlmixr2plot:::.vpcCensObs(.d[, c("ID", "TIME", "DV")])
+  .res2 <- suppressWarnings(
+    nlmixr2plot:::.vpcCensObs(.d[, c("ID", "TIME", "DV")]))
   expect_equal(.res2$TIME, c(2L, 4L))
 })
 
