@@ -4,6 +4,12 @@
   (`log = "y"`, `"x"` or `"xy"`) to draw the individual plots on log-scaled
   axes; non-positive values, which cannot be shown on a log axis, are dropped
   (#32).
+  
+* Fixed the confidence-band width (and its legend label) for `vpcPlot()`/
+  `vpcPlotTad()` with the `tidyvpc` backend; `ci = c(lower, upper)` was passed
+  to `tidyvpc::vpcstats()` as `conf.level = ci[2]` instead of the actual
+  interval width `ci[2] - ci[1]`, so the default `ci = c(0.05, 0.95)` (a 90% CI)
+  was drawn and labeled as a 95% CI.
 
 # nlmixr2plot 5.1.0
 
