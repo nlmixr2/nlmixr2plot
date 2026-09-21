@@ -1,0 +1,65 @@
+test_that("plot(augPred) supports log axes (#32)", {
+  d <- data.frame(
+    id = factor(rep(1:2, each = 6)),
+    time = rep(c(0, 1, 2), 4),
+    values = c(0, 1, 2, 0.5, 1.5, 2.5, 0, 2, 3, 1, 2, 3),
+    ind = factor(rep(rep(c("Pred", "Observed"), each = 3), 2),
+                 c("Pred", "Observed"))
+  )
+  class(d) <- c("nlmixr2AugPred", "data.frame")
+
+  .isLog <- function(scale) {
+    .t <- if (is.function(scale$get_transformation)) {
+      scale$get_transformation()
+    } else {
+      scale$trans
+    }
+    identical(.t$name, "log-10")
+  }
+
+  for (.xgxr in c(TRUE, FALSE)) {
+    withr::local_options(list(rxode2.xgxr = .xgxr))
+
+    p <- plot(d)
+    b <- ggplot2::ggplot_build(p[[1]])
+    expect_false(.isLog(b$layout$panel_scales_x[[1]]))
+    expect_false(.isLog(b$layout$panel_scales_y[[1]]))
+
+    p <- plot(d, log = "y")
+    expect_s3_class(p, "gglist")
+    b <- ggplot2::ggplot_build(p[[1]])
+    expect_false(.isLog(b$layout$panel_scales_x[[1]]))
+    expect_true(.isLog(b$layout$panel_scales_y[[1]]))
+    # non-positive values are dropped rather than producing -Inf
+    expect_true(all(is.finite(b$data[[1]]$y)))
+    expect_true(all(is.finite(b$data[[2]]$y)))
+
+    p <- plot(d, log = "x")
+    b <- ggplot2::ggplot_build(p[[1]])
+    expect_true(.isLog(b$layout$panel_scales_x[[1]]))
+    expect_false(.isLog(b$layout$panel_scales_y[[1]]))
+
+    for (.l in c("xy", "yx")) {
+      p <- plot(d, log = .l)
+      b <- ggplot2::ggplot_build(p[[1]])
+      expect_true(.isLog(b$layout$panel_scales_x[[1]]))
+      expect_true(.isLog(b$layout$panel_scales_y[[1]]))
+    }
+  }
+
+  expect_error(plot(d, log = FALSE), NA)
+  expect_error(plot(d, log = "z"), "log")
+  expect_error(plot(d, log = TRUE), "log")
+  expect_error(plot(d, log = c("x", "y")), "log")
+
+  # multiple endpoints pass `log` through to each endpoint's plot
+  d2 <- d
+  d2$Endpoint <- factor(rep(c("a", "b"), 6))
+  class(d2) <- class(d)
+  p <- plot(d2, log = "y")
+  expect_length(p, 2)
+  for (.p in p) {
+    b <- ggplot2::ggplot_build(.p)
+    expect_true(.isLog(b$layout$panel_scales_y[[1]]))
+  }
+})

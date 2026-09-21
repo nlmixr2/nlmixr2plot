@@ -1,3 +1,10 @@
+# nlmixr2plot (development version)
+
+* `plot()` of an `augPred()` object now accepts a base-R style `log` argument
+  (`log = "y"`, `"x"` or `"xy"`) to draw the individual plots on log-scaled
+  axes; non-positive values, which cannot be shown on a log axis, are dropped
+  (#32).
+
 # nlmixr2plot 5.1.0
 
 * Fixed an "object of type 'closure' is not subsettable" error in `vpcCensTad()`
