@@ -61,16 +61,22 @@ test_that(".vpcCensObs moves censored dv past its limit (#55)", {
   expect_equal(nlmixr2plot:::.vpcCensObs(.d2), .d2)
 })
 
-test_that(".vpcCensObs drops uncensored missing observations (#55)", {
-  .d <- data.frame(ID=1, TIME=1:4, DV=c(NA, 2, NA, NA), CENS=c(0, 0, 1, NA))
+test_that(".vpcCensObs drops missing observations (#55)", {
+  .d <- data.frame(ID=1, TIME=1:4, DV=c(NA, 2, NA, 1), CENS=c(0, 0, 1, 1))
   .res <- nlmixr2plot:::.vpcCensObs(.d)
-  # a censored record keeps its row even when DV is missing
-  expect_equal(.res$TIME, 2:3)
+  # a missing DV is dropped even when flagged as censored, as in the fit
+  expect_equal(.res$TIME, c(2L, 4L))
   expect_equal(.res$DV, c(2, -Inf))
 
   # also without a cens column
   .res2 <- nlmixr2plot:::.vpcCensObs(.d[, c("ID", "TIME", "DV")])
-  expect_equal(.res2$TIME, 2L)
+  expect_equal(.res2$TIME, c(2L, 4L))
+})
+
+test_that(".vpcCensObs errors on an ambiguous cens column (#55)", {
+  .d <- data.frame(ID=1, DV=1, CENS=1, Cens=0)
+  expect_error(nlmixr2plot:::.vpcCensObs(.d),
+               "cannot find a unique 'cens' column in the observed data")
 })
 
 test_that("vpc_cens counts each censored record only on its own side (#55)", {

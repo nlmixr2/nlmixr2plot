@@ -6,7 +6,10 @@
   The observed data now comes from the original (or supplied) dataset instead of
   the fit, so censored records are identified from the `CENS` column rather than
   from the fit's imputed `DV` (which, for `censMethod = "cdf"`, could land above
-  the limit and be counted as uncensored).
+  the limit and be counted as uncensored).  Records without an observation are
+  dropped, as in the fit.
+* The VPC observed data now drops records with `MDV = 1` even when an `EVID`
+  column is also present (previously only `EVID` was checked when both existed).
 
 # nlmixr2plot 5.1.0
 

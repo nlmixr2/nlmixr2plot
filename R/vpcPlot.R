@@ -115,11 +115,11 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   .evid <- which(tolower(names(.obs)) == "evid")
   if (length(.evid) == 1L) {
     .obs <- .obs[.obs[[.evid]] == 0,,drop=FALSE]
-  } else {
-    .mdv <- which(tolower(names(.obs)) == "mdv")
-    if (length(.mdv) == 1L) {
-      .obs <- .obs[.obs[[.mdv]] == 0,,drop=FALSE]
-    }
+  }
+  # an EVID=0 record flagged MDV=1 is still not an observation
+  .mdv <- which(tolower(names(.obs)) == "mdv")
+  if (length(.mdv) == 1L) {
+    .obs <- .obs[.obs[[.mdv]] == 0,,drop=FALSE]
   }
   if (cens & !tidyvpc) {
     if (is.null(lloq) && is.null(uloq)) {
@@ -458,24 +458,23 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' is counted only on its own side of the censoring.  Without a `CENS` column
 #' `vpc` relies on the `dv`/limit comparison alone.
 #'
-#' `vpc` also counts a missing `dv` as censored, so uncensored records without an
-#' observation (e.g. a missed sample) are dropped, as the fitted data does.
+#' `vpc` also counts a missing `dv` as censored, so records without an
+#' observation (e.g. a missed sample) are dropped first, as the fitted data does.
 #'
 #' @param obs observed data with a `dv` column (any case)
-#' @return `obs` with `dv` moved past the limit for censored records and
-#'   uncensored missing observations dropped
+#' @return `obs` without missing observations, with `dv` moved past the limit
+#'   for censored records
 #' @noRd
 .vpcCensObs <- function(obs) {
   .wd <- .vpcCensCol(obs, "dv", "observed")
+  obs <- obs[!is.na(obs[[.wd]]), , drop=FALSE]
+  if (!any(tolower(names(obs)) == "cens")) return(obs)
+  .cens <- obs[[.vpcCensCol(obs, "cens", "observed")]]
   .dv <- obs[[.wd]]
-  .wc <- which(tolower(names(obs)) == "cens")
-  if (length(.wc) == 1L) {
-    .cens <- obs[[.wc]]
-    .dv[!is.na(.cens) & .cens == 1] <- -Inf
-    .dv[!is.na(.cens) & .cens == -1] <- Inf
-    obs[[.wd]] <- .dv
-  }
-  obs[!is.na(.dv), , drop=FALSE]
+  .dv[!is.na(.cens) & .cens == 1] <- -Inf
+  .dv[!is.na(.cens) & .cens == -1] <- Inf
+  obs[[.wd]] <- .dv
+  obs
 }
 
 #' Setup Observation data for VPC
