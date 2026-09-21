@@ -452,7 +452,8 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' The censored `vpc` path uses the fit data, which names the endpoint `CMT`
 #' (with a level for every compartment) instead of the `cmt`/`dvid` column
 #' used to stratify the simulations.  Copy `CMT` into the stratification
-#' column, keeping only the observed endpoints, and match the simulated
+#' column (or recode it in place when stratifying by `CMT`), keeping only the
+#' observed endpoints, and match the simulated
 #' column to it (#44).
 #'
 #' @param obs observed data (from the fit)
@@ -462,7 +463,8 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' @noRd
 .vpcCensEndpoint <- function(obs, sim, stratify) {
   for (.n in stratify) {
-    if (!(tolower(.n) %in% c("cmt", "dvid")) || any(names(obs) == .n) ||
+    if (!(tolower(.n) %in% c("cmt", "dvid")) ||
+          (.n != "CMT" && any(names(obs) == .n)) ||
           !any(names(obs) == "CMT") || !any(names(sim) == .n)) {
       next
     }

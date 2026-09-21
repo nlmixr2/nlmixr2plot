@@ -153,10 +153,17 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
   d$dvid <- NULL
   .coding <- list(
     character = .cmtLabel,
-    numeric = c(depot = 1L, cp = 3L, pca = 4L)[.cmtLabel]
+    numeric = c(depot = 1L, cp = 3L, pca = 4L)[.cmtLabel],
+    CMT = .cmtLabel
   )
+  .panels <- function(p) {
+    .l <- ggplot2::ggplot_build(p)$layout$layout
+    as.character(.l[[intersect(c("cmt", "CMT"), names(.l))]])
+  }
   for (.c in names(.coding)) {
-    d$cmt <- unname(.coding[[.c]])
+    d$cmt <- d$CMT <- NULL
+    # the "CMT" coding uses an uppercase column name
+    d[[if (.c == "CMT") "CMT" else "cmt"]] <- unname(.coding[[.c]])
 
     suppressMessages(suppressWarnings(
       fit <- nlmixr2est::nlmixr(
@@ -170,9 +177,6 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
     expect_equal(grep("^Endpoint:", .names, value = TRUE),
                  c("Endpoint:  cp", "Endpoint:  pca"))
 
-    .panels <- function(p) {
-      as.character(ggplot2::ggplot_build(p)$layout$layout$cmt)
-    }
     for (.method in c("vpc", "tidyvpc")) {
       for (.pc in c(FALSE, TRUE)) {
         suppressWarnings(
