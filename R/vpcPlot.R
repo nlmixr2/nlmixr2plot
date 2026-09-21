@@ -125,12 +125,13 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   # Simulate with VPC
   if (!.hasSim) {
     .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
-  } else if (pred_corr) {
+  } else if (pred_corr && (tidyvpc || !cens)) {
     # The observed-data pred-correction below re-solves the setup that
     # vpcSim(pred=TRUE) stores globally, which may belong to a later vpcSim()
     # of another fit.  Refresh it from this simulation's fit with a
     # small simulation (n=1 hits an nlmixr2est vpcSim() bug when the solve has
     # no sim.id); the supplied simulation itself is still what is plotted.
+    # vpc's censored VPC does not pred-correct, so it needs no refresh.
     nlmixr2est::vpcSim(fit, ..., n=2, pred=TRUE, seed=seed)
   }
   .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, .obs)

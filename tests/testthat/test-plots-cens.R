@@ -150,6 +150,8 @@ test_that("plot censoring", {
   expect_equal(.dbSimTad$obs, .dbFitTad$obs)
   expect_equal(.dbSimTad$sim, .dbFitTad$sim)
   expect_warning(vpcPlot(sim57, n = 10, vpcdb = TRUE), "'n' is ignored")
+  expect_no_warning(vpcPlot(sim57, n = 5, vpcdb = TRUE),
+                    message = "'n' is ignored")
   expect_error(
     vpcPlot(nlmixr2est::vpcSim(fit1, n = 5), pred_corr = TRUE),
     "pred = TRUE")
