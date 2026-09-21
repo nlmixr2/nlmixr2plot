@@ -90,6 +90,14 @@ test_that("supplied data gets the fitted tad by content, not row number (#60)", 
   .o <- .vpcUiSetupObservationData(fit, data=sub8, idv="tad")
   expect_equal(.o$obs$tad, .ref)
 
+  # the VPC itself runs with the subset data
+  for (.m in c("vpc", "tidyvpc")) {
+    if (requireNamespace(.m, quietly=TRUE)) {
+      expect_error(suppressWarnings(
+        vpcPlotTad(fit, data=sub, n=10, method=.m)), NA)
+    }
+  }
+
   # a supplied tad column is used as-is
   sub4 <- sub
   sub4$tad <- 42
@@ -126,4 +134,12 @@ test_that(".vpcFitColForData does not guess between identical-looking fitted row
   .fit2 <- list(origData=.orig2, tad=0, env=list(.rownum=2L))
   expect_equal(.vpcFitColForData(.fit2, .orig2[2, c("ID", "TIME", "DV")],
                                  "tad", supplied=TRUE), 0)
+
+  # a new observation that only looks like a dose row still warns
+  .new <- data.frame(ID=1, TIME=0, DV=0)
+  .orig3 <- data.frame(ID=1, TIME=c(0, 1), DV=c(0, 2), EVID=c(1, 0))
+  .fit3 <- list(origData=.orig3, tad=1, env=list(.rownum=2L))
+  expect_warning(.r <- .vpcFitColForData(.fit3, .new, "tad", supplied=TRUE),
+                 "1 observation\\(s\\) in 'data' do not match")
+  expect_true(is.na(.r))
 })

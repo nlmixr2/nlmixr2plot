@@ -453,7 +453,8 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' may be a subset or reordering of the fitted data, so each of its rows is
 #' matched by content (on the columns it shares with `fit$origData`, which
 #' must include the id and time columns) to the fitted row it came from instead
-#' of assuming the row numbers line up.
+#' of assuming the row numbers line up.  Rows that do not match a fitted row
+#' get `NA`, with a warning when they are observations.
 #'
 #' @param fit nlmixr2 fit
 #' @param obs observation data (already passed through
@@ -488,11 +489,11 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   .amb <- rep(FALSE, nrow(obs))
   if (all(c("id", "time") %in% .by)) {
     .ko <- .key(obs, .lo)
-    .korig <- .key(.orig, .lorig)
-    # prefer the fitted rows so an observation cannot pick up an identical-
-    # looking dose row when the columns telling them apart were dropped
+    # only fitted rows carry a value, so only match those; this also keeps an
+    # observation from picking up an identical-looking dose row when the
+    # columns telling them apart were dropped
     .fitRows <- fit$env$.rownum
-    .kfit <- .korig[.fitRows]
+    .kfit <- .key(.orig, .lorig)[.fitRows]
     .m <- .fitRows[match(.ko, .kfit)]
     # fitted rows that look identical on the shared columns but have different
     # values cannot be told apart, so do not guess between them
@@ -505,8 +506,6 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
       .amb <- .ko %in% names(.nv)[.nv > 1L]
       .m[.amb] <- NA_integer_
     }
-    .w <- which(is.na(.m) & !.amb)
-    .m[.w] <- match(.ko[.w], .korig)
   } else {
     .m <- rep(NA_integer_, nrow(obs))
   }
@@ -518,6 +517,11 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
     .isObs <- if (length(.w) == 1L) obs[[.w]] == 0 else rep(TRUE, nrow(obs))
   }
   .isObs <- !is.na(.isObs) & .isObs
+  # observations without a dv are dropped from the VPC, so do not warn for them
+  .w <- which(tolower(names(obs)) == "dv")
+  if (length(.w) == 1L) {
+    .isObs <- .isObs & !is.na(obs[[.w]])
+  }
   .n <- sum(.isObs & .amb)
   if (.n > 0) {
     warning(.n, " observation(s) in 'data' match several fitted rows with ",
