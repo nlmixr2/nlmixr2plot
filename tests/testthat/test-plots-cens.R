@@ -137,7 +137,8 @@ test_that("plot censoring", {
 
   # #55: the censored VPC must honour `data` (it used to always use the fit)
   .od <- fit1$origData
-  .half <- .od[.od$ID %in% unique(.od$ID)[1:4], ]
+  # a subset that does not start at the first subject
+  .half <- .od[.od$ID %in% unique(.od$ID)[5:8], ]
   .nObs <- function(d) sum(d$AMT == 0 & !is.na(d$DV))
   .all <- vpcCens(fit1, cens = TRUE, n = 5, vpcdb = TRUE)
   .sub <- vpcCens(fit1, data = .half, cens = TRUE, n = 5, vpcdb = TRUE)

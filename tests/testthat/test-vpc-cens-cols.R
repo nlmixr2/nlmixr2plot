@@ -50,13 +50,36 @@ test_that(".vpcCensDropStray keeps stratify columns", {
   expect_false("idv" %in% names(.res))
 })
 
-test_that(".vpcCensObs sets censored dv to NA (#55)", {
+test_that(".vpcCensObs moves censored dv past its limit (#55)", {
   .d <- data.frame(ID=1, TIME=1:4, DV=c(1, 2, 1, 5), CENS=c(1, 0, NA, -1))
   .res <- nlmixr2plot:::.vpcCensObs(.d)
-  expect_equal(.res$DV, c(NA, 2, 1, NA))
+  expect_equal(.res$DV, c(-Inf, 2, 1, Inf))
   expect_equal(.res[, c("ID", "TIME", "CENS")], .d[, c("ID", "TIME", "CENS")])
 
   # without a cens column the data is returned unchanged
   .d2 <- .d[, c("ID", "TIME", "DV")]
   expect_equal(nlmixr2plot:::.vpcCensObs(.d2), .d2)
+})
+
+test_that(".vpcCensObs counts each censored record only on its own side (#55)", {
+  skip_if_not_installed("vpc")
+  .res <- nlmixr2plot:::.vpcCensObs(
+    data.frame(DV=c(1, 2, 3, 5), CENS=c(1, 0, 0, -1)))
+  .frac <- function(lloq=NULL, uloq=NULL) {
+    .dv <- .res$DV
+    # mirror vpc:::format_vpc_input_data()
+    if (!is.null(uloq)) .dv[.dv > uloq] <- NA
+    if (!is.null(lloq)) .dv[.dv < lloq] <- NA
+    if (is.null(uloq)) {
+      vpc:::loq_frac(.dv, limit=lloq, cens="left")
+    } else if (is.null(lloq)) {
+      vpc:::loq_frac(.dv, limit=uloq, cens="right")
+    } else {
+      vpc:::loq_frac(.dv, limit=c(lloq, uloq), cens="both")
+    }
+  }
+  # the record at the upper limit must not count as below the lower limit
+  expect_equal(.frac(lloq=1), 1/4)
+  expect_equal(.frac(uloq=5), 1/4)
+  expect_equal(.frac(lloq=1, uloq=5), 2/4)
 })

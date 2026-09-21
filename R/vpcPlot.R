@@ -451,22 +451,26 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #'
 #' nlmixr2 data encodes a censored record at its censoring limit (`DV` equal to
 #' the limit) with a non-zero `CENS` column.  `vpc` decides whether an observation
-#' is censored by comparing `dv` strictly against the limit (`dv < lloq`), so a
-#' record sitting exactly at the limit would be counted as uncensored.  `vpc`
-#' counts a missing `dv` as censored, so set `dv` to `NA` for every record
-#' flagged in `CENS`.  Without a `CENS` column the data is returned unchanged
-#' and `vpc` relies on the `dv`/limit comparison alone.
+#' is censored by comparing `dv` strictly against the limit (`dv < lloq`,
+#' `dv > uloq`), so a record sitting exactly at the limit would be counted as
+#' uncensored.  Move the flagged records past their limit instead: `-Inf` for
+#' below the limit (`CENS == 1`) and `Inf` for above it (`CENS == -1`), so each
+#' is counted only on its own side of the censoring.  Without a `CENS` column
+#' the data is returned unchanged and `vpc` relies on the `dv`/limit comparison
+#' alone.
 #'
 #' @param obs observed data with a `dv` column (any case)
-#' @return `obs` with `dv` set to `NA` for censored records
+#' @return `obs` with `dv` moved past the limit for censored records
 #' @noRd
 .vpcCensObs <- function(obs) {
   .wc <- which(tolower(names(obs)) == "cens")
   if (length(.wc) != 1L) return(obs)
   .wd <- .vpcCensCol(obs, "dv", "observed")
   .cens <- obs[[.wc]]
-  .cens <- !is.na(.cens) & .cens != 0
-  obs[[.wd]][.cens] <- NA
+  .dv <- obs[[.wd]]
+  .dv[!is.na(.cens) & .cens == 1] <- -Inf
+  .dv[!is.na(.cens) & .cens == -1] <- Inf
+  obs[[.wd]] <- .dv
   obs
 }
 
