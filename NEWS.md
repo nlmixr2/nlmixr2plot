@@ -1,5 +1,12 @@
 # nlmixr2plot 5.1.0.9000
 
+* `plot()` on an rxode2 model (`rxUi`) now draws its ODEs as a block diagram
+  (summing junctions, `1/s` integrators, gain and nonlinear blocks) with
+  'DiagrammeR'.  Dosing inputs are annotated with lag time, bioavailability and
+  modeled infusion rate/duration, and integrators with their initial
+  conditions.  `odeDiagram()` returns the underlying graph (also for fits) and
+  `as.character()` gives the Graphviz DOT source.
+
 * Fixed the confidence-band width (and its legend label) for `vpcPlot()`/
   `vpcPlotTad()` with the `tidyvpc` backend; `ci = c(lower, upper)` was passed
   to `tidyvpc::vpcstats()` as `conf.level = ci[2]` instead of the actual
