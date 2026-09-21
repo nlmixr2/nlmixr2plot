@@ -147,6 +147,16 @@ test_that("plot censoring", {
   # censored records (CENS == 1, DV at the limit) count as below the limit
   expect_equal(sum(is.na(.all$obs$dv)), sum(.od$cens == 1 & .od$AMT == 0))
   expect_equal(sum(is.na(.sub$obs$dv)), sum(.half$cens == 1 & .half$AMT == 0))
+  # records that are not observations are dropped from the supplied data:
+  # EVID=0 with MDV=1 (even alongside EVID) and a missing DV
+  .skip <- .od
+  .skip$MDV <- as.integer(.skip$EVID != 0)
+  .wObs <- which(.skip$EVID == 0)
+  .skip$MDV[.wObs[3]] <- 1L
+  .skip$DV[.wObs[5]] <- NA
+  .skipDb <- vpcCens(fit1, data = .skip, cens = TRUE, n = 5, vpcdb = TRUE)
+  expect_equal(nrow(.skipDb$obs), .nObs(.od) - 2L)
+
   # ... and so must the tad variant (leading subjects only: a subset that is
   # not row-aligned with the fit loses tad, #60)
   .lead <- .od[.od$ID %in% unique(.od$ID)[1:4], ]
