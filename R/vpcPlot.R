@@ -486,7 +486,14 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
     }), sep="\r"))
   }
   if (all(c("id", "time") %in% .by)) {
-    .m <- match(.key(obs, .lo), .key(.orig, .lorig))
+    .ko <- .key(obs, .lo)
+    .korig <- .key(.orig, .lorig)
+    # prefer the fitted rows so an observation cannot pick up an identical-
+    # looking dose row when the columns telling them apart were dropped
+    .fitRows <- fit$env$.rownum
+    .m <- .fitRows[match(.ko, .korig[.fitRows])]
+    .w <- which(is.na(.m))
+    .m[.w] <- match(.ko[.w], .korig)
   } else {
     .m <- rep(NA_integer_, nrow(obs))
   }

@@ -75,6 +75,15 @@ test_that("supplied data gets the fitted tad by content, not row number (#60)", 
   expect_warning(.vpcUiSetupObservationData(fit, data=sub3, idv="tad"),
                  "1 observation\\(s\\) in 'data' do not match")
 
+  # without evid/mdv (and amt), observations still match the fitted rows
+  # rather than an identical-looking dose row, and unmatched rows warn
+  sub7 <- sub[sub$EVID == 0, setdiff(names(sub), c("EVID", "AMT"))]
+  .o <- .vpcUiSetupObservationData(fit, data=sub7, idv="tad")
+  expect_equal(.o$obs$tad, .ref[sub$EVID == 0])
+  sub7$TIME[1] <- 999
+  expect_warning(.vpcUiSetupObservationData(fit, data=sub7, idv="tad"),
+                 "1 observation\\(s\\) in 'data' do not match")
+
   # a supplied tad column is used as-is
   sub4 <- sub
   sub4$tad <- 42
