@@ -144,6 +144,11 @@ test_that("plot censoring", {
   .dbFit <- vpcPlot(fit1, n = 5, seed = 7, pred_corr = TRUE, vpcdb = TRUE)
   expect_equal(.dbStale$obs, .dbFit$obs)
   expect_equal(.dbStale$sim, .dbFit$sim)
+  .dbSimTad <- vpcPlotTad(sim57, pred_corr = TRUE, vpcdb = TRUE)
+  .dbFitTad <- vpcPlotTad(fit1, n = 5, seed = 7, pred_corr = TRUE,
+                          vpcdb = TRUE)
+  expect_equal(.dbSimTad$obs, .dbFitTad$obs)
+  expect_equal(.dbSimTad$sim, .dbFitTad$sim)
   expect_warning(vpcPlot(sim57, n = 10, vpcdb = TRUE), "'n' is ignored")
   expect_error(
     vpcPlot(nlmixr2est::vpcSim(fit1, n = 5), pred_corr = TRUE),
