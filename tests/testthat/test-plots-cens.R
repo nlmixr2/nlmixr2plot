@@ -21,7 +21,7 @@ test_that("plot censoring", {
           dplyr::filter(DOSE == x) |>
           dplyr::reframe(ids=unique(ID)) |>
           dplyr::pull()
-        ids <- ids[seq(1, nid)]
+        ids <- ids[seq_len(nid)]
         dat |>
           dplyr::filter(ID %in% ids)
       })
