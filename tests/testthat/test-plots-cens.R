@@ -147,6 +147,12 @@ test_that("plot censoring", {
   # censored records (CENS == 1, DV at the limit) count as below the limit
   expect_equal(sum(is.na(.all$obs$dv)), sum(.od$cens == 1 & .od$AMT == 0))
   expect_equal(sum(is.na(.sub$obs$dv)), sum(.half$cens == 1 & .half$AMT == 0))
+  # ... and so must the tad variant (leading subjects only: a subset that is
+  # not row-aligned with the fit loses tad, #60)
+  .lead <- .od[.od$ID %in% unique(.od$ID)[1:4], ]
+  .tad <- vpcCensTad(fit1, data = .lead, cens = TRUE, n = 5, vpcdb = TRUE)
+  expect_equal(nrow(.tad$obs), .nObs(.lead))
+  expect_false(anyNA(.tad$obs$idv))
 
   # nlmixr2#390: prediction-corrected VPC on censored data must not crash
   # with a quantile() NA error
