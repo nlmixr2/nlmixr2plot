@@ -135,6 +135,10 @@ test_that(".vpcFitColForData does not guess between identical-looking fitted row
   expect_equal(.vpcFitColForData(.fit2, .orig2[2, c("ID", "TIME", "DV")],
                                  "tad", supplied=TRUE), 0)
 
+  # duplicated supplied rows each get the fitted value
+  expect_equal(.vpcFitColForData(.fit, .orig[c(4, 4), ], "tad", supplied=TRUE),
+               c(6, 6))
+
   # a new observation that only looks like a dose row still warns
   .new <- data.frame(ID=1, TIME=0, DV=0)
   .orig3 <- data.frame(ID=1, TIME=c(0, 1), DV=c(0, 2), EVID=c(1, 0))
