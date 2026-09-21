@@ -12,6 +12,9 @@
   errors for multiple-endpoint fits ("stratification columns were NOT found in
   observation data"); the observed endpoints are now used for stratification
   (#44).
+* `plot()` of a censored multiple-endpoint fit no longer errors in
+  `geom_cens()` ("argument must be coercible to non-negative integer") for an
+  endpoint without censored observations (#44).
 
 # nlmixr2plot 5.1.0
 

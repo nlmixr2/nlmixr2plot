@@ -157,6 +157,9 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
   d <- nlmixr2data::warfarin
   .cmtLabel <- ifelse(d$evid != 0, "depot", as.character(d$dvid))
   d$dvid <- NULL
+  # censor low concentrations so the censored VPCs have censored data
+  d$cens <- ifelse(d$evid == 0 & .cmtLabel == "cp" & d$dv < 2, 1L, 0L)
+  d$dv[d$cens == 1L] <- 2
   .coding <- list(
     character = .cmtLabel,
     numeric = c(depot = 1L, cp = 3L, pca = 4L)[.cmtLabel],
@@ -192,10 +195,13 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
                      info = paste(.c, .method, "pred_corr =", .pc))
       }
     }
-    # the censored vpc path stratifies by the observed endpoints too
-    suppressWarnings(
-      .p <- vpcPlot(fit, n = 10, cens = TRUE, lloq = 2, method = "vpc")
-    )
-    expect_equal(.panels(.p), c("cp", "pca"), info = paste(.c, "cens"))
+    # the censored vpc paths stratify by the observed endpoints too
+    for (.method in c("vpc", "tidyvpc")) {
+      suppressWarnings(
+        .p <- vpcPlot(fit, n = 10, cens = TRUE, method = .method)
+      )
+      expect_equal(.panels(.p), c("cp", "pca"),
+                   info = paste(.c, .method, "cens"))
+    }
   }
 })

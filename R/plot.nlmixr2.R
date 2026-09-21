@@ -285,7 +285,10 @@ plotCmt <- function(x, cmt, bsv = NULL) {
       .pIndividual <- .pIndividual +
         ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$PRED), col = "blue", linewidth = 1.2)
     }
-    if (any(names(.datCmt) == "lowerLim")) {
+    # With multiple endpoints, an endpoint without censoring has only missing
+    # limits, which geom_cens() cannot draw (#44)
+    if (any(names(.datCmt) == "lowerLim") &&
+          any(!is.na(.datCmt$lowerLim) | !is.na(.datCmt$upperLim))) {
       .pIndividual <- .pIndividual +
         geom_cens(ggplot2::aes(lower = .data$lowerLim, upper = .data$upperLim), fill = "purple")
     }
