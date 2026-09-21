@@ -50,6 +50,25 @@ test_that("supplied data gets the fitted tad by content, not row number (#60)", 
   .o <- .vpcUiSetupObservationData(fit, data=sub2, idv="tad")
   expect_equal(.o$obs$tad, rev(.ref))
 
+  # column names differing only in case still match on every column
+  sub5 <- sub
+  names(sub5)[names(sub5) == "TIME"] <- "time"
+  .o <- .vpcUiSetupObservationData(fit, data=sub5, idv="tad")
+  expect_equal(.o$obs$tad, .ref)
+
+  # without a shared time column, rows cannot be matched reliably
+  sub6 <- sub
+  names(sub6)[names(sub6) == "TIME"] <- "hours"
+  expect_warning(.o <- .vpcUiSetupObservationData(fit, data=sub6, idv="tad"),
+                 "do not match the fitted data")
+  expect_true(all(is.na(.o$obs$tad)))
+
+  if (requireNamespace("data.table", quietly=TRUE)) {
+    .o <- .vpcUiSetupObservationData(fit, data=data.table::as.data.table(sub),
+                                     idv="tad")
+    expect_equal(.o$obs$tad, .ref)
+  }
+
   # observations not in the fitted data warn instead of silently being NA
   sub3 <- sub
   sub3$TIME[which(sub3$EVID == 0)[1]] <- 999

@@ -451,8 +451,9 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' `fit$env$.rownum` giving the row of `fit$origData` each came from.  When the
 #' observation data is `fit$origData` its rows are used directly.  Supplied data
 #' may be a subset or reordering of the fitted data, so each of its rows is
-#' matched by content (on the columns it shares with `fit$origData`) to the
-#' fitted row it came from instead of assuming the row numbers line up.
+#' matched by content (on the columns it shares with `fit$origData`, which
+#' must include the id and time columns) to the fitted row it came from instead
+#' of assuming the row numbers line up.
 #'
 #' @param fit nlmixr2 fit
 #' @param obs observation data (already passed through
@@ -472,13 +473,23 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
     return(.full[seq_len(nrow(obs))])
   }
   .orig <- nlmixr2est::vpcNameDataCmts(fit, .orig)
-  .by <- intersect(names(obs), names(.orig))
-  .key <- function(d) {
-    do.call(paste, c(lapply(d[.by], function(x) {
+  # match column names case-insensitively (as the rest of the VPC setup does);
+  # names that are ambiguous in either dataset are not used
+  .lo <- tolower(names(obs))
+  .lorig <- tolower(names(.orig))
+  .by <- intersect(.lo[!(.lo %in% .lo[duplicated(.lo)])],
+                   .lorig[!(.lorig %in% .lorig[duplicated(.lorig)])])
+  .key <- function(d, lower) {
+    do.call(paste, c(lapply(.by, function(n) {
+      x <- d[[which(lower == n)]]
       if (is.double(x)) sprintf("%.17g", x) else as.character(x)
     }), sep="\r"))
   }
-  .m <- match(.key(obs), .key(.orig))
+  if (all(c("id", "time") %in% .by)) {
+    .m <- match(.key(obs, .lo), .key(.orig, .lorig))
+  } else {
+    .m <- rep(NA_integer_, nrow(obs))
+  }
   .w <- which(tolower(names(obs)) == "evid")
   if (length(.w) == 1L) {
     .isObs <- obs[[.w]] == 0
