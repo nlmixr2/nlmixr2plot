@@ -5,7 +5,8 @@
   'DiagrammeR'.  Dosing inputs are annotated with lag time, bioavailability and
   modeled infusion rate/duration, and integrators with their initial
   conditions.  `odeDiagram()` returns the underlying graph (also for fits) and
-  `as.character()` gives the Graphviz DOT source.
+  `as.character()` gives the Graphviz DOT source.  See the new "ODE block diagrams"
+  vignette.
 
 * Fixed the confidence-band width (and its legend label) for `vpcPlot()`/
   `vpcPlotTad()` with the `tidyvpc` backend; `ci = c(lower, upper)` was passed

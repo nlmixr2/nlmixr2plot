@@ -201,3 +201,21 @@ test_that("odeDiagram keeps conditional derivatives and condition dependencies",
   expect_equal(n$label[n$type == "gain"], c("ka", "ka"))
   expect_equal(n$label[n$type == "block"], "k * center")
 })
+
+test_that("a leading unary minus becomes the summing-junction sign", {
+  mm <- function() {
+    ini({
+      vmax <- 1
+      km <- 1
+      add.sd <- 1
+    })
+    model({
+      d/dt(center) <- -vmax * center / (km + center)
+      center ~ add(add.sd)
+    })
+  }
+  d <- odeDiagram(mm)
+  bid <- d$nodes$id[d$nodes$type == "block"]
+  expect_equal(d$nodes$label[d$nodes$id == bid], "vmax * center/(km + center)")
+  expect_equal(d$edges$label[d$edges$from == bid], "-")
+})

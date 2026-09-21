@@ -1,0 +1,232 @@
+---
+title: "ODE block diagrams"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{ODE block diagrams}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+hasDiagrammeR <- requireNamespace("DiagrammeR", quietly = TRUE)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, message = FALSE}
+library(nlmixr2plot)
+library(rxode2)
+```
+
+`nlmixr2plot` can draw the ordinary differential equations (ODEs) of an
+rxode2/nlmixr2 model as a control-systems block diagram. Call `plot()` on
+the model's user interface object, e.g. `plot(rxode2(model))` or
+`plot(model())`.
+
+The diagram follows the classic recipe for turning an ODE into a
+simulation scheme:
+
+1. **Isolate the highest derivative.** rxode2 ODEs are already first
+   order (`d/dt(x) <- ...`), so each state gets exactly one integrator
+   ($1/s$).
+2. **Integrators.** The integrator's input is `d/dt(x)` and its output is
+   the state `x`.
+3. **Summing junction.** A $\Sigma$ node in front of each integrator
+   combines the additive terms of `d/dt(x)`. Each input is marked `+` or
+   `-`.
+4. **Gains and feedback.** Terms that are linear in one state are drawn as
+   gain blocks (triangles) tapped from that state's integrator output. When
+   a state feeds its own derivative (or an earlier state's), the edge is
+   drawn as a dashed feedback edge.
+
+Terms that don't depend on any state become external inputs (dashed
+boxes). All other terms become nonlinear function blocks (purple),
+wired from every state they depend on. This includes dependencies through
+intermediate variables and `if()` conditions.
+
+The diagram also shows rxode2's dosing and state features:
+
+| Model code             | Diagram                                              |
+|------------------------|------------------------------------------------------|
+| dosing                 | green `Dose` input into the compartment's $\Sigma$   |
+| `alag(cmt)`/`lag(cmt)` | orange delay block $e^{-s \cdot t_{lag}}$            |
+| `f(cmt)`/`F(cmt)`      | green bioavailability gain `F`                       |
+| `rate(cmt)`            | blue zero-order infusion block (modeled rate)        |
+| `dur(cmt)`             | blue zero-order infusion block (modeled duration)    |
+| `cmt(0)`               | initial condition shown on the integrator            |
+| endpoints (`~`)        | grey output nodes, with the residual error model     |
+
+`plot()` needs the 'DiagrammeR' package. Without it, `odeDiagram()` still
+builds the diagram as data, which you can print or export as Graphviz DOT
+(see the end of this vignette).
+
+## One-compartment model with first-order absorption
+
+Here the depot has a bioavailability and a lag time. The central
+compartment has an initial amount and a modeled infusion duration.
+
+```{r onecmt}
+one.compartment <- function() {
+  ini({
+    tka <- 0.45
+    tcl <- 1
+    tv <- 3.45
+    eta.ka ~ 0.6
+    add.sd <- 0.7
+  })
+  model({
+    ka <- exp(tka + eta.ka)
+    cl <- exp(tcl)
+    v <- exp(tv)
+    d/dt(depot) <- -ka * depot
+    d/dt(center) <- ka * depot - cl / v * center
+    f(depot) <- 0.8
+    alag(depot) <- 0.5
+    center(0) <- 1
+    dur(center) <- 2
+    cp <- center / v
+    cp ~ add(add.sd)
+  })
+}
+```
+
+```{r onecmt-plot, eval = hasDiagrammeR}
+plot(one.compartment())
+```
+
+Reading the diagram:
+
+- `ka * depot` shows up twice. Its gain feeds back negatively into the
+  depot's $\Sigma$ and positively into the central compartment's $\Sigma$.
+- `cl/v` is negative feedback on the central compartment.
+- The depot dose passes through the lag time and then the bioavailability.
+- The central compartment dose passes through the modeled infusion duration.
+
+## Two-compartment `linCmt()` models
+
+`linCmt()` models are first converted to their ODE form with
+`rxode2::linToOde()`, so they are drawn the same way.
+
+```{r twocmt}
+two.compartment <- function() {
+  ini({
+    lka <- 0.45
+    lcl <- 1
+    lv <- 3.45
+    lq <- 0.5
+    lvp <- 4
+    add.sd <- 0.7
+  })
+  model({
+    ka <- exp(lka)
+    cl <- exp(lcl)
+    v <- exp(lv)
+    q <- exp(lq)
+    vp <- exp(lvp)
+    rate(central) <- 5
+    linCmt() ~ add(add.sd)
+  })
+}
+```
+
+```{r twocmt-plot, eval = hasDiagrammeR}
+plot(two.compartment())
+```
+
+## Nonlinear elimination with an indirect-response effect
+
+Michaelis–Menten elimination is not linear in the state, so it is drawn as
+a function block. The turnover model's `kin` does not depend on any state,
+so it is an external input. The `kout * (1 + cp) * eff` term depends on
+both `eff` and, through `cp`, on `center`. The block lists the
+intermediate's definition.
+
+```{r pkpd}
+pkpd <- function() {
+  ini({
+    vmax <- 10
+    km <- 2
+    v <- 10
+    kin <- 1
+    kout <- 0.1
+    add.sd <- 0.1
+    prop.sd <- 0.1
+  })
+  model({
+    cp <- center / v
+    d/dt(center) <- -vmax * cp / (km + cp)
+    d/dt(eff) <- kin - kout * (1 + cp) * eff
+    eff(0) <- kin / kout
+    cp ~ prop(prop.sd)
+    eff ~ add(add.sd)
+  })
+}
+```
+
+```{r pkpd-plot, eval = hasDiagrammeR}
+plot(pkpd())
+```
+
+## Transit compartments
+
+A chain of transit compartments shows as a series of integrators, each
+with its own feedback loop and a forward gain to the next compartment.
+
+```{r transit}
+transit <- function() {
+  ini({
+    ktr <- 1
+    ka <- 1
+    cl <- 1
+    v <- 10
+    add.sd <- 0.1
+  })
+  model({
+    d/dt(depot) <- -ktr * depot
+    d/dt(transit1) <- ktr * depot - ktr * transit1
+    d/dt(transit2) <- ktr * transit1 - ktr * transit2
+    d/dt(gut) <- ktr * transit2 - ka * gut
+    d/dt(center) <- ka * gut - cl / v * center
+    cp <- center / v
+    cp ~ add(add.sd)
+  })
+}
+```
+
+```{r transit-plot, eval = hasDiagrammeR}
+plot(transit())
+```
+
+## Controlling the diagram
+
+By default, doses are drawn for the first state and for every state with
+a bioavailability, lag time, rate or duration. Use `doses=` to choose the
+dosed compartments; `character(0)` hides dosing entirely.
+`showZeroIni = TRUE` labels the integrators that have no explicit initial
+condition with `x(0) = 0`.
+
+```{r options, eval = hasDiagrammeR}
+plot(transit(), doses = c("depot", "center"), showZeroIni = TRUE)
+```
+
+## Working with the diagram as data
+
+`odeDiagram()` returns the diagram as `nodes` and `edges` data frames. It
+accepts a model function, a `rxUi` object or a fitted nlmixr2 model.
+Printing it gives a text summary of each state's inputs.
+
+```{r data}
+d <- odeDiagram(one.compartment)
+d
+head(d$nodes)
+head(d$edges)
+```
+
+`as.character()` gives the Graphviz DOT source. You can render it with
+any Graphviz tool, or pass it to `DiagrammeR::grViz()` yourself.
+
+```{r dot}
+cat(substr(as.character(d), 1, 600), "...\n")
+```

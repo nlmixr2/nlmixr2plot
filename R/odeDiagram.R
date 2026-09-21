@@ -168,7 +168,36 @@
   if (is.numeric(e) && length(e) == 1L && e == 0) {
     return(list())
   }
-  list(list(sign = sign, term = e))
+  .r <- .odeStripSign(e)
+  list(list(sign = sign * .r$sign, term = .r$term))
+}
+
+#' Move a unary minus out of the leading factor of a product
+#'
+#' R parses `-a * b` as `(-a) * b`, so the sign of a term can sit inside
+#' its first factor.
+#'
+#' @param e expression
+#' @return list with `sign` (1 or -1) and the unsigned `term`
+#' @noRd
+.odeStripSign <- function(e) {
+  if (is.call(e)) {
+    .op <- e[[1]]
+    if (identical(.op, quote(`-`)) && length(e) == 2L) {
+      .r <- .odeStripSign(e[[2]])
+      return(list(sign = -.r$sign, term = .r$term))
+    }
+    if (identical(.op, quote(`(`))) {
+      .r <- .odeStripSign(e[[2]])
+      if (.r$sign < 0) return(.r)
+    }
+    if (identical(.op, quote(`*`)) || identical(.op, quote(`/`))) {
+      .r <- .odeStripSign(e[[2]])
+      e[[2]] <- .r$term
+      return(list(sign = .r$sign, term = e))
+    }
+  }
+  list(sign = 1, term = e)
 }
 
 #' Flatten a product/quotient into numerator and denominator factors
@@ -444,9 +473,9 @@ odeDiagram <- function(x, doses = NULL, showZeroIni = FALSE, ...) {
       .v <- as.character(.pd$var[.j])
       .from <- .odeStateDeps(.v, .states, .c$lhs, .c$cond)
       if (length(.from) == 0L) next
-      .lab <- .v
+      .lab <- if (.v == "rxLinCmt") "linCmt()" else .v
       if (!(.v %in% .states) && !is.null(.c$lhs[[.v]])) {
-        .lab <- paste0(.v, " = ",
+        .lab <- paste0(.lab, " = ",
                        .odeDeparse(.c$lhs[[.v]][[length(.c$lhs[[.v]])]]))
       }
       .err <- as.character(.pd$errType[.j])
