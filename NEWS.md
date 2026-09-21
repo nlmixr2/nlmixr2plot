@@ -1,3 +1,11 @@
+# nlmixr2plot (development version)
+
+* Fixed stratified censored VPCs (`vpcCens()`/`vpcCensTad()`, or `vpcPlot()`
+  with `cens = TRUE`) failing with "The following specified stratification
+  columns were NOT found in observation data"; stratification columns missing
+  from the fit table are now carried over from the original data, matched by
+  row (#56).
+
 # nlmixr2plot 5.1.0
 
 * Fixed an "object of type 'closure' is not subsettable" error in `vpcCensTad()`

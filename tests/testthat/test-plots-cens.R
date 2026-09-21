@@ -135,6 +135,15 @@ test_that("plot censoring", {
     expect_equal(sort(unique(.db$sim$sim)), 1:10)
   }
 
+  # #56: a stratified censored VPC must find the covariate in the observed data
+  # (as.data.frame(fit) drops it) and assign it to the right rows
+  .db <- vpcCens(fit1, cens = TRUE, n = 5, stratify = "WT", vpcdb = TRUE)
+  .wt <- unique(fit1$origData[, c("ID", "WT")])
+  expect_equal(nlevels(factor(.db$obs$strat)), nrow(unique(.wt["WT"])))
+  .strat <- nlmixr2plot:::.vpcCensAddStratify(as.data.frame(fit1), fit1, "WT")
+  expect_equal(.strat$WT,
+               .wt$WT[match(as.character(.strat$ID), as.character(.wt$ID))])
+
   # nlmixr2#390: prediction-corrected VPC on censored data must not crash
   # with a quantile() NA error
   expect_error(vpcPlot(fit = fit1, pred_corr = TRUE, n = 10), NA)

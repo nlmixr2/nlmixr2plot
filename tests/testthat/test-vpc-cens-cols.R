@@ -49,3 +49,41 @@ test_that(".vpcCensDropStray keeps stratify columns", {
   expect_true("dv" %in% names(.res))
   expect_false("idv" %in% names(.res))
 })
+
+test_that(".vpcCensAddStratify copies stratify columns by original-data row", {
+  local_mocked_bindings(vpcNameDataCmts=function(fit, data) data,
+                        .package="nlmixr2est")
+  .orig <- data.frame(ID=c(1, 1, 1, 2, 2, 2), EVID=c(1, 0, 0, 1, 0, 0),
+                      WT=c(70, 70, 70, 80, 80, 80),
+                      SEX=c("m", "m", "m", "f", "f", "f"))
+  # the fit table is deliberately out of original-data order
+  .fit <- list(origData=.orig, env=list(.rownum=c(6, 2, 5, 3)))
+  .obs <- data.frame(ID=c(2, 1, 2, 1), DV=1:4)
+  .res <- nlmixr2plot:::.vpcCensAddStratify(.obs, .fit, c("WT", "sex"))
+  expect_equal(.res$WT, c(80, 70, 80, 70))
+  # case-insensitive fallback, kept under the requested name
+  expect_equal(.res$sex, c("f", "m", "f", "m"))
+  # columns already present and NULL stratify are left alone
+  .obs$WT <- 1
+  expect_equal(nlmixr2plot:::.vpcCensAddStratify(.obs, .fit, "WT"), .obs)
+  expect_equal(nlmixr2plot:::.vpcCensAddStratify(.obs, .fit, NULL), .obs)
+})
+
+test_that(".vpcCensAddStratify errors instead of misaligning rows", {
+  local_mocked_bindings(vpcNameDataCmts=function(fit, data) data,
+                        .package="nlmixr2est")
+  .orig <- data.frame(ID=c(1, 1, 2), WT=c(70, 70, 80))
+  .obs <- data.frame(ID=c(1, 2), DV=1:2)
+  expect_error(
+    nlmixr2plot:::.vpcCensAddStratify(.obs, list(origData=.orig,
+                                                 env=list(.rownum=2)), "WT"),
+    "cannot align")
+  expect_error(
+    nlmixr2plot:::.vpcCensAddStratify(.obs, list(origData=.orig,
+                                                 env=list(.rownum=c(2, 9))), "WT"),
+    "cannot align")
+  expect_error(
+    nlmixr2plot:::.vpcCensAddStratify(.obs, list(origData=.orig,
+                                                 env=list(.rownum=c(2, 3))), "AGE"),
+    "cannot find a unique 'AGE' column in the original data")
+})
