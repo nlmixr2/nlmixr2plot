@@ -38,6 +38,8 @@ test_that("plot(augPred) supports log axes (#32)", {
     b <- ggplot2::ggplot_build(p[[1]])
     expect_true(.isLog(b$layout$panel_scales_x[[1]]))
     expect_false(.isLog(b$layout$panel_scales_y[[1]]))
+    expect_true(all(is.finite(b$data[[1]]$x)))
+    expect_true(all(is.finite(b$data[[2]]$x)))
 
     for (.l in c("xy", "yx")) {
       p <- plot(d, log = .l)
@@ -46,6 +48,23 @@ test_that("plot(augPred) supports log axes (#32)", {
       expect_true(.isLog(b$layout$panel_scales_y[[1]]))
     }
   }
+
+  # a prediction dipping to a non-positive value breaks the line rather
+  # than bridging the gap
+  d3 <- data.frame(
+    id = factor(rep(1L, 6)),
+    time = c(1, 2, 3, 4, 1, 3),
+    values = c(1, 2, -1, 1, 1.5, 0.5),
+    ind = factor(c(rep("Pred", 4), rep("Observed", 2)),
+                 c("Pred", "Observed"))
+  )
+  class(d3) <- class(d)
+  withr::with_options(list(rxode2.xgxr = FALSE), {
+    expect_no_warning(b <- ggplot2::ggplot_build(plot(d3, log = "y")[[1]]))
+  })
+  expect_equal(nrow(b$data[[1]]), 3L)
+  expect_equal(length(unique(b$data[[1]]$group)), 2L)
+  expect_equal(nrow(b$data[[2]]), 2L)
 
   expect_error(plot(d, log = FALSE), NA)
   expect_error(plot(d, log = "z"), "log")

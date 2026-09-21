@@ -125,20 +125,35 @@ plot.nlmixr2AugPred <- function(x, y, ..., log = "") {
     }
     return(ggtibble::new_gglist(.ret))
   } else {
-    if (.log$x) {
-      x <- x[!is.na(x$time) & x$time > 0, ]
-    }
-    if (.log$y) {
-      x <- x[!is.na(x$values) & x$values > 0, ]
-    }
     dobs <- x[x$ind == "Observed", ]
     dpred <- x[x$ind != "Observed", ]
+    .lineAes <- NULL
+    if (.log$x || .log$y) {
+      # Non-positive values cannot be drawn on a log axis.  Drop them, but
+      # start a new line group after each dropped prediction so the line
+      # breaks at the gap instead of bridging it.
+      .ok <- function(d) {
+        .r <- rep(TRUE, nrow(d))
+        if (.log$x) .r <- .r & !is.na(d$time) & d$time > 0
+        if (.log$y) .r <- .r & !is.na(d$values) & d$values > 0
+        .r
+      }
+      dobs <- dobs[.ok(dobs), ]
+      dpred <- dpred[order(dpred$id, dpred$ind, dpred$time), ]
+      .okPred <- .ok(dpred)
+      .seg <- stats::ave(as.integer(!.okPred), dpred$id, dpred$ind,
+                         FUN = cumsum)
+      dpred$.group <- interaction(dpred$id, dpred$ind, .seg, drop = TRUE)
+      dpred <- dpred[.okPred, ]
+      x <- rbind(dpred[, names(dpred) != ".group"], dobs)
+      .lineAes <- ggplot2::aes(group = .data$.group)
+    }
     .facet <- function(page) {
       ggforce::facet_wrap_paginate(~id, nrow = 4, ncol = 4, page = page)
     }
     .p <-
       ggplot2::ggplot(x, ggplot2::aes(.data$time, .data$values, col = .data$ind)) +
-      ggplot2::geom_line(data = dpred, linewidth = 1.2) +
+      ggplot2::geom_line(.lineAes, data = dpred, linewidth = 1.2) +
       ggplot2::geom_point(data = dobs) +
       .facet(1L) +
       .log$scales +

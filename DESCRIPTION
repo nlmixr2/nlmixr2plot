@@ -29,6 +29,7 @@ Imports:
     nlmixr2est,
     nlmixr2extra (>= 5.0.0),
     rxode2,
+    stats,
     tidyr,
     utils,
     xgxr
