@@ -133,6 +133,14 @@ test_that("plot censoring", {
   }
   .db <- vpcPlot(sim57, pred_corr = TRUE, vpcdb = TRUE)
   expect_equal(length(unique(.db$sim$sim)), 5L)
+  # the observed pred-correction must come from sim57's own fit, not whatever
+  # vpcSim(pred = TRUE) ran last (simulate another model to make it stale)
+  fit2 <- nlmixr2est::nlmixr(rxode2::ini(m1, tcl = 1, tv = 3), theo_cens,
+                             est = "posthoc",
+                             control = nlmixr2est::foceiControl(print = 0))
+  invisible(nlmixr2est::vpcSim(fit2, n = 2, pred = TRUE))
+  .dbStale <- vpcPlot(sim57, pred_corr = TRUE, vpcdb = TRUE)
+  expect_equal(.dbStale$obs, .db$obs)
   expect_warning(vpcPlot(sim57, n = 10, vpcdb = TRUE), "'n' is ignored")
   expect_error(
     vpcPlot(nlmixr2est::vpcSim(fit1, n = 5), pred_corr = TRUE),
