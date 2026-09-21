@@ -125,6 +125,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     if (is.null(lloq) && is.null(uloq)) {
       stop("this data is not censored")
     }
+    .obsData <- .obs
     .obs <- as.data.frame(fit)
     # Pass the column mappings explicitly (as in the non-censored vpc path)
     # instead of letting vpc_cens guess them.  Guessing maps idv to "TIME"/"time"
@@ -142,7 +143,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       id=.vpcCensCol(.obs, "id", "observed"),
       dv=.vpcCensCol(.obs, "dv", "observed"),
       idv=.vpcCensCol(.obs, idv, "observed"))
-    .strat <- .vpcCensEndpoint(.obs, .sim, stratify)
+    .strat <- .vpcCensEndpoint(.obs, .sim, stratify, .obsData)
     .obs <- .strat$obs
     .sim <- .strat$sim
     .sim <- .vpcCensDropStray(.sim, .simCens, stratify)
@@ -459,9 +460,11 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' @param obs observed data (from the fit)
 #' @param sim simulated data
 #' @param stratify stratification columns
+#' @param obsData observed data with named stratification columns (from
+#'   `nlmixr2est::vpcNameDataCmts()`), used to decode integer simulated codes
 #' @return list with `obs` and `sim`
 #' @noRd
-.vpcCensEndpoint <- function(obs, sim, stratify) {
+.vpcCensEndpoint <- function(obs, sim, stratify, obsData=NULL) {
   for (.n in stratify) {
     if (!(tolower(.n) %in% c("cmt", "dvid")) ||
           (.n != "CMT" && any(names(obs) == .n)) ||
@@ -472,7 +475,8 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
     .lvl <- levels(droplevels(.cmt))
     obs[[.n]] <- factor(as.character(.cmt), levels=.lvl)
     # simulated endpoints may be integer compartment codes or labels
-    .sim <- .vpcMatchFactor(sim[[.n]], .cmt)
+    .ref <- if (any(names(obsData) == .n)) obsData[[.n]] else .cmt
+    .sim <- .vpcMatchFactor(sim[[.n]], .ref)
     sim[[.n]] <- factor(as.character(.sim), levels=.lvl)
   }
   list(obs=obs, sim=sim)

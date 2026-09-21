@@ -95,6 +95,12 @@ test_that("multiple endpoint plots", {
   )
   expect_equal(grep("^Endpoint:", .names, value = TRUE),
                c("Endpoint:  cp", "Endpoint:  pca"))
+  # the censored vpc stratifies by the observed dvid endpoints
+  suppressWarnings(
+    .p <- vpcPlot(fit, n = 10, cens = TRUE, lloq = 2, method = "vpc")
+  )
+  expect_equal(as.character(ggplot2::ggplot_build(.p)$layout$layout$dvid),
+               c("cp", "pca"))
   expect_error(traceplot(fit), NA)
 
   #vdiffr::expect_doppelganger("vpc plot", vp)

@@ -59,3 +59,20 @@ test_that("plot.nlmixr2AugPred skips endpoints without data (#44)", {
   expect_length(.p, 2L)
   expect_false(anyNA(.p[[1]]$data$values))
 })
+
+test_that(".vpcCensEndpoint stratifies censored VPCs by observed endpoints (#44)", {
+  .obs <- data.frame(CMT = factor(c("cp", "pca"),
+                                  levels = c("depot", "center", "cp", "pca")))
+  # integer dvid codes are decoded with the observed dvid levels
+  .r <- .vpcCensEndpoint(.obs, data.frame(dvid = c(2L, 1L)), "dvid",
+                         data.frame(dvid = factor(c("cp", "pca"))))
+  expect_equal(.r$obs$dvid, factor(c("cp", "pca")))
+  expect_equal(.r$sim$dvid, factor(c("pca", "cp"), levels = c("cp", "pca")))
+  # integer cmt codes are model compartment numbers
+  .r <- .vpcCensEndpoint(.obs, data.frame(cmt = c(4L, 3L)), "cmt")
+  expect_equal(.r$sim$cmt, factor(c("pca", "cp"), levels = c("cp", "pca")))
+  # an uppercase CMT stratification is recoded in place
+  .r <- .vpcCensEndpoint(.obs, data.frame(CMT = c("pca", "cp")), "CMT")
+  expect_equal(levels(.r$obs$CMT), c("cp", "pca"))
+  expect_equal(.r$sim$CMT, factor(c("pca", "cp"), levels = c("cp", "pca")))
+})
