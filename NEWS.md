@@ -1,5 +1,8 @@
 # nlmixr2plot 5.1.0.9000
 
+* Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the `data`
+  argument; the observed data was rebuilt from the fit's dataset instead of the
+  supplied `data` (#62).
 * Fixed the confidence-band width (and its legend label) for `vpcPlot()`/
   `vpcPlotTad()` with the `tidyvpc` backend; `ci = c(lower, upper)` was passed
   to `tidyvpc::vpcstats()` as `conf.level = ci[2]` instead of the actual
