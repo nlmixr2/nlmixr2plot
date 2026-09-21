@@ -74,8 +74,10 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   } else {
     tidyvpc <- TRUE
   }
-  # Simulate with VPC
-  if (inherits(fit, "nlmixr2vpcSim")) {
+  # Reuse a supplied simulation (#57); `fit` is replaced by the underlying fit
+  # below, so remember whether a simulation was given
+  .hasSim <- inherits(fit, "nlmixr2vpcSim")
+  if (.hasSim) {
     .sim <- fit
     .fit <- attr(class(.sim), "fit")
     .cls <- class(.fit)
@@ -84,6 +86,15 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     attr(.cls, ".foceiEnv") <- .attr
     class(.fit) <- .cls
     fit <- .fit
+    .simN <- length(unique(.sim$sim.id))
+    if (!missing(n) && !identical(as.integer(n), as.integer(.simN))) {
+      warning("'n' is ignored when a 'vpcSim()' simulation is supplied; ",
+              "using its ", .simN, " simulations", call.=FALSE)
+    }
+    if (pred_corr && !any(names(.sim) == "pred")) {
+      stop("'pred_corr = TRUE' needs a simulation created with ",
+           "'vpcSim(..., pred = TRUE)'", call.=FALSE)
+    }
   }
   .ui <- rxode2::rxUiDecompress(fit$ui)
   .obsLst <- .vpcUiSetupObservationData(fit, data=data, idv=idv, cens=cens)
@@ -105,7 +116,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     }
   }
   # Simulate with VPC
-  if (!inherits(fit, "nlmixr2vpcSim")) {
+  if (!.hasSim) {
     .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
   }
   .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, .obs)
