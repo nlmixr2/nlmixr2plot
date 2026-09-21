@@ -61,25 +61,32 @@ test_that(".vpcCensObs moves censored dv past its limit (#55)", {
   expect_equal(nlmixr2plot:::.vpcCensObs(.d2), .d2)
 })
 
-test_that(".vpcCensObs counts each censored record only on its own side (#55)", {
+test_that(".vpcCensObs drops uncensored missing observations (#55)", {
+  .d <- data.frame(ID=1, TIME=1:4, DV=c(NA, 2, NA, NA), CENS=c(0, 0, 1, NA))
+  .res <- nlmixr2plot:::.vpcCensObs(.d)
+  # a censored record keeps its row even when DV is missing
+  expect_equal(.res$TIME, 2:3)
+  expect_equal(.res$DV, c(2, -Inf))
+
+  # also without a cens column
+  .res2 <- nlmixr2plot:::.vpcCensObs(.d[, c("ID", "TIME", "DV")])
+  expect_equal(.res2$TIME, 2L)
+})
+
+test_that("vpc_cens counts each censored record only on its own side (#55)", {
   skip_if_not_installed("vpc")
-  .res <- nlmixr2plot:::.vpcCensObs(
-    data.frame(DV=c(1, 2, 3, 5), CENS=c(1, 0, 0, -1)))
+  # one bin, 4 observations: BLQ, two uncensored, ALQ
+  .obs <- nlmixr2plot:::.vpcCensObs(
+    data.frame(id=1:4, time=1, DV=c(1, 2, 3, 5), CENS=c(1, 0, 0, -1)))
+  .sim <- data.frame(id=rep(1:4, 2), time=1, sim=3, rep=rep(1:2, each=4))
   .frac <- function(lloq=NULL, uloq=NULL) {
-    .dv <- .res$DV
-    # mirror vpc:::format_vpc_input_data()
-    if (!is.null(uloq)) .dv[.dv > uloq] <- NA
-    if (!is.null(lloq)) .dv[.dv < lloq] <- NA
-    if (is.null(uloq)) {
-      vpc:::loq_frac(.dv, limit=lloq, cens="left")
-    } else if (is.null(lloq)) {
-      vpc:::loq_frac(.dv, limit=uloq, cens="right")
-    } else {
-      vpc:::loq_frac(.dv, limit=c(lloq, uloq), cens="both")
-    }
+    .db <- suppressWarnings(suppressMessages(vpc::vpc_cens(sim=.sim, sim_cols=list(id="id", dv="sim", idv="time"),
+                         obs=.obs, obs_cols=list(id="id", dv="DV", idv="time"),
+                         bins=c(0, 2), lloq=lloq, uloq=uloq, vpcdb=TRUE)))
+    .db$aggr_obs$obs50
   }
-  # the record at the upper limit must not count as below the lower limit
+  # the record at the upper limit must not count as below the lower limit,
+  # and vice versa (vpc takes only one of lloq/uloq)
   expect_equal(.frac(lloq=1), 1/4)
   expect_equal(.frac(uloq=5), 1/4)
-  expect_equal(.frac(lloq=1, uloq=5), 2/4)
 })
