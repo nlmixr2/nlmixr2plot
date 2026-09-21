@@ -1,3 +1,11 @@
+# nlmixr2plot (development version)
+
+* `vpcPlot()`, `vpcPlotTad()`, `vpcCens()` and `vpcCensTad()` now use a
+  supplied `nlmixr2est::vpcSim()` simulation instead of discarding it and
+  re-simulating with the default `n = 300`.  Supplying `n` alongside a
+  simulation warns that it is ignored, and `pred_corr = TRUE` errors unless the
+  simulation was created with `pred = TRUE` (#57).
+
 # nlmixr2plot 5.1.0
 
 * Fixed an "object of type 'closure' is not subsettable" error in `vpcCensTad()`

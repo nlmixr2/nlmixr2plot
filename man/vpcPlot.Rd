@@ -48,14 +48,18 @@ vpcCensTad(..., cens = TRUE, idv = "tad")
 vpcCens(..., cens = TRUE, idv = "time")
 }
 \arguments{
-\item{fit}{nlmixr2 fit object}
+\item{fit}{nlmixr2 fit object, or a simulation from
+\code{\link[nlmixr2est]{vpcSim}()}.  A supplied simulation is used
+as-is (\code{n}, \code{seed} and \code{...} are then ignored); for \code{pred_corr = TRUE}
+it must have been created with \code{vpcSim(..., pred = TRUE)}.}
 
 \item{data}{this is the data to use to augment the VPC fit.  By
 default is the fitted data, (can be retrieved by
 \code{\link[nlme]{getData}}), but it can be changed by specifying
 this argument.}
 
-\item{n}{Number of VPC simulations}
+\item{n}{Number of VPC simulations (ignored when \code{fit} is a
+\code{vpcSim()} simulation)}
 
 \item{bins}{either "density", "time", or "data", "none", or one of the
 approaches available in classInterval() such as "jenks" (default) or

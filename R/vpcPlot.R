@@ -1,11 +1,15 @@
 #' VPC based on ui model
 #'
-#' @param fit nlmixr2 fit object
+#' @param fit nlmixr2 fit object, or a simulation from
+#'   \code{\link[nlmixr2est]{vpcSim}()}.  A supplied simulation is used
+#'   as-is (`n`, `seed` and `...` are then ignored); for `pred_corr = TRUE`
+#'   it must have been created with `vpcSim(..., pred = TRUE)`.
 #' @param data this is the data to use to augment the VPC fit.  By
 #'   default is the fitted data, (can be retrieved by
 #'   \code{\link[nlme]{getData}}), but it can be changed by specifying
 #'   this argument.
-#' @param n Number of VPC simulations
+#' @param n Number of VPC simulations (ignored when `fit` is a
+#'   `vpcSim()` simulation)
 #' @param idv Name of independent variable. For `vpcPlot()` and
 #'   `vpcCens()` the default is `"time"` for `vpcPlotTad()` and
 #'   `vpcCensTad()` this is `"tad"`
