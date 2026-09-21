@@ -88,6 +88,13 @@ test_that("multiple endpoint plots", {
   suppressWarnings(
     expect_named(plot(fit))
   )
+  # Only observed endpoints are plotted; state compartments like depot, gut
+  # and center are not endpoints (#44)
+  suppressWarnings(
+    .names <- names(plot(fit))
+  )
+  expect_equal(grep("^Endpoint:", .names, value = TRUE),
+               c("Endpoint:  cp", "Endpoint:  pca"))
   expect_error(traceplot(fit), NA)
 
   #vdiffr::expect_doppelganger("vpc plot", vp)

@@ -1,3 +1,10 @@
+# nlmixr2plot (development version)
+
+* `plot()` of a multiple-endpoint fit no longer creates empty
+  "Endpoint: " groups for state compartments without observations (like
+  `depot` or `central`); only observed endpoints are plotted.  `plot()` of an
+  `augPred()` object likewise skips endpoints without data (#44).
+
 # nlmixr2plot 5.1.0
 
 * Fixed an "object of type 'closure' is not subsettable" error in `vpcCensTad()`
