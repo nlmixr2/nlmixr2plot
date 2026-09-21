@@ -140,9 +140,12 @@ test_that("plot censoring", {
   .db <- vpcCens(fit1, cens = TRUE, n = 5, stratify = "WT", vpcdb = TRUE)
   .wt <- unique(fit1$origData[, c("ID", "WT")])
   expect_equal(nlevels(factor(.db$obs$strat)), nrow(unique(.wt["WT"])))
-  .strat <- nlmixr2plot:::.vpcCensAddStratify(as.data.frame(fit1), fit1, "WT")
-  expect_equal(.strat$WT,
-               .wt$WT[match(as.character(.strat$ID), as.character(.wt$ID))])
+  # check the row alignment on a column that varies within ID: drop TIME from
+  # the fit table, carry it back from the original data and compare
+  .fitDf <- as.data.frame(fit1)
+  .strat <- nlmixr2plot:::.vpcCensAddStratify(
+    .fitDf[, names(.fitDf) != "TIME"], fit1, "TIME")
+  expect_equal(.strat$TIME, .fitDf$TIME)
 
   # nlmixr2#390: prediction-corrected VPC on censored data must not crash
   # with a quantile() NA error
