@@ -21,7 +21,7 @@ test_that("plot censoring", {
           dplyr::filter(DOSE == x) |>
           dplyr::reframe(ids=unique(ID)) |>
           dplyr::pull()
-        ids <- ids[seq(1, nid)]
+        ids <- ids[seq_len(nid)]
         dat |>
           dplyr::filter(ID %in% ids)
       })
@@ -147,7 +147,7 @@ test_that("plot censoring", {
   # check the row alignment on a column that varies within ID: drop TIME from
   # the fit table, carry it back from the original data and compare
   .fitDf <- as.data.frame(fit1)
-  .strat <- nlmixr2plot:::.vpcCensAddStratify(
+  .strat <- .vpcCensAddStratify(
     .fitDf[, names(.fitDf) != "TIME"], fit1, "TIME")
   expect_equal(.strat$TIME, .fitDf$TIME)
 
