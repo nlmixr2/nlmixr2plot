@@ -1,4 +1,4 @@
-# nlmixr2plot (development version)
+# nlmixr2plot 5.1.1
 
 * `plot()` of an `augPred()` object now accepts a base-R style `log` argument
   (`log = "y"`, `"x"` or `"xy"`) to draw the individual plots on log-scaled
