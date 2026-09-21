@@ -54,13 +54,14 @@ test_that(".vpcCensAddStratify copies stratify columns by original-data row", {
   local_mocked_bindings(vpcNameDataCmts=function(fit, data) data,
                         .package="nlmixr2est")
   .orig <- data.frame(ID=c(1, 1, 1, 2, 2, 2), EVID=c(1, 0, 0, 1, 0, 0),
-                      WT=c(70, 70, 70, 80, 80, 80),
+                      WT=c(70, 71, 72, 80, 81, 82),
                       SEX=c("m", "m", "m", "f", "f", "f"))
-  # the fit table is deliberately out of original-data order
+  # the fit table is deliberately out of original-data order, and WT varies
+  # within ID so a merge by ID (rather than by row) would give wrong values
   .fit <- list(origData=.orig, env=list(.rownum=c(6, 2, 5, 3)))
   .obs <- data.frame(ID=c(2, 1, 2, 1), DV=1:4)
   .res <- nlmixr2plot:::.vpcCensAddStratify(.obs, .fit, c("WT", "sex"))
-  expect_equal(.res$WT, c(80, 70, 80, 70))
+  expect_equal(.res$WT, c(82, 71, 81, 72))
   # case-insensitive fallback, kept under the requested name
   expect_equal(.res$sex, c("f", "m", "f", "m"))
   # columns already present and NULL stratify are left alone
