@@ -445,6 +445,57 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   data[, setdiff(names(data), .stray), drop=FALSE]
 }
 
+#' Get a fit-derived column (like `tad`) for the observation data
+#'
+#' The fit only carries its derived columns for the observations it used, with
+#' `fit$env$.rownum` giving the row of `fit$origData` each came from.  When the
+#' observation data is `fit$origData` its rows are used directly.  Supplied data
+#' may be a subset or reordering of the fitted data, so each of its rows is
+#' matched by content (on the columns it shares with `fit$origData`) to the
+#' fitted row it came from instead of assuming the row numbers line up.
+#'
+#' @param fit nlmixr2 fit
+#' @param obs observation data (already passed through
+#'   `nlmixr2est::vpcNameDataCmts()`)
+#' @param col fit column to get (for example `"tad"`)
+#' @param supplied logical; `TRUE` when `obs` was supplied by the user instead
+#'   of being `fit$origData`
+#' @return vector with one value of `col` per row of `obs` (`NA` for rows
+#'   without a fitted value)
+#' @noRd
+.vpcFitColForData <- function(fit, obs, col, supplied=FALSE) {
+  .orig <- fit$origData
+  .val <- fit[[col]]
+  .full <- rep(.val[NA_integer_], nrow(.orig))
+  .full[fit$env$.rownum] <- .val
+  if (!supplied) {
+    return(.full[seq_len(nrow(obs))])
+  }
+  .orig <- nlmixr2est::vpcNameDataCmts(fit, .orig)
+  .by <- intersect(names(obs), names(.orig))
+  .key <- function(d) {
+    do.call(paste, c(lapply(d[.by], function(x) {
+      if (is.double(x)) sprintf("%.17g", x) else as.character(x)
+    }), sep="\r"))
+  }
+  .m <- match(.key(obs), .key(.orig))
+  .w <- which(tolower(names(obs)) == "evid")
+  if (length(.w) == 1L) {
+    .isObs <- obs[[.w]] == 0
+  } else {
+    .w <- which(tolower(names(obs)) == "mdv")
+    .isObs <- if (length(.w) == 1L) obs[[.w]] == 0 else rep(TRUE, nrow(obs))
+  }
+  .isObs <- !is.na(.isObs) & .isObs
+  .n <- sum(.isObs & is.na(.m))
+  if (.n > 0) {
+    warning(.n, " observation(s) in 'data' do not match the fitted data so '",
+            col, "' is NA for them; add a '", col, "' column to 'data' to ",
+            "supply it", call.=FALSE)
+  }
+  .full[.m]
+}
+
 #' Setup Observation data for VPC
 #'
 #' @param fit nlmixr2 fit
@@ -477,14 +528,10 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   .wo <- which(.nol == idv)
   if (length(.wo) != 1) {
     if (any(names(fit) == idv)) {
-      .fit <- as.data.frame(fit)
-      .wid <- which(tolower(names(.fit)) == "id")
-      names(.fit)[.wid] <- "ID"
-      .fit$nlmixrRowNums <-  fit$env$.rownum
-      .fit <- .fit[, c("ID", idv, "nlmixrRowNums")]
-      .obs$nlmixrRowNums <- seq_along(.obs$ID)
-      .obs <- merge(.obs, .fit, by=c("ID", "nlmixrRowNums"), all.x=TRUE)
-      .wo <- which(.nol == idv)
+      .obs[[idv]] <- .vpcFitColForData(fit, .obs, idv, supplied=!is.null(data))
+      .no <- names(.obs)
+      .nol <- tolower(.no)
+      .wo <- which(.no == idv)
     } else {
       stop("cannot find '", idv, "' in original dataset",
            call.=FALSE)

@@ -5,6 +5,12 @@
   to `tidyvpc::vpcstats()` as `conf.level = ci[2]` instead of the actual
   interval width `ci[2] - ci[1]`, so the default `ci = c(0.05, 0.95)` (a 90% CI)
   was drawn and labeled as a 95% CI.
+* Fixed `vpcPlotTad()`/`vpcCensTad()` (and any `idv` taken from the fit) with a
+  user-supplied `data` that is a subset or reordering of the fitted data; `tad`
+  was merged from the fit by row number, so it silently became `NA` (or was
+  paired with the wrong row).  Each supplied row is now matched by content to
+  the fitted row it came from, and a warning is given for observations that
+  are not in the fitted data (#60).
 
 # nlmixr2plot 5.1.0
 
