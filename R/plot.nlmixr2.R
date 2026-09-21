@@ -10,6 +10,10 @@
   .dat <- .dat[.w, ]
   .doCmt <- FALSE
   if (any(names(.dat) == "CMT")) {
+    # Only keep compartments that actually have observations; state
+    # compartments (like depot/central) are still factor levels but have no
+    # data and should not become endpoints (#44)
+    .dat$CMT <- droplevels(as.factor(.dat$CMT))
     if (length(levels(.dat$CMT)) > 1) {
       .doCmt <- TRUE
     }

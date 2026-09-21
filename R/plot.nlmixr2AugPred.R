@@ -76,7 +76,8 @@
 plot.nlmixr2AugPred <- function(x, y, ...) {
   if (any(names(x) == "Endpoint")) {
     .ret <- list()
-    for (.tmp in levels(x$Endpoint)) {
+    # Skip endpoint levels without any rows (#44)
+    for (.tmp in levels(droplevels(as.factor(x$Endpoint)))) {
       utils::assignInMyNamespace(".augPredEndpoint", .tmp)
       .x <- x[x$Endpoint == .tmp, names(x) != "Endpoint"]
       .r <- plot.nlmixr2AugPred(.x)
