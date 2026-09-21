@@ -2,8 +2,11 @@
 #'
 #' @param fit nlmixr2 fit object, or a simulation from
 #'   \code{\link[nlmixr2est]{vpcSim}()}.  A supplied simulation is used
-#'   as-is (`n`, `seed` and `...` are then ignored); for `pred_corr = TRUE`
-#'   it must have been created with `vpcSim(..., pred = TRUE)`.
+#'   as-is (`n` is then ignored).  For `pred_corr = TRUE` it must have been
+#'   created with `vpcSim(..., pred = TRUE)`, and the observed data are
+#'   pred-corrected by re-solving the population predictions of the
+#'   simulation's fit with `...`, so pass the same `...` that was given to
+#'   `vpcSim()`.
 #' @param data this is the data to use to augment the VPC fit.  By
 #'   default is the fitted data, (can be retrieved by
 #'   \code{\link[nlme]{getData}}), but it can be changed by specifying

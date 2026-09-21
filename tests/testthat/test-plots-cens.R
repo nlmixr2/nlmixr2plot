@@ -140,7 +140,10 @@ test_that("plot censoring", {
                              control = nlmixr2est::foceiControl(print = 0))
   invisible(nlmixr2est::vpcSim(fit2, n = 2, pred = TRUE))
   .dbStale <- vpcPlot(sim57, pred_corr = TRUE, vpcdb = TRUE)
-  expect_equal(.dbStale$obs, .db$obs)
+  # compare with the fit path, which simulates and pred-corrects in one go
+  .dbFit <- vpcPlot(fit1, n = 5, seed = 7, pred_corr = TRUE, vpcdb = TRUE)
+  expect_equal(.dbStale$obs, .dbFit$obs)
+  expect_equal(.dbStale$sim, .dbFit$sim)
   expect_warning(vpcPlot(sim57, n = 10, vpcdb = TRUE), "'n' is ignored")
   expect_error(
     vpcPlot(nlmixr2est::vpcSim(fit1, n = 5), pred_corr = TRUE),

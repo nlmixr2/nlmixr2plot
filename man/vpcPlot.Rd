@@ -50,8 +50,11 @@ vpcCens(..., cens = TRUE, idv = "time")
 \arguments{
 \item{fit}{nlmixr2 fit object, or a simulation from
 \code{\link[nlmixr2est]{vpcSim}()}.  A supplied simulation is used
-as-is (\code{n}, \code{seed} and \code{...} are then ignored); for \code{pred_corr = TRUE}
-it must have been created with \code{vpcSim(..., pred = TRUE)}.}
+as-is (\code{n} is then ignored).  For \code{pred_corr = TRUE} it must have been
+created with \code{vpcSim(..., pred = TRUE)}, and the observed data are
+pred-corrected by re-solving the population predictions of the
+simulation's fit with \code{...}, so pass the same \code{...} that was given to
+\code{vpcSim()}.}
 
 \item{data}{this is the data to use to augment the VPC fit.  By
 default is the fitted data, (can be retrieved by
