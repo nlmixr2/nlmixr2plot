@@ -142,6 +142,9 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       id=.vpcCensCol(.obs, "id", "observed"),
       dv=.vpcCensCol(.obs, "dv", "observed"),
       idv=.vpcCensCol(.obs, idv, "observed"))
+    .strat <- .vpcCensEndpoint(.obs, .sim, stratify)
+    .obs <- .strat$obs
+    .sim <- .strat$sim
     .sim <- .vpcCensDropStray(.sim, .simCens, stratify)
     .obs <- .vpcCensDropStray(.obs, .obsCens, stratify)
     rxode2::rxReq("vpc")
@@ -442,6 +445,33 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
                     c(unlist(cols), stratify))
   if (length(.stray) == 0L) return(data)
   data[, setdiff(names(data), .stray), drop=FALSE]
+}
+
+#' Add the endpoint stratification column to censored VPC observations
+#'
+#' The censored `vpc` path uses the fit data, which names the endpoint `CMT`
+#' (with a level for every compartment) instead of the `cmt`/`dvid` column
+#' used to stratify the simulations.  Copy `CMT` into the stratification
+#' column, keeping only the observed endpoints, and match the simulated
+#' column to it (#44).
+#'
+#' @param obs observed data (from the fit)
+#' @param sim simulated data
+#' @param stratify stratification columns
+#' @return list with `obs` and `sim`
+#' @noRd
+.vpcCensEndpoint <- function(obs, sim, stratify) {
+  for (.n in stratify) {
+    if (!(tolower(.n) %in% c("cmt", "dvid")) || any(names(obs) == .n) ||
+          !any(names(obs) == "CMT") || !any(names(sim) == .n)) {
+      next
+    }
+    .cmt <- droplevels(as.factor(obs$CMT))
+    .lvl <- levels(.cmt)
+    obs[[.n]] <- .cmt
+    sim[[.n]] <- factor(as.character(sim[[.n]]), levels=.lvl)
+  }
+  list(obs=obs, sim=sim)
 }
 
 #' Recode a column to match a reference factor

@@ -8,6 +8,10 @@
   endpoints with `cmt` no longer shows an extra `NA` panel (or a single `NA`
   panel with `pred_corr = TRUE`); the simulated compartment labels are now
   matched to the observed ones by name (#44).
+* Censored `vpcPlot(cens = TRUE)`/`vpcCens()` with the `vpc` method no longer
+  errors for multiple-endpoint fits ("stratification columns were NOT found in
+  observation data"); the observed endpoints are now used for stratification
+  (#44).
 
 # nlmixr2plot 5.1.0
 

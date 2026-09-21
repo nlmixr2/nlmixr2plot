@@ -175,4 +175,9 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
                    info = paste(.method, "pred_corr =", .pc))
     }
   }
+  # the censored vpc path stratifies by the observed endpoints too
+  suppressWarnings(
+    .p <- vpcPlot(fit, n = 10, cens = TRUE, lloq = 2, method = "vpc")
+  )
+  expect_equal(.panels(.p), c("cp", "pca"))
 })
