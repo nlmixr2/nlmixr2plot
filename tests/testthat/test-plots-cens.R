@@ -175,5 +175,9 @@ test_that("plot censoring", {
     expect_error(
       vpcPlot(fit = fit1, pred_corr = TRUE, n = 10, method = "tidyvpc",
               cens = TRUE), NA)
+    # #57: a supplied simulation through the pred-corrected tidyvpc paths
+    expect_error(vpcPlot(sim57, pred_corr = TRUE, method = "tidyvpc"), NA)
+    expect_error(
+      vpcCens(sim57, pred_corr = TRUE, method = "tidyvpc"), NA)
   }
 })
