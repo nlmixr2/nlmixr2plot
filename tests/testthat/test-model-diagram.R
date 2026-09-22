@@ -1106,3 +1106,24 @@ test_that("substitution falls back for the whole model, not one equation", {
   expect_equal(nrow(.edge(g, "A", NA, "elimination")), 0L)
   expect_equal(nrow(.edge(g, "B", NA, "elimination")), 1L)
 })
+
+test_that("production that saturates with its own compartment is an input", {
+  g <- modelGraph(rxode2::rxode2("d/dt(A) = kin/(1 + A)"))
+  expect_equal(nrow(.edge(g, NA, "A", "input")), 1L)
+  expect_equal(nrow(.edge(g, "A", NA, "elimination")), 0L)
+})
+
+test_that("a reused variable keeps one identity per assignment", {
+  # both equations use `flux`, but it means something different in each
+  l <- paste(sprintf("q%02d*B", 1:40), collapse = " + ")
+  out <- paste(rep("loss", 40), collapse = " - ")
+  m <- rxode2::rxode2(paste("flux = k*A", "d/dt(A) = -flux", "flux = h*B",
+                            paste0("loss = ", l),
+                            paste0("d/dt(B) = flux - ", out), sep = "\n"))
+  g <- modelGraph(m)
+  expect_equal(sum(g$edges$type == "transfer"), 0L)
+  expect_equal(nrow(.edge(g, "A", NA, "elimination")), 1L)
+  expect_equal(nrow(.edge(g, "B", NA, "elimination")), 1L)
+  # the internal name is not shown
+  expect_false(any(grepl("#", g$edges$label, fixed = TRUE)))
+})

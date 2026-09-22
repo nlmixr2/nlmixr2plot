@@ -324,7 +324,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       sign = vapply(.t, function(x) x$sign, numeric(1)),
       key = vapply(.t, function(x) .mdTermKey(x$expr), character(1)),
       label = vapply(.t, function(x) {
-        .mdDeparse(.mdFold(x$expr, .parsed$defs, .foldIndex))
+        # `flux#2` (one name per assignment) is shown as `flux`
+        gsub("#[0-9]+", "", .mdDeparse(.mdFold(x$expr, .parsed$defs, .foldIndex)),
+             perl = TRUE)
       }, character(1)),
       stringsAsFactors = FALSE
     )
@@ -446,14 +448,19 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .env$props <- list()
   .env$defsSmall <- list()
   .env$overflow <- FALSE
+  .env$version <- list()
+  .env$versioned <- list()
   # the definition to substitute for variable `n` (NULL: keep the variable)
   .mdDefinition <- function(n, rhs, maxSize) {
     if (n %in% .env$states || n %in% .env$inIf ||
           length(all.names(rhs)) > maxSize) {
       # values from `if` branches cannot be substituted, and very large
       # definitions (QSP/PBPK models) are kept as variables so the
-      # equations do not grow combinatorially
-      return(NULL)
+      # equations do not grow combinatorially.  A reassigned variable that
+      # is not substituted keeps one name per assignment, so that two
+      # different values (`flux = k*A` ... `flux = h*B`) are not mistaken
+      # for one flow
+      return(.env$versioned[[n]])
     }
     if (!identical(.env$count[[n]], 1)) {
       # a reassigned variable is substituted with its current value so
@@ -530,7 +537,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .rhs <- switch(level,
                      full = .mdSubstitute(x[[3]], .env$defs),
                      small = .mdSubstitute(x[[3]], .env$defsSmall),
-                     none = x[[3]])
+                     none = .mdSubstitute(x[[3]], .env$versioned))
       .rhsSmall <- .mdSubstitute(x[[3]], .env$defsSmall)
       .state <- .mdDdtState(.lhs)
       .prop <- .mdDoseProperty(.lhs)
@@ -550,8 +557,17 @@ print.nlmixr2ModelGraph <- function(x, ...) {
         .addTerms(.state, .mdSplitTerms(.rhs, .env$states, .state))
       } else if (is.name(.lhs)) {
         .n <- as.character(.lhs)
+        .dep <- union(all.vars(x[[3]]), cond)
         # a conditional assignment also depends on its condition
-        .env$deps[[.n]] <- union(.env$deps[[.n]], union(all.vars(x[[3]]), cond))
+        .env$deps[[.n]] <- union(.env$deps[[.n]], .dep)
+        if (!identical(.env$count[[.n]], 1)) {
+          # one name per assignment of a reassigned variable
+          .v <- (if (is.null(.env$version[[.n]])) 0L else .env$version[[.n]]) + 1L
+          .env$version[[.n]] <- .v
+          .vn <- paste0(.n, "#", .v)
+          .env$versioned[[.n]] <- as.name(.vn)
+          .env$deps[[.vn]] <- .dep
+        }
         # a NULL definition removes the variable from the substitutions
         .env$defs[[.n]] <- .mdDefinition(.n, .rhs, .mdMaxDefSize)
         .env$defsSmall[[.n]] <- .mdDefinition(.n, .rhsSmall, .mdMaxSmallDefSize)
@@ -1325,16 +1341,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .dir <- function(o) {
       terms$sign[.i] * .mdSign(terms$dir[[.i]][o])
     }
-    # effect of the compartment's own amount on its equation: a term that
-    # decreases with it is a loss whatever its sign (a term kept whole, like
-    # `(kin - kel*A)/v`, is positive but still eliminates)
-    .self <- terms$sign[.i] * .mdSign(terms$dir[[.i]][.s])
     if (terms$sign[.i] < 0) {
       if (.s %in% .st || length(.others) == 0L) {
         .add(.s, NA_character_, "elimination", -1, terms$label[.i])
       }
-    } else if (.s %in% .st && .self < 0) {
-      .add(.s, NA_character_, "elimination", -1, terms$label[.i])
     } else if (length(.others) == 0L) {
       .add(NA_character_, .s, "input", 1, terms$label[.i])
     }
