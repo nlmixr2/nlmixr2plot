@@ -246,7 +246,8 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   }
   if (inherits(object, "rxode2")) {
     .mv <- rxode2::rxModelVars(object)
-    .lines <- as.list(parse(text = .mv$model["normModel"], keep.source = FALSE))
+    # braces let a normalized `}\nelse` parse
+    .lines <- as.list(str2lang(paste0("{\n", .mv$model["normModel"], "\n}")))[-1]
     .order <- .mv$state
   } else {
     if (is.function(object)) object <- rxode2::rxode2(object)
@@ -555,7 +556,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   for (.i in seq_len(.n)) {
     if (.used[.i] || terms$sign[.i] > 0) next
     .src <- terms$state[.i]
-    if (!(.src %in% terms$states[[.i]])) next
+    # the -term must contain the source amount, or no compartment at all
+    # (zero-order transfer like `-rate` / `+rate`)
+    if (!(.src %in% terms$states[[.i]]) && length(terms$states[[.i]]) > 0L) next
     .j <- which(terms$sign > 0 & terms$state != .src &
                   terms$key == terms$key[.i] &
                   !vapply(.matchedFrom, function(m) .src %in% m, logical(1)))
@@ -693,9 +696,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .ny <- .y[.from]
       for (.d in c(0, rbind(-seq_along(states), seq_along(states)))) {
         .cy <- .y[.from] + .d
-        .block <- !is.na(.x) & abs(.y - .cy) < 0.9 &
-          .x > .x[.from] & .x < .nx
-        if (!any(.block)) {
+        if (.free(.nx, .cy) &&
+              !.mdSegmentCrosses(.x[.from], .y[.from], .nx, .cy,
+                                 .x[!is.na(.x) & names(.x) != .from],
+                                 .y[!is.na(.x) & names(.x) != .from])) {
           .ny <- .cy
           break
         }
@@ -716,6 +720,21 @@ print.nlmixr2ModelGraph <- function(x, ...) {
              dosing = states %in% dosing,
              x = unname(.x[states]), y = unname(.y[states]),
              stringsAsFactors = FALSE)
+}
+
+#' Does the segment (x0, y0)-(x1, y1) pass through any of the node boxes?
+#'
+#' Boxes are centered on (x, y) (grid units) with half width `hw` and half
+#' height `hh`; the segment is sampled finely enough for unit-grid layouts.
+#' @noRd
+.mdSegmentCrosses <- function(x0, y0, x1, y1, x, y, hw = 0.4, hh = 0.3) {
+  if (length(x) == 0L) return(FALSE)
+  .t <- seq(0, 1, length.out = 101L)
+  .px <- x0 + .t * (x1 - x0)
+  .py <- y0 + .t * (y1 - y0)
+  any(vapply(seq_along(x), function(.i) {
+    any(abs(.px - x[.i]) < hw & abs(.py - y[.i]) < hh)
+  }, logical(1)))
 }
 
 #' Positions of the invisible input/output end points

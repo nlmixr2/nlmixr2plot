@@ -252,3 +252,57 @@ test_that("binding transfers mass from both binding partners (TMDD)", {
   expect_equal(nrow(unique(g$nodes[, c("x", "y")])), nrow(g$nodes))
   expect_s3_class(modelDiagram(g, engine = "ggplot2"), "ggplot")
 })
+
+test_that("zero-order transfer is mass transfer", {
+  m <- rxode2::rxode2({
+    d/dt(depot) = -rate
+    d/dt(center) = rate - cl*center
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "depot", "center", "transfer")), 1L)
+  expect_equal(sum(g$edges$type %in% c("input", "interaction")), 0L)
+  expect_equal(nrow(.edge(g, "depot", NA, "elimination")), 0L)
+})
+
+test_that("interaction arrows do not cross other compartments", {
+  m <- rxode2::rxode2({
+    d/dt(center) = -cl*center
+    d/dt(eff1) = kin - kout*center*eff1
+    d/dt(eff2) = kin - kout*center*eff2
+    d/dt(eff3) = kin - kout*center*eff3
+    d/dt(eff4) = kin - kout*center*eff4
+  })
+  g <- modelGraph(m, dosing = "center")
+  n <- g$nodes
+  rownames(n) <- n$name
+  for (.e in paste0("eff", 1:4)) {
+    .others <- setdiff(n$name, c("center", .e))
+    expect_false(nlmixr2plot:::.mdSegmentCrosses(
+      n["center", "x"], n["center", "y"], n[.e, "x"], n[.e, "y"],
+      n[.others, "x"], n[.others, "y"]), label = .e)
+  }
+  expect_equal(nrow(unique(n[, c("x", "y")])), nrow(n))
+})
+
+test_that("terms inside if/else blocks are used", {
+  m <- rxode2::rxode2({
+    if (t > tlag) {
+      ktr = ka
+    } else {
+      ktr = 0
+    }
+    d/dt(depot) = -ktr*depot
+    if (sex == 1) {
+      d/dt(center) = ktr*depot - cl*center/v
+    } else {
+      d/dt(center) = ktr*depot - cl*center/v - q*center/v + q*periph/vp
+    }
+    d/dt(periph) = q*center/v - q*periph/vp
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "depot", "center", "transfer")), 1L)
+  expect_equal(nrow(.edge(g, "center", "periph", "transfer")), 1L)
+  expect_equal(nrow(.edge(g, "periph", "center", "transfer")), 1L)
+  expect_equal(nrow(.edge(g, "center", NA, "elimination")), 1L)
+  expect_equal(g$nodes$role[g$nodes$name == "periph"], "peripheral")
+})
