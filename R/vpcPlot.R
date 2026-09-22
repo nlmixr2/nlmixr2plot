@@ -524,6 +524,17 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 .vpcMatchStrata <- function(obs, sim, stratify) {
   .both <- intersect(names(sim), names(obs))
   for (.n in .both) {
+    # simulated labels missing from the observed levels (e.g. `data` without
+    # an endpoint, with its levels dropped) are added rather than made NA
+    if (inherits(obs[[.n]], "factor") &&
+          (is.character(sim[[.n]]) || inherits(sim[[.n]], "factor"))) {
+      .extra <- setdiff(unique(as.character(sim[[.n]])),
+                        c(levels(obs[[.n]]), NA))
+      if (length(.extra) > 0L) {
+        obs[[.n]] <- factor(as.character(obs[[.n]]),
+                            levels=c(levels(obs[[.n]]), .extra))
+      }
+    }
     sim[[.n]] <- .vpcMatchFactor(sim[[.n]], obs[[.n]])
   }
   for (.n in intersect(stratify, .both)) {

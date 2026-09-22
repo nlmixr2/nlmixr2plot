@@ -215,6 +215,16 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
         expect_equal(.panels(.p), c("cp", "pca"),
                      info = paste("pca DV missing, cens =", .cens))
       }
+      # likewise when `data` drops the endpoint's records and factor level
+      .d <- d[!(d$evid == 0 & .cmtLabel == "pca"), ]
+      .d$cmt <- droplevels(factor(.d$cmt, levels = c("depot", "cp", "pca")))
+      for (.cens in c(FALSE, TRUE)) {
+        suppressWarnings(
+          .p <- vpcPlot(fit, data = .d, n = 10, cens = .cens, method = "vpc")
+        )
+        expect_equal(.panels(.p), c("cp", "pca"),
+                     info = paste("pca level dropped, cens =", .cens))
+      }
     }
   }
 })
