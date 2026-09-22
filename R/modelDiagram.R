@@ -870,6 +870,12 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     # ... and one -term may go to several destinations (e.g. dissociation
     # `koff*RC` back to both C and R); keep one destination per compartment
     .j <- .j[!duplicated(terms$state[.j])]
+    if (!(.src %in% terms$states[[.i]])) {
+      # a rate that does not depend on the source (zero-order or driven by
+      # another compartment) is one flow: pair it with one unused +term
+      .j <- .j[!.used[.j]][1]
+      if (is.na(.j)) next
+    }
     .used[c(.i, .j)] <- TRUE
     for (.k in .j) {
       .matchedFrom[[.k]] <- c(.matchedFrom[[.k]], .src)

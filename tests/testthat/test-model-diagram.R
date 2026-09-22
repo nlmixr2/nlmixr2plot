@@ -737,3 +737,30 @@ test_that("mass transfer arrows do not cross compartments", {
   }
   expect_equal(nrow(unique(n[, c("x", "y")])), nrow(n))
 })
+
+test_that("identical externally driven rates pair one-to-one", {
+  m <- rxode2::rxode2({
+    d/dt(A) = -k*E
+    d/dt(B) = k*E
+    d/dt(C) = -k*E
+    d/dt(D) = k*E
+    d/dt(E) = kin - kout*E
+  })
+  g <- modelGraph(m)
+  tr <- g$edges[g$edges$type == "transfer", ]
+  expect_equal(nrow(tr), 2L)
+  expect_equal(sort(paste(tr$from, tr$to)), c("A B", "C D"))
+})
+
+test_that("scaled transfer is an elimination plus an interaction", {
+  m <- rxode2::rxode2({
+    d/dt(A) = -k*A
+    d/dt(B) = k*A*V1/V2 - kel*B
+  })
+  g <- modelGraph(m)
+  expect_equal(sum(g$edges$type == "transfer"), 0L)
+  expect_equal(nrow(.edge(g, "A", NA, "elimination")), 1L)
+  e <- .edge(g, "A", "B", "interaction")
+  expect_equal(nrow(e), 1L)
+  expect_equal(e$sign, 1)
+})
