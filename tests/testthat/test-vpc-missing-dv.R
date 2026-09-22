@@ -7,6 +7,11 @@ test_that(".vpcSimDropMissingDv() drops simulated records of missing observation
   # nothing missing, or no row numbers to match on: unchanged
   expect_identical(.vpcSimDropMissingDv(sim, data.frame(ID=1, DV=1:5), "DV"), sim)
   expect_identical(.vpcSimDropMissingDv(sim[, -3], obs, "DV"), sim[, -3])
+  # reordered observed data matches on its own row numbers
+  obs2 <- obs[c(3, 1, 2, 4, 5), ]
+  obs2$nlmixrRowNums <- c(3L, 1L, 2L, 4L, 5L)
+  ret <- .vpcSimDropMissingDv(sim, obs2, "DV")
+  expect_equal(ret$nlmixrRowNums, rep(c(2L, 4L, 5L), 2))
 })
 
 .vpcBadSimWarn <- function(expr) {
@@ -52,6 +57,11 @@ test_that("tidyvpc VPC handles missing DV observations (#74)", {
   p <- .vpcBadSimWarn(vpcPlot(fit, data=d, n=5, method="tidyvpc", pred_corr=TRUE))
   expect_s3_class(p, "ggplot")
   sim <- nlmixr2est::vpcSim(fit, n=5)
+  # exactly the records of the missing observations are dropped
+  ret <- .vpcSimDropMissingDv(sim, d, "DV")
+  expect_equal(nrow(ret), 5 * sum(d$EVID == 0 & !is.na(d$DV)))
+  expect_false(anyNA(d$DV[ret$nlmixrRowNums]))
+  expect_true(all(d$EVID[ret$nlmixrRowNums] == 0))
   p <- .vpcBadSimWarn(vpcPlot(sim, data=d, method="tidyvpc"))
   expect_s3_class(p, "ggplot")
 })

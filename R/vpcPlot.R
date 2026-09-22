@@ -522,8 +522,9 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' still has a value for each of them.  tidyvpc needs the simulation to be an
 #' exact replicate of the observed records, so drop the same records from every
 #' simulated replicate (#74).  Records are matched on `nlmixrRowNums`, the row
-#' of `obs` each simulated record came from (as in
-#' `nlmixr2est::vpcSimExpand()`).
+#' of the dataset each simulated record came from.  That is the row of `obs`,
+#' unless `obs` already carries `nlmixrRowNums` (added, before a merge that can
+#' reorder the rows, when `idv` comes from the fit).
 #'
 #' @param sim simulation from `nlmixr2est::vpcSim()`
 #' @param obs observed data, before any rows are dropped
@@ -532,8 +533,13 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' @noRd
 .vpcSimDropMissingDv <- function(sim, obs, dv) {
   if (!any(names(sim) == "nlmixrRowNums")) return(sim)
-  .na <- which(is.na(obs[[dv]]))
-  if (length(.na) == 0L) return(sim)
+  .na <- is.na(obs[[dv]])
+  if (!any(.na)) return(sim)
+  if (any(names(obs) == "nlmixrRowNums")) {
+    .na <- obs$nlmixrRowNums[.na]
+  } else {
+    .na <- which(.na)
+  }
   sim[!(sim$nlmixrRowNums %in% .na), , drop=FALSE]
 }
 
