@@ -912,3 +912,97 @@ test_that("combined labels keep repeated contributions", {
   expect_equal(e$label, "k * A + k * A")
   expect_equal(nrow(.edge(g, "A", NA, "elimination")), 0L)
 })
+
+test_that("delay() is a delayed transfer and keeps its direction", {
+  m <- rxode2::rxode2({
+    d/dt(depot) = -ka*depot
+    d/dt(central) = ka*delay(depot, tlag) - cl*central
+  })
+  g <- modelGraph(m)
+  e <- .edge(g, "depot", "central", "transfer")
+  expect_equal(nrow(e), 1L)
+  expect_equal(e$label, "ka * delay(depot, tlag)")
+  expect_equal(nrow(.edge(g, "depot", NA, "elimination")), 0L)
+  expect_equal(sum(g$edges$type == "interaction"), 0L)
+  m <- rxode2::rxode2({
+    d/dt(central) = -cl*central
+    d/dt(resp) = kin*(1 - delay(central, tau)/(ec50 + delay(central, tau))) - kout*resp
+  })
+  g <- modelGraph(m, dosing = "central")
+  expect_equal(.edge(g, "central", "resp", "interaction")$sign, -1)
+})
+
+test_that("dosing modifiers and initial conditions do not change the graph", {
+  base <- rxode2::rxode2({
+    d/dt(depot) = -ka*depot
+    d/dt(central) = ka*depot - cl*central
+  })
+  mod <- rxode2::rxode2({
+    d/dt(depot) = -ka*depot
+    alag(depot) = tlag
+    f(depot) = fbio
+    d/dt(central) = ka*depot - cl*central
+    rate(central) = r
+    dur(central) = d
+    central(0) = 0
+  })
+  expect_equal(modelGraph(mod)$edges, modelGraph(base)$edges)
+  cols <- setdiff(names(modelGraph(base)$nodes), "annotation")
+  expect_equal(modelGraph(mod)$nodes[, cols], modelGraph(base)$nodes[, cols])
+})
+
+test_that("lag, F, rate and dur are annotations on their compartment", {
+  f <- function() {
+    ini({
+      tka <- 0.4
+      tcl <- 1
+      tv <- 3
+      tlag <- 0.5
+      fbio <- 0.8
+      add.sd <- 0.1
+    })
+    model({
+      ka <- exp(tka)
+      cl <- exp(tcl)
+      v <- exp(tv)
+      d/dt(depot) <- -ka * depot
+      alag(depot) <- tlag
+      f(depot) <- fbio
+      d/dt(central) <- ka * depot - cl / v * central
+      rate(central) <- 2
+      dur(central) <- 1
+      cp <- central / v
+      cp ~ add(add.sd)
+    })
+  }
+  ui <- suppressMessages(rxode2::rxode2(f))
+  g <- modelGraph(ui)
+  expect_equal(g$nodes$annotation, c("lag = tlag\nF = fbio", "rate = 2\ndur = 1"))
+  expect_output(print(g), "lag = tlag; F = fbio", fixed = TRUE)
+  dot <- plot(ui, engine = "dot")
+  expect_match(dot, "xlabel = \"lag = tlag\\nF = fbio\"", fixed = TRUE)
+  expect_match(dot, "forcelabels = true", fixed = TRUE)
+  p <- plot(ui, engine = "ggplot2")
+  txt <- unname(unlist(lapply(p$layers, function(l) {
+    if (inherits(l$geom, "GeomText") &&
+          grepl("annotation", paste(deparse(l$mapping$label), collapse = ""),
+                fixed = TRUE)) {
+      l$data$annotation
+    }
+  })))
+  expect_equal(txt, c("lag = tlag\nF = fbio", "rate = 2\ndur = 1"))
+  expect_error(print(p), NA)
+  # the same properties on a compiled model; compartments without them are NA
+  m <- rxode2::rxode2({
+    d/dt(depot) = -ka*depot
+    lag(depot) = tlag
+    d/dt(central) = ka*depot - cl*central
+  })
+  g <- modelGraph(m)
+  # compartments without dosing properties are blank
+  expect_equal(g$nodes$annotation, c("lag = tlag", ""))
+  expect_false(grepl("NA", paste(capture.output(print(g)), collapse = "\n")))
+  lines <- strsplit(modelDiagram(g, engine = "dot"), "\n")[[1]]
+  expect_false(grepl("xlabel", grep("^  \"central\" \\[", lines, value = TRUE)))
+  expect_error(print(modelDiagram(g, engine = "ggplot2")), NA)
+})

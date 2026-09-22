@@ -51,7 +51,9 @@
 #' - `nodes`: data frame with the compartment `name`, its `role`
 #'   (`"dosing"`, `"central"`, `"peripheral"`, `"transit"`, `"metabolite"`,
 #'   `"effect"` or `"other"`), whether it is `dosing` and the layout
-#'   coordinates `x` and `y`.
+#'   coordinates `x` and `y`, and an `annotation` with the compartment's
+#'   dosing properties (`lag`, `F`, `rate`, `dur`; `""` when there are none),
+#'   which the diagrams show next to the compartment.
 #'
 #' - `edges`: data frame with `from`, `to` (`NA` for inputs/eliminations),
 #'   `type` (`"transfer"`, `"elimination"`, `"input"` or `"interaction"`),
@@ -109,6 +111,7 @@ modelGraph <- function(object, dosing = NULL, data = NULL) {
   }
   .edges <- .mdClassifyTerms(.info$terms, .states)
   .nodes <- .mdLayout(.states, .edges, dosing)
+  .nodes$annotation <- .info$annotation
   structure(list(nodes = .nodes, edges = .edges),
             class = "nlmixr2ModelGraph")
 }
@@ -246,7 +249,13 @@ plot.rxode2 <- plot.rxUi
 #' @export
 print.nlmixr2ModelGraph <- function(x, ...) {
   cat("nlmixr2 model graph\n\ncompartments:\n")
-  print(x$nodes[, c("name", "role", "dosing")], row.names = FALSE)
+  .n <- x$nodes[, c("name", "role", "dosing")]
+  .a <- x$nodes$annotation
+  if (!is.null(.a) && any(!is.na(.a) & nzchar(.a))) {
+    .a[is.na(.a)] <- ""
+    .n$annotation <- gsub("\n", "; ", .a, fixed = TRUE)
+  }
+  print(.n, row.names = FALSE)
   cat("\nflows:\n")
   .e <- x$edges
   if (nrow(.e) == 0L) {
@@ -330,6 +339,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # rxode2's full compartment order, including compartments without ODEs
   # (e.g. from `cmt()`), maps numeric `cmt` values
   list(states = .states, terms = .terms, data = .data,
+       annotation = .mdAnnotation(.parsed$props, .states),
        order = c(.order, setdiff(.states, .order)))
 }
 
@@ -424,6 +434,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .env$count <- list()
   .env$inIf <- character(0)
   .env$states <- character(0)
+  .env$props <- list()
   .isAssign <- function(x) {
     length(x) == 3L &&
       (identical(x[[1]], quote(`<-`)) || identical(x[[1]], quote(`=`)) ||
@@ -488,7 +499,16 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .lhs <- x[[2]]
       .rhs <- .mdSubstitute(x[[3]], .env$defs)
       .state <- .mdDdtState(.lhs)
-      if (!is.null(.state)) {
+      .prop <- .mdDoseProperty(.lhs)
+      if (!is.null(.prop)) {
+        # dosing properties (lag, F, rate, dur) are annotations only
+        .old <- .env$props[[.prop$state]]
+        .val <- .mdDeparse(x[[3]])
+        .cur <- .old[.prop$name]
+        .old[.prop$name] <- if (is.null(.old) || is.na(.cur)) .val else
+          paste(.cur, .val, sep = " / ")
+        .env$props[[.prop$state]] <- .old
+      } else if (!is.null(.state)) {
         .addTerms(.state, .mdTerms(.rhs))
       } else if (is.name(.lhs)) {
         .n <- as.character(.lhs)
@@ -514,7 +534,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     identical(.env$count[[.n]], 1)
   }, logical(1))]
   list(ode = .env$ode, deps = .env$deps, defs = .fold,
-       states = .env$states)
+       states = .env$states, props = .env$props)
 }
 
 #' Replace substituted definitions by their variable names (for labels)
@@ -541,6 +561,37 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 .mdSubstitute <- function(expr, defs) {
   if (length(defs) == 0L) return(expr)
   do.call(substitute, list(expr, defs))
+}
+
+#' Dosing property set by an assignment like `alag(depot) <- tlag`
+#'
+#' @param lhs left hand side of an assignment
+#' @return list(state, name) with the display name (`lag`, `F`, `rate` or
+#'   `dur`), or NULL
+#' @noRd
+.mdDoseProperty <- function(lhs) {
+  if (!is.call(lhs) || length(lhs) != 2L || !is.name(lhs[[1]]) ||
+        !is.name(lhs[[2]])) {
+    return(NULL)
+  }
+  .n <- c(lag = "lag", alag = "lag", f = "F", F = "F", rate = "rate",
+          dur = "dur")[as.character(lhs[[1]])]
+  if (is.na(.n)) return(NULL)
+  list(state = as.character(lhs[[2]]), name = unname(.n))
+}
+
+#' Annotation text for each compartment's dosing properties
+#' @param props named list (by compartment) of named character vectors
+#' @param states compartment names
+#' @return character vector (`""` without properties)
+#' @noRd
+.mdAnnotation <- function(props, states) {
+  vapply(states, function(.s) {
+    .p <- props[[.s]]
+    if (is.null(.p) || length(.p) == 0L) return("")
+    .p <- .p[intersect(c("lag", "F", "rate", "dur"), names(.p))]
+    paste0(names(.p), " = ", .p, collapse = "\n")
+  }, character(1), USE.NAMES = FALSE)
 }
 
 #' Return the state name for a `d/dt(state)` expression or NULL
@@ -672,6 +723,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 .mdCanon <- function(x) {
   if (!is.call(x)) return(x)
   if (identical(x[[1]], quote(`(`))) return(.mdCanon(x[[2]]))
+  # `delay(x, tau)` moves the same mass as `x`, only later: a delayed
+  # transfer `-ka*depot` / `+ka*delay(depot, tlag)` is still one flow
+  if (identical(x[[1]], quote(delay)) && length(x) >= 2L) return(.mdCanon(x[[2]]))
   for (.op in list(quote(`+`), quote(`*`))) {
     if (identical(x[[1]], .op) && length(x) == 3L) {
       .ops <- list()
@@ -733,8 +787,8 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' Direction of the dependence of an expression on a compartment
 #'
 #' Rates and parameters (including symbolic exponents) are assumed positive.
-#' Monotone functions (`exp`, `log`, `sqrt`, `expit`, positive powers) keep
-#' the direction of their argument, and a quotient whose numerator and
+#' Monotone functions (`exp`, `log`, `sqrt`, `expit`, positive powers) and
+#' `delay(x, tau)` keep the direction of their argument, and a quotient whose numerator and
 #' denominator both increase is taken as a saturating (Emax/Hill) increase.
 #' @param expr expression
 #' @param o compartment name
@@ -861,6 +915,13 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     }
     if (.fn %in% c("exp", "log", "sqrt", "expit", "log1p", "log10", "log2") &&
           length(e) == 2L) {
+      return(.d(e[[2]]))
+    }
+    # a delayed value moves with the value itself (the delay time is a
+    # parameter)
+    if (.fn == "delay" && length(e) >= 2L &&
+          all(vapply(as.list(e)[-(1:2)], function(a) identical(.d(a), 0),
+                     logical(1)))) {
       return(.d(e[[2]]))
     }
     if (.fn %in% c("^", "**") && length(e) == 3L) {
@@ -1245,6 +1306,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # (14pt Helvetica is about 0.11 inch per character plus margins)
   .xs <- max(1.6, 0.11 * max(nchar(graph$nodes$name), 0L) + 0.9)
   .ys <- 1.1
+  # dosing properties shown as an external label next to the compartment
+  .ann <- graph$nodes$annotation
+  if (is.null(.ann)) .ann <- rep("", nrow(graph$nodes))
+  .ann[is.na(.ann)] <- ""
   # quote a DOT string; "\r" (from combined labels) becomes a DOT line break
   .q <- function(x) {
     paste0("\"", gsub("\r", "\\n", gsub("\"", "\\\\\"", x), fixed = TRUE), "\"")
@@ -1252,15 +1317,16 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .n <- graph$nodes
   .e <- .mdEdgeCoords(graph)
   .lines <- c("digraph model {",
-              "  graph [layout = neato, splines = true, outputorder = edgesfirst];",
+              "  graph [layout = neato, splines = true, outputorder = edgesfirst, forcelabels = true];",
               "  node [shape = box, style = \"rounded,filled\", fontname = Helvetica];",
               "  edge [fontname = Helvetica, fontsize = 10];")
   for (.i in seq_len(nrow(.n))) {
     .lines <- c(.lines, sprintf(
-      "  %s [pos = \"%g,%g!\", fillcolor = %s%s];",
+      "  %s [pos = \"%g,%g!\", fillcolor = %s%s%s];",
       .q(.n$name[.i]), .n$x[.i] * .xs, .n$y[.i] * .ys,
       .q(.mdRoleColors[[.n$role[.i]]]),
-      if (.n$dosing[.i]) ", penwidth = 2" else ""))
+      if (.n$dosing[.i]) ", penwidth = 2" else "",
+      if (nzchar(.ann[.i])) paste0(", xlabel = ", .q(gsub("\n", "\r", .ann[.i], fixed = TRUE))) else ""))
   }
   .done <- rep(FALSE, nrow(.e))
   for (.i in seq_len(nrow(.e))) {
@@ -1372,6 +1438,16 @@ print.nlmixr2ModelGraph <- function(x, ...) {
                label = .e$label[.i], stringsAsFactors = FALSE)
   }))
   .n$role <- factor(.n$role, levels = names(.mdRoleColors))
+  if (is.null(.n$annotation)) .n$annotation <- ""
+  .n$annotation[is.na(.n$annotation)] <- ""
+  .ann <- .n[nzchar(.n$annotation), , drop = FALSE]
+  .ann$x <- .ann$x + .hw * 0.9
+  .ann$y <- .ann$y + .hh * 1.1
+  .annLines <- strsplit(.ann$annotation, "\n", fixed = TRUE)
+  .annExtent <- data.frame(
+    x = .ann$x + 0.075 * vapply(.annLines, function(l) max(nchar(l)), numeric(1)),
+    y = .ann$y + 0.13 * lengths(.annLines)
+  )
   .p <- ggplot2::ggplot() +
     ggplot2::geom_tile(
       data = .n,
@@ -1382,6 +1458,16 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     ggplot2::geom_text(data = .n,
                        ggplot2::aes(x = .data$x, y = .data$y,
                                     label = .data$name)) +
+    # dosing properties (lag, F, rate, dur) as an annotation at the upper
+    # right corner of the compartment
+    ggplot2::geom_text(data = .ann,
+                       ggplot2::aes(x = .data$x, y = .data$y,
+                                    label = .data$annotation),
+                       hjust = 0, vjust = 0, size = 2.6,
+                       fontface = "italic", lineheight = 0.9) +
+    # keep the annotations inside the plot (away from the legend)
+    ggplot2::geom_blank(data = .annExtent,
+                        ggplot2::aes(x = .data$x, y = .data$y)) +
     ggplot2::scale_fill_manual(values = .mdRoleColors, drop = TRUE,
                                name = "compartment") +
     ggplot2::coord_equal(clip = "off") +

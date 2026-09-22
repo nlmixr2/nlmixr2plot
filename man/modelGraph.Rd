@@ -27,7 +27,9 @@ a \code{nlmixr2ModelGraph} object; a list with:
 \item \code{nodes}: data frame with the compartment \code{name}, its \code{role}
 (\code{"dosing"}, \code{"central"}, \code{"peripheral"}, \code{"transit"}, \code{"metabolite"},
 \code{"effect"} or \code{"other"}), whether it is \code{dosing} and the layout
-coordinates \code{x} and \code{y}.
+coordinates \code{x} and \code{y}, and an \code{annotation} with the compartment's
+dosing properties (\code{lag}, \code{F}, \code{rate}, \code{dur}; \code{""} when there are none),
+which the diagrams show next to the compartment.
 \item \code{edges}: data frame with \code{from}, \code{to} (\code{NA} for inputs/eliminations),
 \code{type} (\code{"transfer"}, \code{"elimination"}, \code{"input"} or \code{"interaction"}),
 \code{sign} (\code{1} when the term is added, \code{-1} when it is subtracted; for

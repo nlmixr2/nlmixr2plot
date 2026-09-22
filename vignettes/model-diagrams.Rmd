@@ -274,6 +274,30 @@ fit <- nlmixr2(two.cmt, nlmixr2data::theo_sd, est = "focei")
 modelDiagram(fit)
 ```
 
+## Dosing properties and delays
+
+Dosing properties set in the model (`lag()`/`alag()`, `f()`/`F()`, `rate()`
+and `dur()`) do not change the flows, so they are shown as an annotation next
+to their compartment (compartments without them are left blank).  Initial
+conditions like `central(0) <- 0` do not change the diagram.
+
+```{r}
+pk.lag <- rxode2::rxode2({
+  d/dt(depot) <- -ka * depot
+  alag(depot) <- tlag
+  f(depot) <- fbio
+  d/dt(central) <- ka * depot - cl / v * central
+  dur(central) <- d1
+})
+modelGraph(pk.lag)
+modelDiagram(pk.lag, engine = "ggplot2")
+```
+
+A `delay()` keeps the meaning of what it delays: `ka*delay(depot, tlag)` in
+the destination still matches `-ka*depot` in the source (a delayed transfer),
+and a delayed concentration driving an effect keeps the direction of the
+concentration.
+
 ## `linCmt()` models
 
 Models written with `linCmt()` are converted to their ODE form with
