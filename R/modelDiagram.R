@@ -301,7 +301,14 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     if (length(.err) > 0L) .lines <- .lines[-.err]
     .order <- object$mv0$state
   }
+  # substitute definitions into the equations; when that makes an equation
+  # too large (QSP/PBPK models), redo the whole model with smaller
+  # substitutions so every equation is written the same way
   .parsed <- .mdParseLines(.lines)
+  for (.level in c("small", "none")) {
+    if (!isTRUE(.parsed$overflow)) break
+    .parsed <- .mdParseLines(.lines, .level)
+  }
   .states <- .parsed$states
   # keep rxode2's compartment order (used to map numeric `cmt` values)
   .states <- c(intersect(.order, .states), setdiff(.states, .order))
@@ -427,7 +434,8 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @return list(ode = named list of term lists, deps = named list of
 #'   variables to the (possibly empty) set of variables they depend on)
 #' @noRd
-.mdParseLines <- function(lines) {
+.mdParseLines <- function(lines, level = c("full", "small", "none")) {
+  level <- match.arg(level)
   .env <- new.env(parent = emptyenv())
   .env$ode <- list()
   .env$deps <- list()
@@ -437,6 +445,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .env$states <- character(0)
   .env$props <- list()
   .env$defsSmall <- list()
+  .env$overflow <- FALSE
   # the definition to substitute for variable `n` (NULL: keep the variable)
   .mdDefinition <- function(n, rhs, maxSize) {
     if (n %in% .env$states || n %in% .env$inIf ||
@@ -518,7 +527,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .lhs <- x[[2]]
       # full substitution, and substitution of small definitions only (used
       # when full substitution makes an equation too large)
-      .rhs <- .mdSubstitute(x[[3]], .env$defs)
+      .rhs <- switch(level,
+                     full = .mdSubstitute(x[[3]], .env$defs),
+                     small = .mdSubstitute(x[[3]], .env$defsSmall),
+                     none = x[[3]])
       .rhsSmall <- .mdSubstitute(x[[3]], .env$defsSmall)
       .state <- .mdDdtState(.lhs)
       .prop <- .mdDoseProperty(.lhs)
@@ -531,10 +543,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
           paste(.cur, .val, sep = " / ")
         .env$props[[.prop$state]] <- .old
       } else if (!is.null(.state)) {
-        if (length(all.names(.rhs)) > .mdMaxOdeSize) .rhs <- .rhsSmall
-        # still too large: use the equation as written (variables are
-        # followed through their dependencies)
-        if (length(all.names(.rhs)) > .mdMaxOdeSize) .rhs <- x[[3]]
+        # an equation that is too large after substitution makes the whole
+        # model fall back to a lower substitution level, so that the same
+        # flow is written the same way in every equation
+        if (length(all.names(.rhs)) > .mdMaxOdeSize) .env$overflow <- TRUE
         .addTerms(.state, .mdSplitTerms(.rhs, .env$states, .state))
       } else if (is.name(.lhs)) {
         .n <- as.character(.lhs)
@@ -555,7 +567,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     identical(.env$count[[.n]], 1)
   }, logical(1))]
   list(ode = .env$ode, deps = .env$deps, defs = .fold,
-       states = .env$states, props = .env$props)
+       states = .env$states, props = .env$props, overflow = .env$overflow)
 }
 
 #' Replace substituted definitions by their variable names (for labels)
@@ -824,8 +836,17 @@ print.nlmixr2ModelGraph <- function(x, ...) {
         .denExpr <- x[[3]]
       }
       .num <- .mdTerms(x[[2]], states, own, budget)
-      # each numerator term carries a copy of the denominator
-      .mdCharge(budget, length(.num) * length(all.names(.denExpr)))
+      # each numerator term carries a copy of the denominator; when that is
+      # too much, group like numerator terms first so that a production and
+      # a loss over the same denominator stay apart
+      .denSize <- length(all.names(.denExpr))
+      if (!is.null(budget) && length(.num) * .denSize > budget$left) {
+        .num <- .mdCollapse(.num, states, own = own)
+      }
+      if (!is.null(budget) && length(.num) * .denSize > budget$left) {
+        .num <- .mdCollapse(.num, states, coarse = TRUE)
+      }
+      .mdCharge(budget, length(.num) * .denSize)
       return(lapply(.num, function(.t) {
         list(sign = .t$sign * .denSign,
              expr = as.call(list(quote(`/`), .t$expr, .denExpr)))
@@ -1304,10 +1325,16 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .dir <- function(o) {
       terms$sign[.i] * .mdSign(terms$dir[[.i]][o])
     }
+    # effect of the compartment's own amount on its equation: a term that
+    # decreases with it is a loss whatever its sign (a term kept whole, like
+    # `(kin - kel*A)/v`, is positive but still eliminates)
+    .self <- terms$sign[.i] * .mdSign(terms$dir[[.i]][.s])
     if (terms$sign[.i] < 0) {
       if (.s %in% .st || length(.others) == 0L) {
         .add(.s, NA_character_, "elimination", -1, terms$label[.i])
       }
+    } else if (.s %in% .st && .self < 0) {
+      .add(.s, NA_character_, "elimination", -1, terms$label[.i])
     } else if (length(.others) == 0L) {
       .add(NA_character_, .s, "input", 1, terms$label[.i])
     }

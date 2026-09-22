@@ -1077,3 +1077,32 @@ test_that("large graphs use straight edges in DOT", {
   g$edges <- g$edges[rep(seq_len(nrow(g$edges)), length.out = 201), ]
   expect_match(modelDiagram(g, engine = "dot"), "splines = line", fixed = TRUE)
 })
+
+test_that("a term kept whole still shows its loss and production", {
+  # too large to expand: the quotient stays one (positive) term, but it
+  # decreases with A, so it is a loss, not an input
+  loss <- paste(sprintf("k%03d*A", 1:128), collapse = " - ")
+  den <- paste(sprintf("p%03d", 1:256), collapse = " + ")
+  m <- rxode2::rxode2(sprintf("d/dt(A) = (kin - %s)/(%s)", loss, den))
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "A", NA, "elimination")), 1L)
+  expect_equal(nrow(.edge(g, NA, "A", "input")), 1L)
+  # the same model written small behaves the same way
+  g <- modelGraph(rxode2::rxode2("d/dt(A) = (kin - kel*A)/v"))
+  expect_equal(nrow(.edge(g, "A", NA, "elimination")), 1L)
+  expect_equal(nrow(.edge(g, NA, "A", "input")), 1L)
+})
+
+test_that("substitution falls back for the whole model, not one equation", {
+  # `loss` fits the definition limits but blows up one equation; both
+  # equations must still write `flux` the same way for the transfer to match
+  l <- paste(sprintf("q%02d*B", 1:40), collapse = " + ")
+  out <- paste(rep("loss", 40), collapse = " - ")
+  m <- rxode2::rxode2(paste("flux = k*A", paste0("loss = ", l),
+                            "d/dt(A) = -flux",
+                            paste0("d/dt(B) = flux - ", out), sep = "\n"))
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "A", "B", "transfer")), 1L)
+  expect_equal(nrow(.edge(g, "A", NA, "elimination")), 0L)
+  expect_equal(nrow(.edge(g, "B", NA, "elimination")), 1L)
+})
