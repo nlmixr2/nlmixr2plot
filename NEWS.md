@@ -1,5 +1,16 @@
 # nlmixr2plot 5.1.0.9000
 
+* Added automatic model diagrams (#10).  `modelGraph()` parses a model's
+  differential equations (from a model function, `rxode2` model/UI or an
+  `nlmixr2` fit) into a graph of compartments and flows (mass transfer,
+  eliminations, inputs and non-mass-transfer interactions like effect
+  compartments or PD stimulation/inhibition), detecting dosing compartments
+  from the dosing records.  `modelDiagram()` lays it out with dosing and
+  absorption compartments above the central compartment, peripheral
+  compartments to the left, eliminations/metabolites below and PD models to
+  the right, and draws it with the `"DiagrammeR"` (Graphviz), `"ggplot2"` or
+  `"dot"` (DOT source) engine.
+
 * Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the `data`
   argument; the observed data was rebuilt from the fit's dataset instead of the
   supplied `data` (#62).

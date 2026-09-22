@@ -29,10 +29,12 @@ Imports:
     nlmixr2est,
     nlmixr2extra (>= 5.0.0),
     rxode2,
+    stats,
     tidyr,
     utils,
     xgxr
 Suggests:
+    DiagrammeR,
     testthat (>= 3.0.0),
     dplyr,
     withr,
