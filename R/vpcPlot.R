@@ -125,7 +125,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     if (is.null(lloq) && is.null(uloq)) {
       stop("this data is not censored")
     }
-    .obs <- as.data.frame(fit)
+    .obs <- .vpcCensAddStratify(as.data.frame(fit), fit, stratify)
     # Pass the column mappings explicitly (as in the non-censored vpc path)
     # instead of letting vpc_cens guess them.  Guessing maps idv to "TIME"/"time"
     # and, when idv is "tad", left an extra "idv" column that collided with vpc's
@@ -424,6 +424,44 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
          call.=FALSE)
   }
   names(data)[.wo]
+}
+
+#' Carry stratification columns into the censored observed data
+#'
+#' The censored VPC uses `as.data.frame(fit)` as its observed data, which drops
+#' the input covariates, so `vpc::vpc_cens()` rejects any covariate
+#' stratification (#56).  Copy each stratify column missing from `obs` out of
+#' the fit's original data, aligning rows with `fit$env$.rownum` (the
+#' original-data row of each fit-table row) rather than assuming the two are in
+#' the same order.
+#'
+#' @param obs fit table (`as.data.frame(fit)`)
+#' @param fit nlmixr2 fit
+#' @param stratify stratification columns (may be `NULL`)
+#' @return `obs` with the missing stratify columns added
+#' @noRd
+.vpcCensAddStratify <- function(obs, fit, stratify=NULL) {
+  .miss <- setdiff(stratify, names(obs))
+  if (length(.miss) == 0L) return(obs)
+  .src <- nlmixr2est::vpcNameDataCmts(fit, fit$origData)
+  .rn <- fit$env$.rownum
+  if (length(.rn) != nrow(obs) || any(is.na(.rn)) ||
+        any(.rn < 1L | .rn > nrow(.src))) {
+    stop("cannot align the fit table with the original data to add the ",
+         "stratification column(s): ", paste(.miss, collapse=", "),
+         call.=FALSE)
+  }
+  # match exactly: vpcSimExpand() and vpc_cens() both need the exact name, so
+  # a case-insensitive match here would only move the error into vpc
+  .notFound <- setdiff(.miss, names(.src))
+  if (length(.notFound) > 0L) {
+    stop("stratification column(s) not found in the data: ",
+         paste(.notFound, collapse=", "), call.=FALSE)
+  }
+  for (.s in .miss) {
+    obs[[.s]] <- .src[[.s]][.rn]
+  }
+  obs
 }
 
 #' Drop columns that collide with vpc's standardized names
