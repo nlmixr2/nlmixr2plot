@@ -864,3 +864,51 @@ test_that("a saturating quotient needs a positive constant", {
   g <- modelGraph(m, dosing = "C")
   expect_equal(.edge(g, "C", "resp", "interaction")$sign, 0)
 })
+
+test_that("plot() of an rxode2 ui or compiled model draws its diagram", {
+  ui <- suppressMessages(rxode2::rxode2(.pkTurnover))
+  expect_s3_class(ui, "rxUi")
+  p <- plot(ui, engine = "ggplot2")
+  expect_s3_class(p, "ggplot")
+  expect_identical(plot(ui, engine = "dot"),
+                   suppressMessages(modelDiagram(.pkTurnover, engine = "dot")))
+  expect_match(plot(ui, engine = "dot", dosing = "center", labels = TRUE),
+               "ktr * depot", fixed = TRUE)
+  d <- data.frame(ID = 1, TIME = 0:1, AMT = c(100, 0), EVID = c(1, 0),
+                  CMT = c("gut", "gut"), DV = 0)
+  lines <- strsplit(plot(ui, engine = "dot", data = d), "\n")[[1]]
+  expect_match(grep("^  \"gut\" \\[", lines, value = TRUE), "penwidth = 2", fixed = TRUE)
+  m <- rxode2::rxode2({
+    d/dt(depot) = -ka*depot
+    d/dt(central) = ka*depot - cl*central
+  })
+  expect_s3_class(plot(m, engine = "ggplot2"), "ggplot")
+  skip_if_not_installed("DiagrammeR")
+  withr::local_options(nlmixr2plot.diagram.engine = NULL)
+  expect_s3_class(plot(ui), "htmlwidget")
+})
+
+test_that("the saturating constant must be known positive", {
+  m <- rxode2::rxode2({
+    d/dt(C) = -k*C
+    d/dt(r1) = C/((1 - 2) + C) - kout*r1
+    d/dt(r2) = C/((1 + 2) + C) - kout*r2
+    d/dt(r3) = C/(exp(a) + C) - kout*r3
+  })
+  g <- modelGraph(m, dosing = "C")
+  expect_equal(.edge(g, "C", "r1", "interaction")$sign, 0)
+  expect_equal(.edge(g, "C", "r2", "interaction")$sign, 1)
+  expect_equal(.edge(g, "C", "r3", "interaction")$sign, 1)
+})
+
+test_that("combined labels keep repeated contributions", {
+  m <- rxode2::rxode2({
+    d/dt(A) = -k*A - k*A
+    d/dt(B) = k*A + k*A
+  })
+  g <- modelGraph(m)
+  e <- .edge(g, "A", "B", "transfer")
+  expect_equal(nrow(e), 1L)
+  expect_equal(e$label, "k * A + k * A")
+  expect_equal(nrow(.edge(g, "A", NA, "elimination")), 0L)
+})

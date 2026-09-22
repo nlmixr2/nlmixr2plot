@@ -216,13 +216,32 @@ modelDiagram <- function(object, dosing = NULL, data = NULL,
 }
 
 #' @rdname modelDiagram
-#' @param x a `nlmixr2ModelGraph` object
+#' @param x a `nlmixr2ModelGraph` object, an `rxode2` user interface
+#'   (`rxUi`) object or a compiled `rxode2` model
+#' @details `plot()` of an `rxode2` user interface (`rxUi`) object, like
+#'   `rxode2::rxode2(modelFunction)`, or of a compiled `rxode2` model draws
+#'   its model diagram, so `plot(rxode2(model))` is the same as
+#'   `modelDiagram(model)`.  (A fitted `nlmixr2` model keeps its
+#'   goodness-of-fit `plot()`; use `modelDiagram(fit)` for its diagram.)
 #' @export
 plot.nlmixr2ModelGraph <- function(x, ...,
                                    engine = getOption("nlmixr2plot.diagram.engine"),
                                    labels = FALSE) {
   modelDiagram(x, engine = engine, labels = labels)
 }
+
+#' @rdname modelDiagram
+#' @export
+plot.rxUi <- function(x, ..., dosing = NULL, data = NULL,
+                      engine = getOption("nlmixr2plot.diagram.engine"),
+                      labels = FALSE) {
+  modelDiagram(x, dosing = dosing, data = data, engine = engine,
+               labels = labels)
+}
+
+#' @rdname modelDiagram
+#' @export
+plot.rxode2 <- plot.rxUi
 
 #' @export
 print.nlmixr2ModelGraph <- function(x, ...) {
@@ -763,21 +782,47 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .ind <- Filter(Negate(.dep), .s)
     # K must be positive (`C/(C - 1)` decreases)
     length(.ds) == 1L && length(.ind) > 0L &&
-      all(vapply(.ind, .sgn, numeric(1)) > 0) &&
+      isTRUE(all(vapply(.ind, .sgn, numeric(1)) > 0)) &&
       identical(.mdDeparse(.mdCanon(.ds[[1]])), .mdDeparse(.mdCanon(.n)))
   }
-  # sign of an expression that does not depend on `o`
+  # sign of an expression that does not depend on `o`: parameters and
+  # `exp()`/`sqrt()` are positive, constant arithmetic is evaluated, and
+  # anything else is unknown (NA)
   .sgn <- function(e) {
     if (is.numeric(e) && length(e) == 1L && !is.na(e)) return(sign(e))
-    if (!is.call(e)) return(1)
-    if (identical(e[[1]], quote(`(`))) return(.sgn(e[[2]]))
-    if (identical(e[[1]], quote(`-`)) && length(e) == 2L) return(-.sgn(e[[2]]))
-    if ((identical(e[[1]], quote(`*`)) || identical(e[[1]], quote(`/`))) &&
+    if (is.name(e)) return(1)
+    if (!is.call(e)) return(NA_real_)
+    if (length(all.vars(e)) == 0L) {
+      .v <- tryCatch(eval(e, baseenv()), error = function(err) NA_real_)
+      if (is.numeric(.v) && length(.v) == 1L && !is.na(.v)) return(sign(.v))
+      return(NA_real_)
+    }
+    .f <- e[[1]]
+    if (identical(.f, quote(`(`))) return(.sgn(e[[2]]))
+    if (identical(.f, quote(`-`)) && length(e) == 2L) return(-.sgn(e[[2]]))
+    if ((identical(.f, quote(`*`)) || identical(.f, quote(`/`))) &&
           length(e) == 3L) {
       return(.sgn(e[[2]]) * .sgn(e[[3]]))
     }
-    1
+    if (identical(.f, quote(`+`)) && length(e) == 3L) {
+      .a <- .sgn(e[[2]])
+      .b <- .sgn(e[[3]])
+      if (identical(.a, 1) && identical(.b, 1)) return(1)
+      if (identical(.a, -1) && identical(.b, -1)) return(-1)
+      return(NA_real_)
+    }
+    if ((identical(.f, quote(exp)) || identical(.f, quote(sqrt))) &&
+          length(e) == 2L) {
+      return(1)
+    }
+    # a power of a positive base is positive
+    if ((identical(.f, quote(`^`)) || identical(.f, quote(`**`))) &&
+          length(e) == 3L && identical(.sgn(e[[2]]), 1)) {
+      return(1)
+    }
+    NA_real_
   }
+
   .d <- function(e) {
     if (is.name(e)) {
       if (identical(as.character(e), o)) return(1)
@@ -798,6 +843,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .b <- .d(e[[3]])
       # a factor that does not depend on `o` may still carry a sign (R
       # parses `-k*C` as `(-k)*C`)
+      if (identical(.a, 0) && identical(.b, 0)) return(0)
       if (identical(.a, 0)) return(.b * .sgn(e[[2]]))
       if (identical(.b, 0)) return(.a * .sgn(e[[3]]))
       return(.comb(c(.a, .b)))
@@ -805,6 +851,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     if (.fn == "/") {
       .n <- .d(e[[2]])
       .m <- .d(e[[3]])
+      if (identical(.n, 0) && identical(.m, 0)) return(0)
       if (identical(.m, 0)) return(.n * .sgn(e[[3]]))
       if (identical(.n, 0)) return(-.m * .sgn(e[[2]]))
       # saturating forms `N/(K + N)` (Emax/Hill: `C^g/(ec50^g + C^g)`)
@@ -963,7 +1010,8 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .id <- paste(.e$from, .e$to, .e$type, .e$sign, sep = "\r")
     .e <- do.call(rbind, lapply(unique(.id), function(.k) {
       .w <- .e[.id == .k, , drop = FALSE]
-      .w$label[1] <- paste(unique(.w$label), collapse = " + ")
+      # keep every contribution (`k*A + k*A` is twice `k*A`)
+      .w$label[1] <- paste(.w$label, collapse = " + ")
       .w[1, , drop = FALSE]
     }))
   }
