@@ -203,8 +203,9 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
       expect_equal(.panels(.p), c("cp", "pca"),
                    info = paste(.c, .method, "cens"))
     }
-    # an endpoint that is simulated but has no observations (all its DV
-    # missing in `data`) keeps its panel instead of becoming an NA stratum
+    # an endpoint without observations in `data` (all its DV missing) is not
+    # simulated either, so it drops out instead of becoming an NA stratum
+    # (#68: the simulation follows `data`)
     if (.c == "character") {
       .d <- d
       .d$dv[.d$evid == 0 & .cmtLabel == "pca"] <- NA
@@ -212,7 +213,7 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
         suppressWarnings(
           .p <- vpcPlot(fit, data = .d, n = 10, cens = .cens, method = "vpc")
         )
-        expect_equal(.panels(.p), c("cp", "pca"),
+        expect_equal(.panels(.p), "cp",
                      info = paste("pca DV missing, cens =", .cens))
       }
       # likewise when `data` drops the endpoint's records and factor level
@@ -222,9 +223,16 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
         suppressWarnings(
           .p <- vpcPlot(fit, data = .d, n = 10, cens = .cens, method = "vpc")
         )
-        expect_equal(.panels(.p), c("cp", "pca"),
+        expect_equal(.panels(.p), "cp",
                      info = paste("pca level dropped, cens =", .cens))
       }
+      # an endpoint still observed in `data` keeps its panel
+      .d <- d
+      .d$dv[.d$evid == 0 & .cmtLabel == "cp"] <- NA
+      suppressWarnings(
+        .p <- vpcPlot(fit, data = .d, n = 10, method = "vpc")
+      )
+      expect_equal(.panels(.p), "pca", info = "cp DV missing")
     }
   }
 })

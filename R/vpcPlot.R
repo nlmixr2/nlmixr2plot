@@ -124,15 +124,24 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   }
   # Simulate with VPC
   if (!.hasSim) {
-    .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
-  } else if (pred_corr && (tidyvpc || !cens)) {
-    # The observed-data pred-correction below re-solves the setup that
-    # vpcSim(pred=TRUE) stores globally, which may belong to a later vpcSim()
-    # of another fit.  Refresh it from this simulation's fit with a
-    # small simulation (n=1 hits an nlmixr2est vpcSim() bug when the solve has
-    # no sim.id); the supplied simulation itself is still what is plotted.
-    # vpc's censored VPC does not pred-correct, so it needs no refresh.
-    nlmixr2est::vpcSim(fit, ..., n=2, pred=TRUE, seed=seed)
+    .sim <- .vpcSimData(fit, data, ..., keep=stratify, n=n, pred=pred_corr,
+                        seed=seed)
+  } else {
+    if (!is.null(data)) {
+      # a supplied simulation was simulated from its own dataset, so `data`
+      # only replaces the observed side (#68)
+      warning("'data' does not change a supplied 'vpcSim()' simulation; ",
+              "it only replaces the observed data", call.=FALSE)
+    }
+    if (pred_corr && (tidyvpc || !cens)) {
+      # The observed-data pred-correction below re-solves the setup that
+      # vpcSim(pred=TRUE) stores globally, which may belong to a later vpcSim()
+      # of another fit.  Refresh it from this simulation's fit with a
+      # small simulation (n=1 hits an nlmixr2est vpcSim() bug when the solve has
+      # no sim.id); the supplied simulation itself is still what is plotted.
+      # vpc's censored VPC does not pred-correct, so it needs no refresh.
+      .vpcSimData(fit, data, ..., n=2, pred=TRUE, seed=seed)
+    }
   }
   if (tidyvpc) {
     # tidyvpc needs the simulation to replicate the observed records (#74);
@@ -202,12 +211,9 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       # tidyvpc cens=TRUE path can still find it
       .keep <- c(.keep, names(.obs)[tolower(names(.obs)) == "cens"])
     }
+    # .si carries the (preprocessed) dataset the simulation used, which is the
+    # user-supplied data when given (#62, #68)
     .si$keep <- unique(.keep)
-    if (!is.null(data)) {
-      # .si carries the fit's dataset; rebuild the observations from the
-      # user-supplied data instead (#62)
-      .si$events <- data
-    }
     .si$addDosing <- FALSE
     .si$subsetNonmem <- TRUE
     .obs1 <- .obs
@@ -426,6 +432,56 @@ vpcCensTad <- function(..., cens=TRUE, idv="tad") {
 #' @export
 vpcCens <- function(..., cens=TRUE, idv="time") {
   vpcPlot(..., cens=cens, idv=idv)
+}
+
+#' Run the VPC simulation from the supplied data
+#'
+#' `nlmixr2est::vpcSim()` always simulates from the fit's original data
+#' (`fit$simInfo$events`, which is `fit$origData`), and an `events` argument
+#' passed through `...` is ignored.  When `data` is supplied, temporarily swap
+#' it in as the fit's original data so the simulation (and the
+#' pred-correction simulation info it saves) uses it, then restore the fit's
+#' data (#68).
+#'
+#' @param fit nlmixr2 fit
+#' @param data replacement data (`NULL` uses the fitted data)
+#' @param ... passed to `nlmixr2est::vpcSim()`
+#' @return the VPC simulation
+#' @noRd
+.vpcSimData <- function(fit, data, ...) {
+  if (!is.null(data)) {
+    # For a model with a non-normal endpoint, nlmixr2est takes the compartment
+    # of each record from the fit's saved data by row number when the events
+    # have no "CMT" column.  Those row numbers are the fitted data's, so they
+    # do not line up with a different `data` and the normal-endpoint records
+    # would be picked out wrongly (silently dropping observations).  Only the
+    # fit knows that translation, so ask for the column instead of guessing.
+    .dist <- fit$ui$predDf$distribution
+    .dots <- list(...)
+    .normRelated <- !identical(.dots$normRelated, FALSE)
+    if (.normRelated && !all(.dist %in% c("norm", "dnorm", "t", "cauchy"))) {
+      .wc <- which(names(data) == "CMT")
+      if (length(.wc) != 1L) {
+        stop("'data' needs a 'CMT' column to simulate this model, which has ",
+             "a non-normal endpoint; without it the compartments are taken ",
+             "from the fitted data by row number, which does not match 'data'",
+             call.=FALSE)
+      }
+      # the filter reads this column as-is, so a factor would be read by its
+      # level order and a label would not be read at all
+      if (!is.numeric(data[[.wc]])) {
+        stop("the 'CMT' column of 'data' must be the model's compartment ",
+             "number (", paste(fit$ui$predDf$cmt, collapse=", "),
+             " for the endpoints), not a factor or a label",
+             call.=FALSE)
+      }
+    }
+    .env <- fit$env
+    .origData <- .env$origData
+    on.exit(assign("origData", .origData, envir=.env))
+    assign("origData", data, envir=.env)
+  }
+  nlmixr2est::vpcSim(fit, ...)
 }
 
 #' Find the column `col` maps to for a censored VPC
