@@ -1,11 +1,18 @@
 #' VPC based on ui model
 #'
-#' @param fit nlmixr2 fit object
+#' @param fit nlmixr2 fit object, or a simulation from
+#'   \code{\link[nlmixr2est]{vpcSim}()}.  A supplied simulation is used
+#'   as-is (`n` is then ignored).  For `pred_corr = TRUE` it must have been
+#'   created with `vpcSim(..., pred = TRUE)`, and the observed data are
+#'   pred-corrected by re-solving the population predictions of the
+#'   simulation's fit with `...`, so pass the same `...` that was given to
+#'   `vpcSim()`.
 #' @param data this is the data to use to augment the VPC fit.  By
 #'   default is the fitted data, (can be retrieved by
 #'   \code{\link[nlme]{getData}}), but it can be changed by specifying
 #'   this argument.
-#' @param n Number of VPC simulations
+#' @param n Number of VPC simulations (ignored when `fit` is a
+#'   `vpcSim()` simulation)
 #' @param idv Name of independent variable. For `vpcPlot()` and
 #'   `vpcCens()` the default is `"time"` for `vpcPlotTad()` and
 #'   `vpcCensTad()` this is `"tad"`
@@ -74,8 +81,10 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   } else {
     tidyvpc <- TRUE
   }
-  # Simulate with VPC
-  if (inherits(fit, "nlmixr2vpcSim")) {
+  # Reuse a supplied simulation (#57); `fit` is replaced by the underlying fit
+  # below, so remember whether a simulation was given
+  .hasSim <- inherits(fit, "nlmixr2vpcSim")
+  if (.hasSim) {
     .sim <- fit
     .fit <- attr(class(.sim), "fit")
     .cls <- class(.fit)
@@ -84,6 +93,15 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     attr(.cls, ".foceiEnv") <- .attr
     class(.fit) <- .cls
     fit <- .fit
+    .simN <- length(unique(.sim$sim.id))
+    if (!missing(n) && !identical(as.integer(n), as.integer(.simN))) {
+      warning("'n' is ignored when a 'vpcSim()' simulation is supplied; ",
+              "using its ", .simN, " simulations", call.=FALSE)
+    }
+    if (pred_corr && !any(names(.sim) == "pred")) {
+      stop("'pred_corr = TRUE' needs a simulation created with ",
+           "'vpcSim(..., pred = TRUE)'", call.=FALSE)
+    }
   }
   .ui <- rxode2::rxUiDecompress(fit$ui)
   .obsLst <- .vpcUiSetupObservationData(fit, data=data, idv=idv, cens=cens)
@@ -105,8 +123,16 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     }
   }
   # Simulate with VPC
-  if (!inherits(fit, "nlmixr2vpcSim")) {
+  if (!.hasSim) {
     .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
+  } else if (pred_corr && (tidyvpc || !cens)) {
+    # The observed-data pred-correction below re-solves the setup that
+    # vpcSim(pred=TRUE) stores globally, which may belong to a later vpcSim()
+    # of another fit.  Refresh it from this simulation's fit with a
+    # small simulation (n=1 hits an nlmixr2est vpcSim() bug when the solve has
+    # no sim.id); the supplied simulation itself is still what is plotted.
+    # vpc's censored VPC does not pred-correct, so it needs no refresh.
+    nlmixr2est::vpcSim(fit, ..., n=2, pred=TRUE, seed=seed)
   }
   .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, .obs)
   if (any(names(.sim) == "evid")) {
@@ -115,17 +141,19 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   .evid <- which(tolower(names(.obs)) == "evid")
   if (length(.evid) == 1L) {
     .obs <- .obs[.obs[[.evid]] == 0,,drop=FALSE]
-  } else {
-    .mdv <- which(tolower(names(.obs)) == "mdv")
-    if (length(.mdv) == 1L) {
-      .obs <- .obs[.obs[[.mdv]] == 0,,drop=FALSE]
-    }
+  }
+  # an EVID=0 record flagged MDV=1 is still not an observation
+  .mdv <- which(tolower(names(.obs)) == "mdv")
+  if (length(.mdv) == 1L) {
+    .obs <- .obs[.obs[[.mdv]] == 0,,drop=FALSE]
   }
   if (cens & !tidyvpc) {
     if (is.null(lloq) && is.null(uloq)) {
       stop("this data is not censored")
     }
-    .obs <- .vpcCensAddStratify(as.data.frame(fit), fit, stratify)
+    # Use the observed data prepared above (which honours `data`, #55) instead
+    # of re-deriving it from the fit.
+    .obs <- .vpcCensObs(.obs)
     # Pass the column mappings explicitly (as in the non-censored vpc path)
     # instead of letting vpc_cens guess them.  Guessing maps idv to "TIME"/"time"
     # and, when idv is "tad", left an extra "idv" column that collided with vpc's
@@ -142,6 +170,9 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       id=.vpcCensCol(.obs, "id", "observed"),
       dv=.vpcCensCol(.obs, "dv", "observed"),
       idv=.vpcCensCol(.obs, idv, "observed"))
+    .strat <- .vpcMatchStrata(.obs, .sim, stratify)
+    .obs <- .strat$obs
+    .sim <- .strat$sim
     .sim <- .vpcCensDropStray(.sim, .simCens, stratify)
     .obs <- .vpcCensDropStray(.obs, .obsCens, stratify)
     rxode2::rxReq("vpc")
@@ -167,18 +198,18 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       .keep <- c(.keep, names(.obs)[tolower(names(.obs)) == "cens"])
     }
     .si$keep <- unique(.keep)
+    if (!is.null(data)) {
+      # .si carries the fit's dataset; rebuild the observations from the
+      # user-supplied data instead (#62)
+      .si$events <- data
+    }
     .si$addDosing <- FALSE
     .si$subsetNonmem <- TRUE
     .obs1 <- .obs
     .obs <- do.call(rxode2::rxSolve, .si)
     .both <- intersect(names(.obs1), names(.obs))
     for (.n in .both) {
-      if (inherits(.obs1[[.n]], "factor") && !inherits(.obs[[.n]], "factor")) {
-        .tmp <- as.integer(.obs[[.n]])
-        attr(.tmp, "levels") <- attr(.obs1[[.n]], "levels")
-        class(.tmp) <- "factor"
-        .obs[[.n]] <- .tmp
-      }
+      .obs[[.n]] <- .vpcMatchFactor(.obs[[.n]], .obs1[[.n]])
     }
     .no <- names(.obs)
     .w <- which(.no == "sim")
@@ -190,15 +221,9 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       .obsCols$dv <- "dv"
     }
    }
-  .both <- intersect(names(.sim), names(.obs))
-  for (.n in .both) {
-    if (inherits(.obs[[.n]], "factor") && !inherits(.sim[[.n]], "factor")) {
-      .tmp <- as.integer(.sim[[.n]])
-      attr(.tmp, "levels") <- attr(.obs[[.n]], "levels")
-      class(.tmp) <- "factor"
-      .sim[[.n]] <- .tmp
-    }
-  }
+  .strat <- .vpcMatchStrata(.obs, .sim, stratify)
+  .obs <- .strat$obs
+  .sim <- .strat$sim
   .w <- which(tolower(names(.obs)) == "evid")
   if (length(.w) == 1L) {
     .obs <- .obs[.obs[, .w] == 0 | .obs[, .w] == 2, ]
@@ -426,44 +451,6 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   names(data)[.wo]
 }
 
-#' Carry stratification columns into the censored observed data
-#'
-#' The censored VPC uses `as.data.frame(fit)` as its observed data, which drops
-#' the input covariates, so `vpc::vpc_cens()` rejects any covariate
-#' stratification (#56).  Copy each stratify column missing from `obs` out of
-#' the fit's original data, aligning rows with `fit$env$.rownum` (the
-#' original-data row of each fit-table row) rather than assuming the two are in
-#' the same order.
-#'
-#' @param obs fit table (`as.data.frame(fit)`)
-#' @param fit nlmixr2 fit
-#' @param stratify stratification columns (may be `NULL`)
-#' @return `obs` with the missing stratify columns added
-#' @noRd
-.vpcCensAddStratify <- function(obs, fit, stratify=NULL) {
-  .miss <- setdiff(stratify, names(obs))
-  if (length(.miss) == 0L) return(obs)
-  .src <- nlmixr2est::vpcNameDataCmts(fit, fit$origData)
-  .rn <- fit$env$.rownum
-  if (length(.rn) != nrow(obs) || any(is.na(.rn)) ||
-        any(.rn < 1L | .rn > nrow(.src))) {
-    stop("cannot align the fit table with the original data to add the ",
-         "stratification column(s): ", paste(.miss, collapse=", "),
-         call.=FALSE)
-  }
-  # match exactly: vpcSimExpand() and vpc_cens() both need the exact name, so
-  # a case-insensitive match here would only move the error into vpc
-  .notFound <- setdiff(.miss, names(.src))
-  if (length(.notFound) > 0L) {
-    stop("stratification column(s) not found in the data: ",
-         paste(.notFound, collapse=", "), call.=FALSE)
-  }
-  for (.s in .miss) {
-    obs[[.s]] <- .src[[.s]][.rn]
-  }
-  obs
-}
-
 #' Drop columns that collide with vpc's standardized names
 #'
 #' `vpc` renames the mapped columns to "id"/"dv"/"idv"; an unrelated column
@@ -574,6 +561,106 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
             "supply it", call.=FALSE)
   }
   .full[.m]
+}
+
+#' Mark censored observations for a censored VPC
+#'
+#' nlmixr2 data encodes a censored record at its censoring limit (`DV` equal to
+#' the limit) with a non-zero `CENS` column.  `vpc` decides whether an observation
+#' is censored by comparing `dv` strictly against the limit (`dv < lloq`,
+#' `dv > uloq`), so a record sitting exactly at the limit would be counted as
+#' uncensored.  Move the flagged records past their limit instead: `-Inf` for
+#' below the limit (`CENS == 1`) and `Inf` for above it (`CENS == -1`), so each
+#' is counted only on its own side of the censoring.  Without a `CENS` column
+#' `vpc` relies on the `dv`/limit comparison alone, so warn: records encoded at
+#' the limit are then counted as uncensored.
+#'
+#' `vpc` also counts a missing `dv` as censored, so records without an
+#' observation (e.g. a missed sample) are dropped first, as the fitted data does.
+#'
+#' @param obs observed data with a `dv` column (any case)
+#' @return `obs` without missing observations, with `dv` moved past the limit
+#'   for censored records
+#' @noRd
+.vpcCensObs <- function(obs) {
+  .wd <- .vpcCensCol(obs, "dv", "observed")
+  obs <- obs[!is.na(obs[[.wd]]), , drop=FALSE]
+  if (!any(tolower(names(obs)) == "cens")) {
+    warning("the observed data has no 'cens' column; censoring for the VPC is ",
+            "judged by comparing 'dv' to the limit, so records at the limit ",
+            "count as uncensored", call.=FALSE)
+    return(obs)
+  }
+  .cens <- obs[[.vpcCensCol(obs, "cens", "observed")]]
+  if (is.factor(.cens)) .cens <- as.numeric(as.character(.cens))
+  .dv <- obs[[.wd]]
+  .dv[!is.na(.cens) & .cens == 1] <- -Inf
+  .dv[!is.na(.cens) & .cens == -1] <- Inf
+  obs[[.wd]] <- .dv
+  obs
+}
+
+#' Match simulated stratification columns to the observed ones
+#'
+#' Recode each column shared by `sim` and `obs` to the observed factor levels
+#' (see `.vpcMatchFactor()`), then keep only the levels that occur in the
+#' observed or simulated stratification columns, so compartments that are never
+#' endpoints (like `depot`) do not become strata (#44).  A simulated endpoint
+#' without observations (e.g. all its `DV` missing) keeps its level instead of
+#' becoming an `NA` stratum.
+#'
+#' @param obs observed data
+#' @param sim simulated data
+#' @param stratify stratification columns
+#' @return list with `obs` and `sim`
+#' @noRd
+.vpcMatchStrata <- function(obs, sim, stratify) {
+  .both <- intersect(names(sim), names(obs))
+  for (.n in .both) {
+    # simulated labels missing from the observed levels (e.g. `data` without
+    # an endpoint, with its levels dropped) are added rather than made NA
+    if (inherits(obs[[.n]], "factor") &&
+          (is.character(sim[[.n]]) || inherits(sim[[.n]], "factor"))) {
+      .extra <- setdiff(unique(as.character(sim[[.n]])),
+                        c(levels(obs[[.n]]), NA))
+      if (length(.extra) > 0L) {
+        obs[[.n]] <- factor(as.character(obs[[.n]]),
+                            levels=c(levels(obs[[.n]]), .extra))
+      }
+    }
+    sim[[.n]] <- .vpcMatchFactor(sim[[.n]], obs[[.n]])
+  }
+  for (.n in intersect(stratify, .both)) {
+    if (inherits(obs[[.n]], "factor")) {
+      .lvl <- levels(obs[[.n]])
+      .lvl <- .lvl[.lvl %in% c(as.character(obs[[.n]]), as.character(sim[[.n]]))]
+      obs[[.n]] <- factor(as.character(obs[[.n]]), levels=.lvl)
+      sim[[.n]] <- factor(as.character(sim[[.n]]), levels=.lvl)
+    }
+  }
+  list(obs=obs, sim=sim)
+}
+
+#' Recode a column to match a reference factor
+#'
+#' Simulated and pred-corrected data can return a stratification column (like
+#' `cmt`) as an integer code or as character labels, while the observed data
+#' has it as a factor.  Integer codes are taken as level indices and character
+#' values are matched by label (#44).
+#'
+#' @param x column to recode
+#' @param ref reference column
+#' @return `x` as a factor with the levels of `ref`, or `x` unchanged when
+#'   `ref` is not a factor or `x` already is one
+#' @noRd
+.vpcMatchFactor <- function(x, ref) {
+  if (!inherits(ref, "factor") || inherits(x, "factor")) return(x)
+  .lvl <- levels(ref)
+  if (is.character(x)) return(factor(x, levels=.lvl))
+  .tmp <- as.integer(x)
+  attr(.tmp, "levels") <- .lvl
+  class(.tmp) <- "factor"
+  .tmp
 }
 
 #' Setup Observation data for VPC
