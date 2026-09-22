@@ -546,3 +546,49 @@ test_that("ggplot2 arrows between the same compartments do not overlap", {
   expect_equal(nrow(seg), 2L)
   expect_false(isTRUE(all.equal(seg$y[1], seg$y[2])))
 })
+
+test_that("direction is seen through monotone functions, ifelse and Hill terms", {
+  m <- rxode2::rxode2({
+    d/dt(center) = -cl*center
+    d/dt(pd1) = kin*exp(-k*center) - kout*pd1
+    d/dt(pd2) = kin*(1 + emax*center^g/(ec50^g + center^g)) - kout*pd2
+    d/dt(pd3) = kin*(1 + sin(center)) - kout*pd3
+  })
+  g <- modelGraph(m, dosing = "center")
+  expect_equal(.edge(g, "center", "pd1", "interaction")$sign, -1)
+  expect_equal(.edge(g, "center", "pd2", "interaction")$sign, 1)
+  # undetermined direction
+  expect_equal(.edge(g, "center", "pd3", "interaction")$sign, 0)
+  dot <- modelDiagram(g, engine = "dot")
+  expect_match(dot, "arrowhead = dot", fixed = TRUE)
+  expect_match(dot, "arrowhead = tee", fixed = TRUE)
+  expect_s3_class(modelDiagram(g, engine = "ggplot2"), "ggplot")
+  m <- rxode2::rxode2({
+    d/dt(center) = ifelse(t < 12, -k1, -k2)*center
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "center", NA, "elimination")), 1L)
+  expect_equal(sum(g$edges$type == "input"), 0L)
+})
+
+test_that("PD inputs go above, outputs below and exchange compartments right", {
+  m <- rxode2::rxode2({
+    d/dt(depot) = -ka*depot
+    d/dt(center) = ka*depot - cl*center - q*center + q*periph
+    d/dt(periph) = q*center - q*periph
+    d/dt(resp) = kin - kout*(1 - center/(ec50 + center))*resp - k12*resp + k21*resp2
+    d/dt(resp2) = k12*resp - k21*resp2
+  })
+  g <- modelGraph(m)
+  n <- g$nodes
+  rownames(n) <- n$name
+  expect_lt(n["periph", "x"], n["center", "x"])
+  expect_gt(n["resp", "x"], n["center", "x"])
+  expect_gt(n["resp2", "x"], n["resp", "x"])
+  ec <- nlmixr2plot:::.mdEdgeCoords(g)
+  inp <- ec[ec$type == "input" & ec$to == "resp", ]
+  expect_equal(nrow(inp), 1L)
+  expect_gt(inp$y0, inp$y1)
+  out <- ec[ec$type == "elimination" & ec$from %in% c("resp", "center"), ]
+  expect_true(all(out$y1 < out$y0))
+})

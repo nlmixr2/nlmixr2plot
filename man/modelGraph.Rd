@@ -30,8 +30,9 @@ coordinates \code{x} and \code{y}.
 \item \code{edges}: data frame with \code{from}, \code{to} (\code{NA} for inputs/eliminations),
 \code{type} (\code{"transfer"}, \code{"elimination"}, \code{"input"} or \code{"interaction"}),
 \code{sign} (\code{1} when the term is added, \code{-1} when it is subtracted; for
-interactions \code{1} is stimulation and \code{-1} inhibition, taking into account
-compartments that only appear in a denominator),
+interactions \code{1} is stimulation, \code{-1} inhibition and \code{0} an effect whose
+direction cannot be determined from the equations, e.g. through
+\code{ifelse()} or a conditionally assigned variable),
 \code{bidirectional} (for transfers) and \code{label} (the model term(s)).
 }
 }

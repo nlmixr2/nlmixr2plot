@@ -60,8 +60,9 @@ pharmacodynamic models) go to the right, with their own inputs above,
 outputs below and exchange compartments further right.
 
 Mass transfer is drawn with solid arrows; interactions without mass
-transfer are dashed (with a "tee" arrow head for inhibition when using
-\code{DiagrammeR}).
+transfer are dashed (with a "tee" arrow head for inhibition and a "dot"
+arrow head when the direction is undetermined with \code{DiagrammeR}; dotted
+for inhibition and dot-dashed when undetermined with \code{ggplot2}).
 }
 \examples{
 \donttest{

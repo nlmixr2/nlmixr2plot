@@ -55,8 +55,9 @@
 #' - `edges`: data frame with `from`, `to` (`NA` for inputs/eliminations),
 #'   `type` (`"transfer"`, `"elimination"`, `"input"` or `"interaction"`),
 #'   `sign` (`1` when the term is added, `-1` when it is subtracted; for
-#'   interactions `1` is stimulation and `-1` inhibition, taking into account
-#'   compartments that only appear in a denominator),
+#'   interactions `1` is stimulation, `-1` inhibition and `0` an effect whose
+#'   direction cannot be determined from the equations, e.g. through
+#'   `ifelse()` or a conditionally assigned variable),
 #'   `bidirectional` (for transfers) and `label` (the model term(s)).
 #' @export
 #' @author Matthew L. Fidler
@@ -124,8 +125,9 @@ modelGraph <- function(object, dosing = NULL, data = NULL) {
 #' outputs below and exchange compartments further right.
 #'
 #' Mass transfer is drawn with solid arrows; interactions without mass
-#' transfer are dashed (with a "tee" arrow head for inhibition when using
-#' `DiagrammeR`).
+#' transfer are dashed (with a "tee" arrow head for inhibition and a "dot"
+#' arrow head when the direction is undetermined with `DiagrammeR`; dotted
+#' for inhibition and dot-dashed when undetermined with `ggplot2`).
 #'
 #' @inheritParams modelGraph
 #' @param object model to diagram (see [modelGraph()]) or a
@@ -292,15 +294,14 @@ print.nlmixr2ModelGraph <- function(x, ...) {
         .mdExprStates(x$expr, .states, .deps)
       })
     }), recursive = FALSE)
-    # compartments that only appear in a term's denominator decrease it
-    .terms$denOnly <- unlist(lapply(.states, function(.s) {
+    # direction (1 increasing, -1 decreasing, NA unknown) of each term in
+    # each compartment it depends on
+    .terms$dir <- unlist(lapply(.states, function(.s) {
       lapply(.parsed$ode[[.s]], function(x) {
-        .f <- .mdTermFactors(x$expr)
-        .num <- unique(unlist(lapply(.f$num, .mdExprStates, states = .states,
-                                     deps = .deps)))
-        .den <- unique(unlist(lapply(.f$den, .mdExprStates, states = .states,
-                                     deps = .deps)))
-        setdiff(.den, .num)
+        .st <- .mdExprStates(x$expr, .states, .deps)
+        stats::setNames(vapply(.st, function(o) {
+          as.numeric(.mdDirection(x$expr, o, .states, .deps))
+        }, numeric(1)), .st)
       })
     }), recursive = FALSE)
   }
@@ -582,6 +583,16 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       }))
     }
   }
+  if (is.call(x) && identical(x[[1]], quote(ifelse)) && length(x) == 4L) {
+    # `ifelse(cond, -a, -b)`: a common sign of both branches is kept
+    .a <- .mdTerms(x[[3]])
+    .b <- .mdTerms(x[[4]])
+    if (length(.a) == 1L && length(.b) == 1L && .a[[1]]$sign == .b[[1]]$sign) {
+      return(list(list(sign = .a[[1]]$sign,
+                       expr = as.call(list(quote(ifelse), x[[2]],
+                                           .a[[1]]$expr, .b[[1]]$expr)))))
+    }
+  }
   if (is.numeric(x) && length(x) == 1L && !is.na(x) && x < 0) {
     return(list(list(sign = -1, expr = -x)))
   }
@@ -620,6 +631,96 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @noRd
 .mdDeparse <- function(x) {
   paste(deparse(.mdStripParen(x), width.cutoff = 500L), collapse = " ")
+}
+
+#' Direction of the dependence of an expression on a compartment
+#'
+#' Rates and parameters (including symbolic exponents) are assumed positive.
+#' Monotone functions (`exp`, `log`, `sqrt`, `expit`, positive powers) keep
+#' the direction of their argument, and a quotient whose numerator and
+#' denominator both increase is taken as a saturating (Emax/Hill) increase.
+#' @param expr expression
+#' @param o compartment name
+#' @return 1 (increasing), -1 (decreasing), 0 (independent) or NA (unknown)
+#' @noRd
+.mdDirection <- function(expr, o, states, deps) {
+  .dep <- function(e) o %in% .mdExprStates(e, states, deps)
+  .comb <- function(d) {
+    d <- d[is.na(d) | d != 0]
+    if (length(d) == 0L) return(0)
+    if (anyNA(d) || length(unique(d)) > 1L) return(NA_real_)
+    d[1]
+  }
+  # sign of an expression that does not depend on `o`
+  .sgn <- function(e) {
+    if (is.numeric(e) && length(e) == 1L && !is.na(e)) return(sign(e))
+    if (!is.call(e)) return(1)
+    if (identical(e[[1]], quote(`(`))) return(.sgn(e[[2]]))
+    if (identical(e[[1]], quote(`-`)) && length(e) == 2L) return(-.sgn(e[[2]]))
+    if ((identical(e[[1]], quote(`*`)) || identical(e[[1]], quote(`/`))) &&
+          length(e) == 3L) {
+      return(.sgn(e[[2]]) * .sgn(e[[3]]))
+    }
+    1
+  }
+  .d <- function(e) {
+    if (is.name(e)) {
+      if (identical(as.character(e), o)) return(1)
+      # a variable that was not substituted (conditional/reassigned)
+      return(if (.dep(e)) NA_real_ else 0)
+    }
+    if (!is.call(e)) return(0)
+    .f <- e[[1]]
+    .fn <- if (is.name(.f)) as.character(.f) else ""
+    if (.fn == "(") return(.d(e[[2]]))
+    if (.fn == "+") return(.comb(vapply(as.list(e)[-1], .d, numeric(1))))
+    if (.fn == "-") {
+      if (length(e) == 2L) return(-.d(e[[2]]))
+      return(.comb(c(.d(e[[2]]), -.d(e[[3]]))))
+    }
+    if (.fn == "*") {
+      .a <- .d(e[[2]])
+      .b <- .d(e[[3]])
+      # a factor that does not depend on `o` may still carry a sign (R
+      # parses `-k*C` as `(-k)*C`)
+      if (identical(.a, 0)) return(.b * .sgn(e[[2]]))
+      if (identical(.b, 0)) return(.a * .sgn(e[[3]]))
+      return(.comb(c(.a, .b)))
+    }
+    if (.fn == "/") {
+      .n <- .d(e[[2]])
+      .m <- .d(e[[3]])
+      if (identical(.m, 0)) return(.n * .sgn(e[[3]]))
+      if (identical(.n, 0)) return(-.m * .sgn(e[[2]]))
+      # saturating forms (Emax/Hill: `C^g/(ec50^g + C^g)`) increase with C
+      if (identical(.n, 1) && identical(.m, 1)) return(1)
+      return(.comb(c(.n, -.m)))
+    }
+    if (.fn %in% c("exp", "log", "sqrt", "expit", "log1p", "log10", "log2") &&
+          length(e) == 2L) {
+      return(.d(e[[2]]))
+    }
+    if (.fn %in% c("^", "**") && length(e) == 3L) {
+      .b <- .d(e[[2]])
+      if (.dep(e[[3]])) return(NA_real_)
+      if (is.numeric(e[[3]])) return(sign(e[[3]]) * .b)
+      if (is.call(e[[3]]) && identical(e[[3]][[1]], quote(`-`)) &&
+            length(e[[3]]) == 2L && is.numeric(e[[3]][[2]])) {
+        return(-sign(e[[3]][[2]]) * .b)
+      }
+      # a symbolic exponent (e.g. a Hill coefficient) is assumed positive
+      return(.b)
+    }
+    if (.dep(e)) NA_real_ else 0
+  }
+  .d(expr)
+}
+
+#' Interaction sign from a direction (unknown directions are 0)
+#' @noRd
+.mdSign <- function(d) {
+  d <- unname(d)
+  if (length(d) == 0L || is.na(d)) 0 else d
 }
 
 #' Numerator and denominator factors of a product/quotient term
@@ -712,7 +813,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
                         c(.matchedFrom[[.j]], terms$state[.j]))
     for (.o in .drivers) {
       .add(.o, terms$state[.j], "interaction",
-           if (.o %in% terms$denOnly[[.j]]) -1 else 1, terms$label[.j])
+           .mdSign(terms$dir[[.j]][.o]), terms$label[.j])
     }
   }
   for (.i in which(!.used)) {
@@ -721,7 +822,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .others <- setdiff(.st, .s)
     # direction of the effect of each other compartment on d/dt(.s)
     .dir <- function(o) {
-      terms$sign[.i] * (if (o %in% terms$denOnly[[.i]]) -1 else 1)
+      terms$sign[.i] * .mdSign(terms$dir[[.i]][o])
     }
     if (terms$sign[.i] < 0) {
       if (.s %in% .st || length(.others) == 0L) {
@@ -980,7 +1081,8 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .lab <- paste(c(.lab, .e$label[.j]), collapse = "\r")
     } else if (.t == "interaction") {
       .attr <- c(.attr, "style = dashed", "color = gray40",
-                 if (.e$sign[.i] < 0) "arrowhead = tee")
+                 if (.e$sign[.i] < 0) "arrowhead = tee",
+                 if (.e$sign[.i] == 0) "arrowhead = dot")
     }
     if (labels) .attr <- c(.attr, paste0("label = ", .q(.lab)))
     .lines <- c(.lines, sprintf(
@@ -1061,7 +1163,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
                   clip1 = .e$type[.i] != "elimination")
     data.frame(x = .c[1], y = .c[2], xend = .c[3], yend = .c[4],
                flow = ifelse(.e$type[.i] == "interaction",
-                             ifelse(.e$sign[.i] < 0, "inhibition", "stimulation"),
+                             c("inhibition", "modulation", "stimulation")[sign(.e$sign[.i]) + 2],
                              "mass transfer"),
                label = .e$label[.i], stringsAsFactors = FALSE)
   }))
@@ -1092,7 +1194,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       ) +
       ggplot2::scale_linetype_manual(
         values = c("mass transfer" = "solid", stimulation = "dashed",
-                   inhibition = "dotted"),
+                   inhibition = "dotted", modulation = "dotdash"),
         name = "flow")
     if (labels) {
       .p <- .p +
