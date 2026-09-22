@@ -58,6 +58,18 @@ test_that("pred_corr VPC uses the supplied data (#62)", {
   # the fit's data is restored after simulating from the supplied data
   expect_equal(fit$origData, od)
 
+  # stratifying by a data covariate keeps the supplied subjects and rows
+  db <- suppressWarnings(
+    vpcPlot(fit, data=half, n=5, stratify="WT", vpcdb=TRUE, method="vpc"))
+  expect_equal(length(unique(db$sim$id)), 4L)
+  expect_equal(nrow(db$sim), 5L * .nobs)
+  expect_setequal(unique(db$sim$WT), unique(half$WT))
+
+  # censored VPCs with method="vpc" use the fit table, so data is ignored
+  expect_warning(
+    try(vpcPlot(fit, data=half, n=5, cens=TRUE, method="vpc"), silent=TRUE),
+    "'data' is ignored")
+
   skip_if_not_installed("tidyvpc")
   for (.pc in c(FALSE, TRUE)) {
     .warn <- character(0)

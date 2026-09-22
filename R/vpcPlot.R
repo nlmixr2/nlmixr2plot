@@ -174,12 +174,9 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       # tidyvpc cens=TRUE path can still find it
       .keep <- c(.keep, names(.obs)[tolower(names(.obs)) == "cens"])
     }
+    # .si carries the (preprocessed) dataset the simulation used, which is the
+    # user-supplied data when given (#62, #68)
     .si$keep <- unique(.keep)
-    if (!is.null(data)) {
-      # .si carries the fit's dataset; rebuild the observations from the
-      # user-supplied data instead (#62)
-      .si$events <- data
-    }
     .si$addDosing <- FALSE
     .si$subsetNonmem <- TRUE
     .obs1 <- .obs
