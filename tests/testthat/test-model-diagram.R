@@ -295,9 +295,9 @@ test_that("terms inside if/else blocks are used", {
     }
     d/dt(depot) = -ktr*depot
     if (sex == 1) {
-      d/dt(center) = ktr*depot - cl*center/v
-    } else {
       d/dt(center) = ktr*depot - cl*center/v - q*center/v + q*periph/vp
+    } else {
+      d/dt(center) = ktr*depot - cl*center/v - q*center/v + q*periph/vp - cl2*center
     }
     d/dt(periph) = q*center/v - q*periph/vp
   })
@@ -305,7 +305,9 @@ test_that("terms inside if/else blocks are used", {
   expect_equal(nrow(.edge(g, "depot", "center", "transfer")), 1L)
   expect_equal(nrow(.edge(g, "center", "periph", "transfer")), 1L)
   expect_equal(nrow(.edge(g, "periph", "center", "transfer")), 1L)
-  expect_equal(nrow(.edge(g, "center", NA, "elimination")), 1L)
+  e <- .edge(g, "center", NA, "elimination")
+  expect_equal(nrow(e), 1L)
+  expect_equal(e$label, "cl * center/v + ifelse(sex == 1, 0, cl2 * center)")
   expect_equal(g$nodes$role[g$nodes$name == "periph"], "peripheral")
 })
 
@@ -419,7 +421,8 @@ test_that("identical terms in if/else branches are one flow", {
   expect_equal(sum(g$edges$type == "interaction"), 0L)
   e <- .edge(g, "center", NA, "elimination")
   expect_equal(nrow(e), 1L)
-  expect_equal(e$label, "cl1 * center + cl2 * center")
+  expect_equal(e$label,
+               "ifelse(sex == 1, cl1 * center, 0) + ifelse(sex == 1, 0, cl2 * center)")
 })
 
 test_that("transit chains stack above central; Michaelis-Menten is elimination", {
@@ -678,6 +681,54 @@ test_that("exchange partners of effect compartments stay off interaction arrows"
   rownames(n) <- n$name
   e <- g$edges[g$edges$type == "interaction", ]
   expect_true(any(e$to == "eff2"))
+  for (.i in seq_len(nrow(e))) {
+    .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
+    expect_false(nlmixr2plot:::.mdSegmentCrosses(
+      n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
+      n[.others, "x"], n[.others, "y"]), label = paste(e$from[.i], e$to[.i]))
+  }
+  expect_equal(nrow(unique(n[, c("x", "y")])), nrow(n))
+})
+
+test_that("equations inside if blocks keep their condition", {
+  m <- rxode2::rxode2({
+    d/dt(center) = -cl*center
+    if (center > 100) {
+      d/dt(tox) = k1 - kout*tox
+    } else {
+      d/dt(tox) = -kout*tox
+    }
+  })
+  g <- modelGraph(m, dosing = "center")
+  expect_equal(nrow(.edge(g, "center", "tox", "interaction")), 1L)
+  expect_equal(nrow(.edge(g, NA, "tox", "input")), 0L)
+  expect_equal(nrow(.edge(g, "tox", NA, "elimination")), 1L)
+  # an unconditional loss is not matched with a conditional gain
+  m <- rxode2::rxode2({
+    d/dt(depot) = -ka*depot
+    if (t < 12) {
+      d/dt(central) = ka*depot - cl*central
+    } else {
+      d/dt(central) = -cl*central
+    }
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "depot", "central", "transfer")), 0L)
+  expect_equal(nrow(.edge(g, "depot", NA, "elimination")), 1L)
+  expect_equal(nrow(.edge(g, "depot", "central", "interaction")), 1L)
+})
+
+test_that("mass transfer arrows do not cross compartments", {
+  m <- rxode2::rxode2({
+    d/dt(central) = -k1*central - k2*central - k3*central
+    d/dt(m1) = k1*central + k*m3 - kel1*m1
+    d/dt(m2) = k2*central - kel2*m2
+    d/dt(m3) = k3*central - k*m3
+  })
+  g <- modelGraph(m, dosing = "central")
+  n <- g$nodes
+  rownames(n) <- n$name
+  e <- g$edges[!is.na(g$edges$from) & !is.na(g$edges$to), ]
   for (.i in seq_len(nrow(e))) {
     .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
     expect_false(nlmixr2plot:::.mdSegmentCrosses(

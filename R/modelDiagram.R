@@ -426,6 +426,21 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     invisible()
   }
   for (.l in lines) .count(.l, FALSE)
+  # add terms to a compartment's equation (a repeated term is one flow)
+  .addTerms <- function(state, terms) {
+    .old <- .env$ode[[state]]
+    .id <- function(t) paste(t$sign, .mdTermKey(t$expr))
+    .oldId <- vapply(.old, .id, character(1))
+    for (.t in terms) {
+      # a literal zero (e.g. `d/dt(x) <- 0`) is no flow
+      if (is.numeric(.t$expr) && all(.t$expr == 0)) next
+      if (!(.id(.t) %in% .oldId)) {
+        .old <- c(.old, list(.t))
+        .oldId <- c(.oldId, .id(.t))
+      }
+    }
+    .env$ode[[state]] <- .old
+  }
   # second pass; `cond` holds the variables of the enclosing `if` conditions
   .walk <- function(x, cond) {
     if (!is.call(x)) return(invisible())
@@ -434,26 +449,39 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       for (.i in seq_along(x)[-1]) .walk(x[[.i]], cond)
     } else if (identical(.f, quote(`if`))) {
       .cond <- union(cond, all.vars(x[[2]]))
+      # walk each branch separately, then merge: terms in both branches
+      # apply either way, the others become `ifelse(cond, term, 0)` /
+      # `ifelse(cond, 0, term)` so that the condition is kept
+      .base <- .env$ode
+      .env$ode <- list()
       .walk(x[[3]], .cond)
+      .yes <- .env$ode
+      .env$ode <- list()
       if (length(x) == 4L) .walk(x[[4]], .cond)
+      .no <- .env$ode
+      .env$ode <- .base
+      .id <- function(t) paste(t$sign, .mdTermKey(t$expr))
+      .wrap <- function(t, yes) {
+        list(sign = t$sign,
+             expr = as.call(list(quote(ifelse), x[[2]],
+                                 if (yes) t$expr else 0,
+                                 if (yes) 0 else t$expr)))
+      }
+      for (.s in union(names(.yes), names(.no))) {
+        .a <- .yes[[.s]]
+        .b <- .no[[.s]]
+        .aId <- vapply(.a, .id, character(1))
+        .bId <- vapply(.b, .id, character(1))
+        .addTerms(.s, c(.a[.aId %in% .bId],
+                        lapply(.a[!(.aId %in% .bId)], .wrap, yes = TRUE),
+                        lapply(.b[!(.bId %in% .aId)], .wrap, yes = FALSE)))
+      }
     } else if (.isAssign(x)) {
       .lhs <- x[[2]]
       .rhs <- .mdSubstitute(x[[3]], .env$defs)
       .state <- .mdDdtState(.lhs)
       if (!is.null(.state)) {
-        # the same term in several `if`/`else` branches is one flow
-        .old <- .env$ode[[.state]]
-        .id <- function(t) paste(t$sign, .mdTermKey(t$expr))
-        .oldId <- vapply(.old, .id, character(1))
-        for (.t in .mdTerms(.rhs)) {
-          # a literal zero (e.g. `d/dt(x) <- 0`) is no flow
-          if (is.numeric(.t$expr) && all(.t$expr == 0)) next
-          if (!(.id(.t) %in% .oldId)) {
-            .old <- c(.old, list(.t))
-            .oldId <- c(.oldId, .id(.t))
-          }
-        }
-        .env$ode[[.state]] <- .old
+        .addTerms(.state, .mdTerms(.rhs))
       } else if (is.name(.lhs)) {
         .n <- as.character(.lhs)
         # a conditional assignment also depends on its condition
@@ -922,25 +950,28 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .bi <- .tr[.tr$bidirectional, , drop = FALSE]
   .uni <- .tr[!.tr$bidirectional, , drop = FALSE]
   .int <- edges[edges$type == "interaction", , drop = FALSE]
+  # every arrow drawn between two compartments
+  .links <- edges[!is.na(edges$from) & !is.na(edges$to), , drop = FALSE]
   .x <- stats::setNames(rep(NA_real_, length(states)), states)
   .y <- .x
   .role <- stats::setNames(rep("other", length(states)), states)
   .free <- function(x, y) {
     !any(!is.na(.x) & abs(.x - x) < 0.9 & abs(.y - y) < 0.9)
   }
-  # is (x, y) free for `s`, with the interaction arrows between `s` and the
-  # placed compartments clear of other compartments, and no placed arrow
-  # running through the new box?
+  # is (x, y) free for `s`, with the arrows between `s` and the placed
+  # compartments clear of other compartments, and no placed arrow running
+  # through the new box?
   .ok <- function(s, x, y) {
     if (!.free(x, y)) return(FALSE)
     .placed <- names(.x)[!is.na(.x)]
-    .partners <- intersect(unique(c(.int$from[.int$to == s],
-                                    .int$to[.int$from == s])), .placed)
+    .partners <- intersect(unique(c(.links$from[.links$to == s],
+                                    .links$to[.links$from == s])), .placed)
     for (.f in .partners) {
       .w <- !is.na(.x) & names(.x) != .f
       if (.mdSegmentCrosses(.x[.f], .y[.f], x, y, .x[.w], .y[.w])) return(FALSE)
     }
-    .pe <- .int[.int$from %in% .placed & .int$to %in% .placed, , drop = FALSE]
+    .pe <- .links[.links$from %in% .placed & .links$to %in% .placed, ,
+                  drop = FALSE]
     for (.i in seq_len(nrow(.pe))) {
       if (.mdSegmentCrosses(.x[.pe$from[.i]], .y[.pe$from[.i]],
                             .x[.pe$to[.i]], .y[.pe$to[.i]], x, y)) {
@@ -950,17 +981,19 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     TRUE
   }
   .place <- function(s, x, y, step) {
-    .y0 <- y
-    .n <- 0L
-    while (!.ok(s, x, y) && .n < 4L * length(states) + 10L) {
-      y <- y + step
-      .n <- .n + 1L
+    # move away (in the `step` direction) until the position is clear,
+    # trying neighboring columns in each row
+    for (.k in 0:(2L * length(states) + 4L)) {
+      for (.dx in c(0, 1, -1, 2, -2)) {
+        if (.ok(s, x + .dx, y + .k * step)) {
+          .x[s] <<- x + .dx
+          .y[s] <<- y + .k * step
+          return(invisible())
+        }
+      }
     }
-    # give up on arrow clearance rather than loop forever
-    if (!.ok(s, x, y)) {
-      y <- .y0
-      while (!.free(x, y)) y <- y + step
-    }
+    # give up on arrow clearance rather than fail
+    while (!.free(x, y)) y <- y + step
     .x[s] <<- x
     .y[s] <<- y
   }
@@ -1047,7 +1080,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' Boxes are centered on (x, y) (grid units) with half width `hw` and half
 #' height `hh`; the segment is sampled finely enough for unit-grid layouts.
 #' @noRd
-.mdSegmentCrosses <- function(x0, y0, x1, y1, x, y, hw = 0.4, hh = 0.3) {
+.mdSegmentCrosses <- function(x0, y0, x1, y1, x, y, hw = 0.35, hh = 0.25) {
   if (length(x) == 0L) return(FALSE)
   .t <- seq(0, 1, length.out = 101L)
   .px <- x0 + .t * (x1 - x0)
