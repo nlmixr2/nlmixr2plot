@@ -611,3 +611,34 @@ test_that("transfer matching ignores the order of sums and products", {
   expect_equal(nrow(.edge(g, "A", "B", "transfer")), 1L)
   expect_equal(sum(g$edges$type == "interaction"), 0L)
 })
+
+test_that("ifelse flows switched off with 0 are still transfers", {
+  m <- rxode2::rxode2({
+    d/dt(depot) = ifelse(time < 12, -ka*depot, 0)
+    d/dt(central) = ifelse(time < 12, ka*depot, 0) - cl*central
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "depot", "central", "transfer")), 1L)
+  expect_equal(sum(g$edges$type %in% c("input", "interaction")), 0L)
+})
+
+test_that("compartments acting on central are placed clear of other arrows", {
+  m <- rxode2::rxode2({
+    d/dt(central) = -cl*central - k1*central*eff1 - k2*central*eff2
+    d/dt(eff1) = kin1 - kout1*eff1
+    d/dt(eff2) = kin2 - kout2*eff2
+  })
+  g <- modelGraph(m, dosing = "central")
+  n <- g$nodes
+  rownames(n) <- n$name
+  e <- g$edges[g$edges$type == "interaction", ]
+  expect_equal(sort(e$from), c("eff1", "eff2"))
+  expect_equal(e$sign, c(-1, -1))
+  for (.i in seq_len(nrow(e))) {
+    .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
+    expect_false(nlmixr2plot:::.mdSegmentCrosses(
+      n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
+      n[.others, "x"], n[.others, "y"]), label = e$from[.i])
+  }
+  expect_equal(nrow(unique(n[, c("x", "y")])), nrow(n))
+})

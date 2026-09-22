@@ -585,9 +585,12 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   }
   if (is.call(x) && identical(x[[1]], quote(ifelse)) && length(x) == 4L) {
     # `ifelse(cond, -a, -b)`: a common sign of both branches is kept
-    .signs <- vapply(c(.mdTerms(x[[3]]), .mdTerms(x[[4]])),
-                     function(t) t$sign, numeric(1))
-    if (all(.signs == -1)) {
+    .t <- c(.mdTerms(x[[3]]), .mdTerms(x[[4]]))
+    # a zero branch (switching the flow off) has no sign
+    .t <- .t[!vapply(.t, function(t) is.numeric(t$expr) && all(t$expr == 0),
+                     logical(1))]
+    .signs <- vapply(.t, function(t) t$sign, numeric(1))
+    if (length(.signs) > 0L && all(.signs == -1)) {
       return(list(list(sign = -1,
                        expr = as.call(list(quote(ifelse), x[[2]],
                                            .mdNegExpr(x[[3]]),
@@ -603,8 +606,13 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' Negate an expression, removing a leading unary minus when possible
 #' @noRd
 .mdNegExpr <- function(x) {
-  if (is.call(x) && identical(x[[1]], quote(`(`))) return(.mdNegExpr(x[[2]]))
-  if (is.call(x) && identical(x[[1]], quote(`-`)) && length(x) == 2L) return(x[[2]])
+  if (is.numeric(x) && all(x == 0)) return(x)
+  .t <- .mdTerms(x)
+  if (all(vapply(.t, function(t) t$sign, numeric(1)) == -1)) {
+    # every term is subtracted (`-ka*depot` parses as `(-ka)*depot`)
+    return(Reduce(function(a, b) as.call(list(quote(`+`), a, b)),
+                  lapply(.t, function(t) t$expr)))
+  }
   as.call(list(quote(`-`), x))
 }
 
@@ -968,6 +976,23 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .role[.central] <- "central"
   .place(.central, 0, 0, -1)
   .spread(.central)
+  # choose a row in column `nx` for `s` where the straight interaction
+  # arrows between `s` and the already placed compartments (either
+  # direction) are clear of the other compartments
+  .pickRow <- function(s, nx, y0) {
+    .placed <- names(.x)[!is.na(.x)]
+    .partners <- unique(c(.int$from[.int$to == s], .int$to[.int$from == s]))
+    .partners <- intersect(.partners, .placed)
+    for (.d in c(0, rbind(-seq_along(states), seq_along(states)))) {
+      .cy <- y0 + .d
+      .clear <- all(vapply(.partners, function(.f) {
+        .w <- !is.na(.x) & names(.x) != .f
+        !.mdSegmentCrosses(.x[.f], .y[.f], nx, .cy, .x[.w], .y[.w])
+      }, logical(1)))
+      if (.free(nx, .cy) && .clear) return(.cy)
+    }
+    y0
+  }
   # compartments interacting without mass transfer: to the right
   repeat {
     .placed <- names(.x)[!is.na(.x)]
@@ -975,35 +1000,20 @@ print.nlmixr2ModelGraph <- function(x, ...) {
                   drop = FALSE]
     if (nrow(.cand) > 0L) {
       .s <- .cand$to[1]
-      .from <- .cand$from[1]
       .nx <- max(.x, na.rm = TRUE) + 1
-      # choose a row where the straight arrow from .from does not cross
-      # another compartment
-      .ny <- .y[.from]
-      for (.d in c(0, rbind(-seq_along(states), seq_along(states)))) {
-        .cy <- .y[.from] + .d
-        # every arrow coming in from an already placed compartment must be
-        # clear of the other compartments
-        .srcs <- unique(.int$from[.int$to == .s & .int$from %in% .placed])
-        .clear <- all(vapply(.srcs, function(.f) {
-          .w <- !is.na(.x) & names(.x) != .f
-          !.mdSegmentCrosses(.x[.f], .y[.f], .nx, .cy, .x[.w], .y[.w])
-        }, logical(1)))
-        if (.free(.nx, .cy) && .clear) {
-          .ny <- .cy
-          break
-        }
-      }
-      .place(.s, .nx, .ny, -1)
+      .place(.s, .nx, .pickRow(.s, .nx, .y[.cand$from[1]]), -1)
       .role[.s] <- "effect"
       .spread(.s, side = 1)
       next
     }
     .left <- states[is.na(.x)]
     if (length(.left) == 0L) break
-    .s <- c(intersect(dosing, .left), .left)[1]
-    .place(.s, max(.x, na.rm = TRUE) + 1, 0, -1)
-    .spread(.s)
+    # compartments acting on the placed ones first, then dosing compartments
+    .acting <- intersect(.left, .int$from[.int$to %in% .placed])
+    .s <- c(.acting, intersect(dosing, .left), .left)[1]
+    .nx <- max(.x, na.rm = TRUE) + 1
+    .place(.s, .nx, .pickRow(.s, .nx, 0), -1)
+    .spread(.s, side = if (length(.acting) > 0L) 1 else -1)
   }
   .role[states %in% dosing & .role != "central"] <- "dosing"
   data.frame(name = states, role = unname(.role[states]),
