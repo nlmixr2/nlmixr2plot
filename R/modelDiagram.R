@@ -312,10 +312,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .states <- .parsed$states
   # keep rxode2's compartment order (used to map numeric `cmt` values)
   .states <- c(intersect(.order, .states), setdiff(.states, .order))
-  .deps <- .mdStateClosure(.states, .parsed$deps)
   .foldIndex <- .mdFoldIndex(.parsed$defs)
-  .dependents <- stats::setNames(lapply(.states, .mdDependents, states = .states,
-                                        closure = .deps), .states)
   .terms <- do.call(rbind, lapply(.states, function(.s) {
     .t <- .parsed$ode[[.s]]
     if (length(.t) == 0L) return(NULL)
@@ -334,15 +331,16 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   if (!is.null(.terms)) {
     .terms$states <- unlist(lapply(.states, function(.s) {
       lapply(.parsed$ode[[.s]], function(x) {
-        .mdExprStates(x$expr, .states, .deps)
+        .mdExprStates(x$expr, .states, x$snap)
       })
     }), recursive = FALSE)
     # direction (1 increasing, -1 decreasing, NA unknown) of each term in
     # each compartment it depends on
     .terms$dir <- unlist(lapply(.states, function(.s) {
       lapply(.parsed$ode[[.s]], function(x) {
-        .st <- .mdExprStates(x$expr, .states, .deps)
-        stats::setNames(.mdDirections(x$expr, .st, .dependents[.st]), .st)
+        .st <- .mdExprStates(x$expr, .states, x$snap)
+        .dep <- lapply(.st, .mdDependents, states = .states, closure = x$snap)
+        stats::setNames(.mdDirections(x$expr, .st, .dep), .st)
       })
     }), recursive = FALSE)
   }
@@ -440,7 +438,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   level <- match.arg(level)
   .env <- new.env(parent = emptyenv())
   .env$ode <- list()
-  .env$deps <- list()
+  # compartments each variable stands for, as the model is read (a later
+  # assignment must not change what an earlier use meant)
+  .env$stateOf <- list()
   .env$defs <- list()
   .env$count <- list()
   .env$inIf <- character(0)
@@ -462,6 +462,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       # for one flow
       return(.env$versioned[[n]])
     }
+    # a constant (`x = -1`) is substituted so that its value and sign are
+    # known where it is used
+    if (length(all.vars(rhs)) == 0L) return(rhs)
     if (!identical(.env$count[[n]], 1)) {
       # a reassigned variable is substituted with its current value so
       # that a reused name (like `flux`) is not mistaken for one flow
@@ -506,6 +509,12 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       # a literal zero (e.g. `d/dt(x) <- 0`) is no flow
       !(is.numeric(t$expr) && all(t$expr == 0))
     }, terms)
+    # what the variables mean here, for the compartments of this term
+    .snap <- .env$stateOf
+    .keep <- lapply(.keep, function(t) {
+      if (is.null(t$snap)) t$snap <- .snap
+      t
+    })
     .env$ode[[state]] <- c(.env$ode[[state]], .keep)
   }
   # second pass; `cond` holds the variables of the enclosing `if` conditions
@@ -520,12 +529,22 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       # apply either way, the others become `ifelse(cond, term, 0)` /
       # `ifelse(cond, 0, term)` so that the condition is kept
       .base <- .env$ode
+      .baseState <- .env$stateOf
       .env$ode <- list()
       .walk(x[[3]], .cond)
       .yes <- .env$ode
+      .yesState <- .env$stateOf
       .env$ode <- list()
+      .env$stateOf <- .baseState
       if (length(x) == 4L) .walk(x[[4]], .cond)
       .no <- .env$ode
+      .noState <- .env$stateOf
+      # a variable assigned in a branch may hold either branch's value
+      .merged <- .noState
+      for (.v in union(names(.yesState), names(.noState))) {
+        .merged[[.v]] <- union(.yesState[[.v]], .noState[[.v]])
+      }
+      .env$stateOf <- .merged
       .env$ode <- .base
       for (.s in union(names(.yes), names(.no))) {
         .addTerms(.s, .mdMergeBranches(x[[2]], .yes[[.s]], .no[[.s]]))
@@ -557,9 +576,15 @@ print.nlmixr2ModelGraph <- function(x, ...) {
         .addTerms(.state, .mdSplitTerms(.rhs, .env$states, .state))
       } else if (is.name(.lhs)) {
         .n <- as.character(.lhs)
+        # the compartments this value stands for, resolved now (a
+        # conditional assignment also depends on its condition)
         .dep <- union(all.vars(x[[3]]), cond)
-        # a conditional assignment also depends on its condition
-        .env$deps[[.n]] <- union(.env$deps[[.n]], .dep)
+        .set <- unique(unlist(c(
+          intersect(.dep, .env$states),
+          lapply(setdiff(.dep, .env$states), function(.v) .env$stateOf[[.v]])
+        )))
+        if (is.null(.set)) .set <- character(0)
+        .env$stateOf[[.n]] <- .set
         if (!identical(.env$count[[.n]], 1) && !(.n %in% .env$inIf)) {
           # one name per assignment of a reassigned variable; a variable
           # assigned in `if` branches keeps one name, since its value is one
@@ -568,7 +593,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
           .env$version[[.n]] <- .v
           .vn <- paste0(.n, "#", .v)
           .env$versioned[[.n]] <- as.name(.vn)
-          .env$deps[[.vn]] <- .dep
+          .env$stateOf[[.vn]] <- .set
         }
         # a NULL definition removes the variable from the substitutions
         .env$defs[[.n]] <- .mdDefinition(.n, .rhs, .mdMaxDefSize)
@@ -584,7 +609,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .fold <- .defs[vapply(names(.defs), function(.n) {
     identical(.env$count[[.n]], 1)
   }, logical(1))]
-  list(ode = .env$ode, deps = .env$deps, defs = .fold,
+  list(ode = .env$ode, defs = .fold,
        states = .env$states, props = .env$props, overflow = .env$overflow)
 }
 
@@ -665,33 +690,8 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   NULL
 }
 
-#' Compartments each variable depends on (through any chain of assignments)
-#'
-#' Computed once per model so that dependency checks are lookups.
-#' @param states compartment names
-#' @param deps named list of variables to the variables they are assigned from
-#' @return named list of variables to the compartments they depend on
-#' @noRd
-.mdStateClosure <- function(states, deps) {
-  .memo <- new.env(parent = emptyenv())
-  .visit <- function(v, path) {
-    if (!is.null(.memo[[v]])) return(.memo[[v]])
-    if (v %in% path) return(character(0)) # a variable updated from itself
-    .d <- deps[[v]]
-    .ret <- intersect(.d, states)
-    for (.w in setdiff(.d, states)) {
-      if (!is.null(deps[[.w]])) .ret <- union(.ret, .visit(.w, c(path, v)))
-    }
-    .memo[[v]] <- .ret
-    .ret
-  }
-  .ret <- lapply(names(deps), .visit, path = character(0))
-  names(.ret) <- names(deps)
-  .ret
-}
-
 #' States an expression depends on (directly or through variables)
-#' @param closure result of `.mdStateClosure()`
+#' @param closure named list of the compartments each variable stands for
 #' @noRd
 .mdExprStates <- function(expr, states, closure) {
   .v <- all.vars(expr)
@@ -1204,6 +1204,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     }
     if (.fn %in% c("^", "**") && length(e) == 3L) {
       .b <- .d(e[[2]])
+      # `(A - 1)^2` is not monotone in A: the base must be non-negative
+      if (!.mdNonNeg(e[[2]])) {
+        .b[is.na(.b) | .b != 0] <- NA_real_
+      }
       .p <- .mdStripParen(e[[3]])
       .r <- if (is.numeric(.p)) {
         sign(.p) * .b
@@ -1227,6 +1231,32 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 .mdDependents <- function(o, states, closure) {
   .v <- names(closure)[vapply(closure, function(s) o %in% s, logical(1))]
   c(o, setdiff(.v, states))
+}
+
+#' Is an expression non-negative wherever it is defined?
+#'
+#' Parameters and compartment amounts are assumed non-negative; a difference
+#' (or a negated value) may be of either sign.
+#' @noRd
+.mdNonNeg <- function(e) {
+  e <- .mdStripParen(e)
+  if (is.numeric(e)) return(all(!is.na(e) & e >= 0))
+  if (is.name(e)) return(TRUE)
+  if (!is.call(e)) return(FALSE)
+  .f <- e[[1]]
+  if (identical(.f, quote(`+`)) || identical(.f, quote(`*`)) ||
+        identical(.f, quote(`/`))) {
+    return(all(vapply(as.list(e)[-1], .mdNonNeg, logical(1))))
+  }
+  if ((identical(.f, quote(exp)) || identical(.f, quote(sqrt))) &&
+        length(e) == 2L) {
+    return(TRUE)
+  }
+  if ((identical(.f, quote(`^`)) || identical(.f, quote(`**`))) &&
+        length(e) == 3L) {
+    return(.mdNonNeg(e[[2]]))
+  }
+  FALSE
 }
 
 #' Interaction sign from a direction (unknown directions are 0)

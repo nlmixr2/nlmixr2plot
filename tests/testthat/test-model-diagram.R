@@ -1144,3 +1144,45 @@ test_that("a variable assigned in if branches keeps every branch's dependencies"
   expect_equal(nrow(.edge(g, "A", "C", "interaction")), 1L)
   expect_equal(nrow(.edge(g, "B", "C", "interaction")), 1L)
 })
+
+test_that("a variable means what it meant where it was used", {
+  # `x` is reassigned after `drive` was set from it: `drive` is still A
+  m <- rxode2::rxode2({
+    x = A
+    if (t < 12) {
+      drive = x
+    } else {
+      drive = 0
+    }
+    x = B
+    d/dt(A) = -k*A
+    d/dt(B) = -k*B
+    d/dt(C) = drive
+  })
+  g <- modelGraph(m, dosing = "A")
+  expect_equal(nrow(.edge(g, "A", "C", "interaction")), 1L)
+  expect_equal(nrow(.edge(g, "B", "C", "interaction")), 0L)
+})
+
+test_that("constants keep their value and sign", {
+  m <- rxode2::rxode2({
+    x = -1
+    d/dt(A) = x*A
+    d/dt(B) = exp(x*A) - k*B
+  })
+  g <- modelGraph(m, dosing = "A")
+  expect_equal(nrow(.edge(g, "A", NA, "elimination")), 1L)
+  expect_equal(nrow(.edge(g, NA, "A", "input")), 0L)
+  expect_equal(.edge(g, "A", "B", "interaction")$sign, -1)
+})
+
+test_that("a power is monotone only for a non-negative base", {
+  m <- rxode2::rxode2({
+    d/dt(A) = -k*A
+    d/dt(B) = (A - 1)^2 - k*B
+    d/dt(C) = A^2 - k*C
+  })
+  g <- modelGraph(m, dosing = "A")
+  expect_equal(.edge(g, "A", "B", "interaction")$sign, 0)
+  expect_equal(.edge(g, "A", "C", "interaction")$sign, 1)
+})
