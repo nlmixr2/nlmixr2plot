@@ -73,6 +73,10 @@ test_that(".vpcMatchStrata stratifies by observed endpoints only (#44)", {
   }
   .r <- .vpcMatchStrata(.obs, data.frame(dvid = c(2L, 1L)), "dvid")
   expect_equal(.r$sim$dvid, factor(c("pca", "cp"), levels = c("cp", "pca")))
+  # a simulated endpoint without observations keeps its level (not NA)
+  .r <- .vpcMatchStrata(.obs[1, ], data.frame(cmt = c("cp", "pca")), "cmt")
+  expect_equal(levels(.r$obs$cmt), c("cp", "pca"))
+  expect_equal(.r$sim$cmt, factor(c("cp", "pca"), levels = c("cp", "pca")))
   # columns that are not stratified keep their levels
   .r <- .vpcMatchStrata(.obs, data.frame(cmt = c(4L, 3L)), NULL)
   expect_equal(levels(.r$obs$cmt), .lvl)

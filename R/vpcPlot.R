@@ -510,9 +510,11 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' Match simulated stratification columns to the observed ones
 #'
 #' Recode each column shared by `sim` and `obs` to the observed factor levels
-#' (see `.vpcMatchFactor()`), then keep only the levels that are actually
-#' observed in the stratification columns, so unobserved compartments (like
-#' `depot`) do not become endpoints (#44).
+#' (see `.vpcMatchFactor()`), then keep only the levels that occur in the
+#' observed or simulated stratification columns, so compartments that are never
+#' endpoints (like `depot`) do not become strata (#44).  A simulated endpoint
+#' without observations (e.g. all its `DV` missing) keeps its level instead of
+#' becoming an `NA` stratum.
 #'
 #' @param obs observed data
 #' @param sim simulated data
@@ -526,7 +528,8 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   }
   for (.n in intersect(stratify, .both)) {
     if (inherits(obs[[.n]], "factor")) {
-      .lvl <- levels(droplevels(obs[[.n]]))
+      .lvl <- levels(obs[[.n]])
+      .lvl <- .lvl[.lvl %in% c(as.character(obs[[.n]]), as.character(sim[[.n]]))]
       obs[[.n]] <- factor(as.character(obs[[.n]]), levels=.lvl)
       sim[[.n]] <- factor(as.character(sim[[.n]]), levels=.lvl)
     }

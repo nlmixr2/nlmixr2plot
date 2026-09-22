@@ -9,8 +9,9 @@
   panel with `pred_corr = TRUE`); the simulated compartment labels are now
   matched to the observed ones by name (#44).
 * The censored VPC (`vpcCens()`, or `vpcPlot()` with `cens = TRUE` and the
-  `vpc` backend) of a multiple-endpoint fit now stratifies by the observed
-  endpoints only, matching the simulated endpoints to them (#44).
+  `vpc` backend) of a multiple-endpoint fit now stratifies by its endpoints
+  only, matching the simulated endpoints to the observed ones; an endpoint
+  whose observations are all missing no longer becomes an `NA` panel (#44).
 * `plot()` of a censored multiple-endpoint fit no longer errors in
   `geom_cens()` ("argument must be coercible to non-negative integer") for an
   endpoint without censored observations (#44).

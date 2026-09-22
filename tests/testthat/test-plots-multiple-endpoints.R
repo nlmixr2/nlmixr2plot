@@ -203,5 +203,18 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
       expect_equal(.panels(.p), c("cp", "pca"),
                    info = paste(.c, .method, "cens"))
     }
+    # an endpoint that is simulated but has no observations (all its DV
+    # missing in `data`) keeps its panel instead of becoming an NA stratum
+    if (.c == "character") {
+      .d <- d
+      .d$dv[.d$evid == 0 & .cmtLabel == "pca"] <- NA
+      for (.cens in c(FALSE, TRUE)) {
+        suppressWarnings(
+          .p <- vpcPlot(fit, data = .d, n = 10, cens = .cens, method = "vpc")
+        )
+        expect_equal(.panels(.p), c("cp", "pca"),
+                     info = paste("pca DV missing, cens =", .cens))
+      }
+    }
   }
 })
