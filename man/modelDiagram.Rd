@@ -3,6 +3,8 @@
 \name{modelDiagram}
 \alias{modelDiagram}
 \alias{plot.nlmixr2ModelGraph}
+\alias{plot.rxUi}
+\alias{plot.rxode2}
 \title{Automatic model diagram}
 \usage{
 modelDiagram(
@@ -15,6 +17,24 @@ modelDiagram(
 )
 
 \method{plot}{nlmixr2ModelGraph}(x, ..., engine = getOption("nlmixr2plot.diagram.engine"), labels = FALSE)
+
+\method{plot}{rxUi}(
+  x,
+  ...,
+  dosing = NULL,
+  data = NULL,
+  engine = getOption("nlmixr2plot.diagram.engine"),
+  labels = FALSE
+)
+
+\method{plot}{rxode2}(
+  x,
+  ...,
+  dosing = NULL,
+  data = NULL,
+  engine = getOption("nlmixr2plot.diagram.engine"),
+  labels = FALSE
+)
 }
 \arguments{
 \item{object}{model to diagram (see \code{\link[=modelGraph]{modelGraph()}}) or a
@@ -41,7 +61,8 @@ installed and \code{"ggplot2"} otherwise; it may be changed with
 
 \item{...}{ignored.}
 
-\item{x}{a \code{nlmixr2ModelGraph} object}
+\item{x}{a \code{nlmixr2ModelGraph} object, an \code{rxode2} user interface
+(\code{rxUi}) object or a compiled \code{rxode2} model}
 }
 \value{
 the diagram drawn by the requested \code{engine}.
@@ -64,6 +85,12 @@ Mass transfer is drawn with solid arrows; interactions without mass
 transfer are dashed (with a "tee" arrow head for inhibition and a "dot"
 arrow head when the direction is undetermined with \code{DiagrammeR}; dotted
 for inhibition and dot-dashed when undetermined with \code{ggplot2}).
+
+\code{plot()} of an \code{rxode2} user interface (\code{rxUi}) object, like
+\code{rxode2::rxode2(modelFunction)}, or of a compiled \code{rxode2} model draws
+its model diagram, so \code{plot(rxode2(model))} is the same as
+\code{modelDiagram(model)}.  (A fitted \code{nlmixr2} model keeps its
+goodness-of-fit \code{plot()}; use \code{modelDiagram(fit)} for its diagram.)
 }
 \examples{
 \donttest{

@@ -9,7 +9,9 @@
   absorption compartments above the central compartment, peripheral
   compartments to the left, eliminations/metabolites below and PD models to
   the right, and draws it with the `"DiagrammeR"` (Graphviz), `"ggplot2"` or
-  `"dot"` (DOT source) engine.
+  `"dot"` (DOT source) engine.  `plot()` of an `rxode2` user interface
+  (`rxUi`) object or compiled `rxode2` model draws its diagram, and the new
+  "Automatic model diagrams" vignette describes the feature.
 
 * `plot()` of an `augPred()` object now accepts a base-R style `log` argument
   (`log = "y"`, `"x"` or `"xy"`) to draw the individual plots on log-scaled

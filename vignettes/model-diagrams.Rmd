@@ -65,6 +65,13 @@ two.cmt <- function() {
 modelDiagram(two.cmt, engine = "ggplot2")
 ```
 
+`plot()` of any `rxode2` user interface object (or compiled `rxode2` model)
+draws the same diagram, so this is equivalent:
+
+```{r, eval = FALSE}
+plot(rxode2::rxode2(two.cmt), engine = "ggplot2")
+```
+
 The dosing compartment (`depot`, drawn with a heavy border) is on top and feeds
 the central compartment.  The peripheral compartment, which exchanges mass with
 `central` in both directions, is to the left, and elimination leaves the
@@ -130,9 +137,10 @@ distributed over sums), and then:
   not matter (`ka*depot` matches `depot*ka`), and first-order, zero-order and
   enzyme-driven rates are all recognized.
 - **Elimination**: a remaining loss that contains the compartment's own
-  amount (like `cl/v*central` or Michaelis-Menten `vmax*C/(km + C)`).
-- **Input**: a remaining gain that does not depend on any compartment (like a
-  zero-order `kin`).
+  amount (like `cl/v*central` or Michaelis-Menten `vmax*C/(km + C)`), or that
+  depends on no compartment at all (a zero-order loss).
+- **Input**: a remaining gain that depends on no other compartment: a
+  zero-order `kin`, or self-dependent growth like `kg*A` in `d/dt(A)`.
 - **Interaction**: a term that depends on another compartment without moving
   mass, like an effect compartment or a pharmacodynamic stimulation or
   inhibition.  It is drawn dashed.  Its direction comes from the equation:
