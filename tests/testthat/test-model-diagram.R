@@ -782,3 +782,53 @@ test_that("missing cmt on a dose record doses the default compartment", {
   g <- modelGraph(m, data = d)
   expect_equal(g$nodes$name[g$nodes$dosing], c("depot", "central"))
 })
+
+test_that("repeated identical terms keep their mass", {
+  m <- rxode2::rxode2({
+    d/dt(A) = -k*A - k*A
+    d/dt(B) = k*A
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "A", "B", "transfer")), 1L)
+  expect_equal(nrow(.edge(g, "A", NA, "elimination")), 1L)
+})
+
+test_that("only saturating quotients are taken as increasing", {
+  m <- rxode2::rxode2({
+    d/dt(C) = -k*C
+    d/dt(r1) = kin*C/(1 + C)^2 - kout*r1
+    d/dt(r2) = kin*emax*C/(ec50 + C) - kout*r2
+    d/dt(r3) = kin*C^g/(ec50^g + C^g) - kout*r3
+  })
+  g <- modelGraph(m, dosing = "C")
+  expect_equal(.edge(g, "C", "r1", "interaction")$sign, 0)
+  expect_equal(.edge(g, "C", "r2", "interaction")$sign, 1)
+  expect_equal(.edge(g, "C", "r3", "interaction")$sign, 1)
+})
+
+test_that("a dataset without dose records has no dosing compartment", {
+  m <- rxode2::rxode2({
+    d/dt(A) = -k*A
+  })
+  g <- modelGraph(m, data = data.frame(time = 0, evid = 1, amt = 0, cmt = 1))
+  expect_false(any(g$nodes$dosing))
+  g <- modelGraph(m, data = data.frame(time = 0:1, evid = 0, dv = 1))
+  expect_false(any(g$nodes$dosing))
+  # no dosing columns: rxode2's default dosing compartment
+  g <- modelGraph(m, data = data.frame(time = 0:1, dv = 1))
+  expect_true(g$nodes$dosing[g$nodes$name == "A"])
+  expect_s3_class(modelDiagram(g, engine = "ggplot2"), "ggplot")
+})
+
+test_that("DOT column spacing grows with long compartment names", {
+  m <- rxode2::rxode2({
+    d/dt(central) = -q*central + q*very_long_peripheral_compartment_name - k*central
+    d/dt(very_long_peripheral_compartment_name) = q*central -
+      q*very_long_peripheral_compartment_name
+  })
+  dot <- modelDiagram(m, engine = "dot")
+  pos <- regmatches(dot, regexpr("\"very_long[^\"]*\" \\[pos = \"[-0-9.]+", dot))
+  x <- as.numeric(sub(".*pos = \"", "", pos))
+  # the peripheral is one column left of central (at 0)
+  expect_lt(x, -0.11 * nchar("very_long_peripheral_compartment_name") / 2 - 0.5)
+})

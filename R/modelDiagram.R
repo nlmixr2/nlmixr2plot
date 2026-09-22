@@ -40,8 +40,9 @@
 #'   `nlmixr2` object.
 #' @param dosing optional character vector naming the dosing compartments.
 #'   When `NULL` the dosing compartments are detected from the dosing records
-#'   in `data`; when there is no data the first compartment (the default
-#'   `rxode2` dosing compartment) is used.
+#'   in `data` (a dataset without dose records has no dosing compartment);
+#'   when there is no data, or it has no `evid`/`amt` columns, the first
+#'   compartment (the default `rxode2` dosing compartment) is used.
 #' @param data optional dataset used to detect the dosing compartments (from
 #'   the dosing records' `cmt`).  For fitted models this defaults to the data
 #'   the model was fit with.
@@ -92,7 +93,9 @@ modelGraph <- function(object, dosing = NULL, data = NULL) {
   }
   if (is.null(dosing)) {
     dosing <- .mdDosingFromData(data, .states, .info$order)
-    if (length(dosing) == 0L) dosing <- .states[1]
+    # without dosing information use rxode2's default dosing compartment; a
+    # dataset without dose records has no dosing compartment
+    if (is.null(dosing)) dosing <- .states[1]
   } else {
     if (!is.character(dosing)) {
       stop("'dosing' must be a character vector of compartment names",
@@ -316,10 +319,11 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @param data dataset (or NULL)
 #' @param states compartment names that are diagrammed
 #' @param order rxode2's compartment order (numeric `cmt` values index it)
-#' @return character vector of dosed compartments (possibly empty)
+#' @return character vector of dosed compartments (empty when the data has
+#'   no dose records) or `NULL` when the data has no dosing information
 #' @noRd
 .mdDosingFromData <- function(data, states, order = states) {
-  if (!is.data.frame(data) || nrow(data) == 0L) return(character(0))
+  if (!is.data.frame(data) || nrow(data) == 0L) return(NULL)
   .nm <- tolower(names(data))
   .col <- function(n) {
     .w <- which(.nm == n)
@@ -328,7 +332,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   }
   .evid <- .col("evid")
   .amt <- .col("amt")
-  if (is.null(.evid) && is.null(.amt)) return(character(0))
+  if (is.null(.evid) && is.null(.amt)) return(NULL)
   .dose <- rep(TRUE, nrow(data))
   # factors are converted through their labels, not their level codes
   .num <- function(v) suppressWarnings(as.numeric(as.character(v)))
@@ -429,20 +433,15 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     invisible()
   }
   for (.l in lines) .count(.l, FALSE)
-  # add terms to a compartment's equation (a repeated term is one flow)
+  # add terms to a compartment's equation; a repeated term (`-k*A - k*A`)
+  # is kept, since each copy moves mass (if/else branches are merged
+  # before they get here)
   .addTerms <- function(state, terms) {
-    .old <- .env$ode[[state]]
-    .id <- function(t) paste(t$sign, .mdTermKey(t$expr))
-    .oldId <- vapply(.old, .id, character(1))
-    for (.t in terms) {
+    .keep <- Filter(function(t) {
       # a literal zero (e.g. `d/dt(x) <- 0`) is no flow
-      if (is.numeric(.t$expr) && all(.t$expr == 0)) next
-      if (!(.id(.t) %in% .oldId)) {
-        .old <- c(.old, list(.t))
-        .oldId <- c(.oldId, .id(.t))
-      }
-    }
-    .env$ode[[state]] <- .old
+      !(is.numeric(t$expr) && all(t$expr == 0))
+    }, terms)
+    .env$ode[[state]] <- c(.env$ode[[state]], .keep)
   }
   # second pass; `cond` holds the variables of the enclosing `if` conditions
   .walk <- function(x, cond) {
@@ -723,6 +722,40 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     if (anyNA(d) || length(unique(d)) > 1L) return(NA_real_)
     d[1]
   }
+  # the part of a product that depends on `o` (NULL when none)
+  .depPart <- function(e) {
+    e <- .mdStripParen(e)
+    if (is.call(e) && identical(e[[1]], quote(`*`)) && length(e) == 3L) {
+      .a <- .depPart(e[[2]])
+      .b <- .depPart(e[[3]])
+      if (is.null(.a)) return(.b)
+      if (is.null(.b)) return(.a)
+      return(as.call(list(quote(`*`), .a, .b)))
+    }
+    if (.dep(e)) e else NULL
+  }
+  # is `num/den` of the form `c*N/(K + N)`, with K independent of `o`?
+  .saturating <- function(e) {
+    .n <- .depPart(e[[2]])
+    .den <- .mdStripParen(e[[3]])
+    if (is.null(.n) || !(is.call(.den) && identical(.den[[1]], quote(`+`)))) {
+      return(FALSE)
+    }
+    .s <- list()
+    .flat <- function(x) {
+      x <- .mdStripParen(x)
+      if (is.call(x) && identical(x[[1]], quote(`+`)) && length(x) == 3L) {
+        .flat(x[[2]])
+        .flat(x[[3]])
+      } else {
+        .s[[length(.s) + 1L]] <<- x
+      }
+    }
+    .flat(.den)
+    .ds <- Filter(.dep, .s)
+    length(.ds) == 1L && length(.ds) < length(.s) &&
+      identical(.mdDeparse(.mdCanon(.ds[[1]])), .mdDeparse(.mdCanon(.n)))
+  }
   # sign of an expression that does not depend on `o`
   .sgn <- function(e) {
     if (is.numeric(e) && length(e) == 1L && !is.na(e)) return(sign(e))
@@ -764,8 +797,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .m <- .d(e[[3]])
       if (identical(.m, 0)) return(.n * .sgn(e[[3]]))
       if (identical(.n, 0)) return(-.m * .sgn(e[[2]]))
-      # saturating forms (Emax/Hill: `C^g/(ec50^g + C^g)`) increase with C
-      if (identical(.n, 1) && identical(.m, 1)) return(1)
+      # saturating forms `N/(K + N)` (Emax/Hill: `C^g/(ec50^g + C^g)`)
+      # increase with C; other quotients may not be monotone
+      if (identical(.n, 1) && identical(.m, 1) && .saturating(e)) return(1)
       return(.comb(c(.n, -.m)))
     }
     if (.fn %in% c("exp", "log", "sqrt", "expit", "log1p", "log10", "log2") &&
@@ -1149,7 +1183,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' Graphviz DOT source for a model graph
 #' @noRd
 .mdDot <- function(graph, labels = FALSE) {
-  .xs <- 1.6
+  # column spacing (inches) wide enough for the longest compartment name
+  # (14pt Helvetica is about 0.11 inch per character plus margins)
+  .xs <- max(1.6, 0.11 * max(nchar(graph$nodes$name), 0L) + 0.9)
   .ys <- 1.1
   # quote a DOT string; "\r" (from combined labels) becomes a DOT line break
   .q <- function(x) {

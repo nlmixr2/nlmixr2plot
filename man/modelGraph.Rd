@@ -13,8 +13,9 @@ interface (\code{rxUi}) object, a compiled \code{rxode2} model or a fitted
 
 \item{dosing}{optional character vector naming the dosing compartments.
 When \code{NULL} the dosing compartments are detected from the dosing records
-in \code{data}; when there is no data the first compartment (the default
-\code{rxode2} dosing compartment) is used.}
+in \code{data} (a dataset without dose records has no dosing compartment);
+when there is no data, or it has no \code{evid}/\code{amt} columns, the first
+compartment (the default \code{rxode2} dosing compartment) is used.}
 
 \item{data}{optional dataset used to detect the dosing compartments (from
 the dosing records' \code{cmt}).  For fitted models this defaults to the data
