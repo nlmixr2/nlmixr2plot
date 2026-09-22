@@ -105,10 +105,18 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     }
   }
   # Simulate with VPC
-  if (!inherits(fit, "nlmixr2vpcSim")) {
-    .sim <- nlmixr2est::vpcSim(fit, ..., keep=stratify, n=n, pred=pred_corr, seed=seed)
+  if (!is.null(data) && cens && !tidyvpc) {
+    # the censored vpc path takes its observations from the fit table, so
+    # simulate from the fitted data too to keep the two consistent
+    warning("'data' is ignored for censored VPCs with method = 'vpc'; ",
+            "the fitted data is used instead", call.=FALSE)
+    data <- NULL
   }
-  .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, .obs)
+  if (!inherits(fit, "nlmixr2vpcSim")) {
+    .sim <- .vpcSimData(fit, data, ..., keep=stratify, n=n,
+                        pred=pred_corr, seed=seed)
+  }
+  .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, data)
   if (any(names(.sim) == "evid")) {
     .sim <- .sim[.sim$evid == 0,]
   }
@@ -401,6 +409,30 @@ vpcCensTad <- function(..., cens=TRUE, idv="tad") {
 #' @export
 vpcCens <- function(..., cens=TRUE, idv="time") {
   vpcPlot(..., cens=cens, idv=idv)
+}
+
+#' Run the VPC simulation from the supplied data
+#'
+#' `nlmixr2est::vpcSim()` always simulates from the fit's original data
+#' (`fit$simInfo$events`, which is `fit$origData`), and an `events` argument
+#' passed through `...` is ignored.  When `data` is supplied, temporarily swap
+#' it in as the fit's original data so the simulation (and the
+#' pred-correction simulation info it saves) uses it, then restore the fit's
+#' data (#68).
+#'
+#' @param fit nlmixr2 fit
+#' @param data replacement data (`NULL` uses the fitted data)
+#' @param ... passed to `nlmixr2est::vpcSim()`
+#' @return the VPC simulation
+#' @noRd
+.vpcSimData <- function(fit, data, ...) {
+  if (!is.null(data)) {
+    .env <- fit$env
+    .origData <- .env$origData
+    on.exit(assign("origData", .origData, envir=.env))
+    assign("origData", data, envir=.env)
+  }
+  nlmixr2est::vpcSim(fit, ...)
 }
 
 #' Find the column `col` maps to for a censored VPC

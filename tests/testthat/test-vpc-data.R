@@ -43,4 +43,30 @@ test_that("pred_corr VPC uses the supplied data (#62)", {
   db <- suppressWarnings(
     vpcPlot(fit, n=5, pred_corr=TRUE, vpcdb=TRUE, method="vpc"))
   expect_equal(length(unique(db$obs$id)), length(unique(od$ID)))
+
+  # the simulation uses the supplied data as well (#68)
+  db <- suppressWarnings(
+    vpcPlot(fit, data=half, n=5, vpcdb=TRUE, method="vpc"))
+  expect_equal(length(unique(db$sim$id)), 4L)
+  expect_equal(nrow(db$sim), 5L * .nobs)
+
+  db <- suppressWarnings(
+    vpcPlot(fit, data=half, n=5, pred_corr=TRUE, vpcdb=TRUE, method="vpc"))
+  expect_equal(length(unique(db$sim$id)), 4L)
+  expect_equal(nrow(db$sim), 5L * .nobs)
+
+  # the fit's data is restored after simulating from the supplied data
+  expect_equal(fit$origData, od)
+
+  skip_if_not_installed("tidyvpc")
+  for (.pc in c(FALSE, TRUE)) {
+    .warn <- character(0)
+    withCallingHandlers(
+      vpcPlot(fit, data=half, n=5, pred_corr=.pc, method="tidyvpc"),
+      warning=function(w) {
+        .warn <<- c(.warn, conditionMessage(w))
+        invokeRestart("muffleWarning")
+      })
+    expect_false(any(grepl("xsim", .warn)), info=paste("pred_corr =", .pc))
+  }
 })

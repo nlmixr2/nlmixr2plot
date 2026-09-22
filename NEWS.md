@@ -1,5 +1,11 @@
 # nlmixr2plot 5.1.0.9000
 
+* Fixed the VPC simulation ignoring the `data` argument of `vpcPlot()`/
+  `vpcPlotTad()`; the simulation always used the fit's dataset, so it did not
+  match the observed data built from `data` (and `tidyvpc` warned that `xsim`
+  did not match the observed x-values).  The simulation now uses `data` when
+  supplied.  Censored VPCs with `method = "vpc"` take their observations from
+  the fit, so they now warn that `data` is ignored (#68).
 * Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the `data`
   argument; the observed data was rebuilt from the fit's dataset instead of the
   supplied `data` (#62).
