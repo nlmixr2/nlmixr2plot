@@ -2,6 +2,10 @@
 
 ## nlmixr2plot 5.1.0.9000
 
+- Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the
+  `data` argument; the observed data was rebuilt from the fit’s dataset
+  instead of the supplied `data`
+  ([\#62](https://github.com/nlmixr2/nlmixr2plot/issues/62)).
 - Fixed stratified censored VPCs
   ([`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/[`vpcCensTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
   or
