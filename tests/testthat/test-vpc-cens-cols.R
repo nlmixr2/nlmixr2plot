@@ -50,47 +50,56 @@ test_that(".vpcCensDropStray keeps stratify columns", {
   expect_false("idv" %in% names(.res))
 })
 
-test_that(".vpcCensAddStratify copies stratify columns by original-data row", {
-  local_mocked_bindings(vpcNameDataCmts=function(fit, data) data,
-                        .package="nlmixr2est")
-  .orig <- data.frame(ID=c(1, 1, 1, 2, 2, 2), EVID=c(1, 0, 0, 1, 0, 0),
-                      WT=c(70, 71, 72, 80, 81, 82),
-                      SEX=c("m", "m", "m", "f", "f", "f"))
-  # the fit table is deliberately out of original-data order, and WT varies
-  # within ID so a merge by ID (rather than by row) would give wrong values
-  .fit <- list(origData=.orig, env=list(.rownum=c(6, 2, 5, 3)))
-  .obs <- data.frame(ID=c(2, 1, 2, 1), DV=1:4)
-  .res <- .vpcCensAddStratify(.obs, .fit, c("WT", "SEX"))
-  expect_equal(.res$WT, c(82, 71, 81, 72))
-  expect_equal(.res$SEX, c("f", "m", "f", "m"))
-  # columns already present and NULL stratify are left alone
-  .obs$WT <- 1
-  .part <- .vpcCensAddStratify(.obs, .fit, c("WT", "SEX"))
-  expect_equal(.part$WT, rep(1, 4))
-  expect_equal(.part$SEX, c("f", "m", "f", "m"))
-  expect_equal(.vpcCensAddStratify(.obs, .fit, "WT"), .obs)
-  expect_equal(.vpcCensAddStratify(.obs, .fit, NULL), .obs)
+test_that(".vpcCensObs moves censored dv past its limit (#55)", {
+  .d <- data.frame(ID=1, TIME=1:4, DV=c(1, 2, 1, 5), CENS=c(1, 0, NA, -1))
+  .res <- .vpcCensObs(.d)
+  expect_equal(.res$DV, c(-Inf, 2, 1, Inf))
+  expect_equal(.res[, c("ID", "TIME", "CENS")], .d[, c("ID", "TIME", "CENS")])
+
+  # a factor cens column is read by its values, not its codes
+  .df <- .d
+  .df$CENS <- factor(.df$CENS)
+  expect_equal(.vpcCensObs(.df)$DV, c(-Inf, 2, 1, Inf))
+
+  # without a cens column the data is returned unchanged, with a warning
+  .d2 <- .d[, c("ID", "TIME", "DV")]
+  expect_warning(.res2 <- .vpcCensObs(.d2), "no 'cens' column")
+  expect_equal(.res2, .d2)
 })
 
-test_that(".vpcCensAddStratify errors instead of misaligning rows", {
-  local_mocked_bindings(vpcNameDataCmts=function(fit, data) data,
-                        .package="nlmixr2est")
-  .orig <- data.frame(ID=c(1, 1, 2), WT=c(70, 70, 80))
-  .obs <- data.frame(ID=c(1, 2), DV=1:2)
-  .mockFit <- function(rn) list(origData=.orig, env=list(.rownum=rn))
-  expect_error(
-    .vpcCensAddStratify(.obs, .mockFit(2), "WT"),
-    "cannot align")
-  for (.rn in list(c(2, 9), c(0, 2), c(2, NA))) {
-    expect_error(
-      .vpcCensAddStratify(.obs, .mockFit(.rn), "WT"),
-      "cannot align")
+test_that(".vpcCensObs drops missing observations (#55)", {
+  .d <- data.frame(ID=1, TIME=1:4, DV=c(NA, 2, NA, 1), CENS=c(0, 0, 1, 1))
+  .res <- .vpcCensObs(.d)
+  # a missing DV is dropped even when flagged as censored, as in the fit
+  expect_equal(.res$TIME, c(2L, 4L))
+  expect_equal(.res$DV, c(2, -Inf))
+
+  # also without a cens column
+  .res2 <- suppressWarnings(
+    .vpcCensObs(.d[, c("ID", "TIME", "DV")]))
+  expect_equal(.res2$TIME, c(2L, 4L))
+})
+
+test_that(".vpcCensObs errors on an ambiguous cens column (#55)", {
+  .d <- data.frame(ID=1, DV=1, CENS=1, Cens=0)
+  expect_error(.vpcCensObs(.d),
+               "cannot find a unique 'cens' column in the observed data")
+})
+
+test_that("vpc_cens counts each censored record only on its own side (#55)", {
+  skip_if_not_installed("vpc")
+  # one bin, 4 observations: BLQ, two uncensored, ALQ
+  .obs <- .vpcCensObs(
+    data.frame(id=1:4, time=1, DV=c(1, 2, 3, 5), CENS=c(1, 0, 0, -1)))
+  .sim <- data.frame(id=rep(1:4, 2), time=1, sim=3, rep=rep(1:2, each=4))
+  .frac <- function(lloq=NULL, uloq=NULL) {
+    .db <- suppressWarnings(suppressMessages(vpc::vpc_cens(sim=.sim, sim_cols=list(id="id", dv="sim", idv="time"),
+                         obs=.obs, obs_cols=list(id="id", dv="DV", idv="time"),
+                         bins=c(0, 2), lloq=lloq, uloq=uloq, vpcdb=TRUE)))
+    .db$aggr_obs$obs50
   }
-  expect_error(
-    .vpcCensAddStratify(.obs, .mockFit(c(2, 3)), "AGE"),
-    "stratification column\\(s\\) not found in the data: AGE")
-  # names must match exactly, as vpcSimExpand() and vpc_cens() require
-  expect_error(
-    .vpcCensAddStratify(.obs, .mockFit(c(2, 3)), "wt"),
-    "not found in the data: wt")
+  # the record at the upper limit must not count as below the lower limit,
+  # and vice versa (vpc takes only one of lloq/uloq)
+  expect_equal(.frac(lloq=1), 1/4)
+  expect_equal(.frac(uloq=5), 1/4)
 })
