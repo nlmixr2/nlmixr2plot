@@ -1,3 +1,13 @@
+# nlmixr2plot (development version)
+
+* `vpcPlot()`, `vpcPlotTad()`, `vpcCens()` and `vpcCensTad()` now use a
+  supplied `nlmixr2est::vpcSim()` simulation instead of discarding it and
+  re-simulating with the default `n = 300`.  Supplying `n` alongside a
+  simulation warns that it is ignored, and `pred_corr = TRUE` errors unless the
+  simulation was created with `pred = TRUE` (#57).  The observed-data
+  prediction correction for a supplied simulation is computed from that
+  simulation's own fit rather than from whichever `vpcSim(pred = TRUE)` ran
+  last.
 # nlmixr2plot 5.1.0.9000
 
 * Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the `data`
