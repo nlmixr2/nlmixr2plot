@@ -4,7 +4,7 @@
 \alias{plot.nlmixr2AugPred}
 \title{Plot a nlmixr2 augPred object}
 \usage{
-\method{plot}{nlmixr2AugPred}(x, y, ...)
+\method{plot}{nlmixr2AugPred}(x, y, ..., log = "")
 }
 \arguments{
 \item{x}{augPred object}
@@ -12,6 +12,12 @@
 \item{y}{ignored, used to mach plot generic}
 
 \item{...}{Other arguments (ignored)}
+
+\item{log}{a character string which contains \code{"x"} if the x axis
+is to be logarithmic, \code{"y"} if the y axis is to be logarithmic
+and \code{"xy"} or \code{"yx"} if both axes are to be logarithmic (as in
+\code{\link[graphics:plot.default]{graphics::plot.default()}}).  The default \code{""} uses linear axes.
+Non-positive values cannot be shown on a log axis and are dropped.}
 }
 \value{
 A \code{ggtibble::gglist} object (a list of ggplot2 objects, one per page
@@ -57,6 +63,9 @@ a <- nlmixr2est::augPred(fit)
 
 # you can plot it with plot(augPred object)
 plot(a)
+
+# or with a log-scaled y axis
+plot(a, log = "y")
 
 }
 }

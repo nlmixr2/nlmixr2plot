@@ -1,4 +1,4 @@
-# nlmixr2plot 5.1.0.9000
+# nlmixr2plot 5.1.1
 
 * Added automatic model diagrams (#10).  `modelGraph()` parses a model's
   differential equations (from a model function, `rxode2` model/UI or an
@@ -11,6 +11,18 @@
   the right, and draws it with the `"DiagrammeR"` (Graphviz), `"ggplot2"` or
   `"dot"` (DOT source) engine.
 
+* `plot()` of an `augPred()` object now accepts a base-R style `log` argument
+  (`log = "y"`, `"x"` or `"xy"`) to draw the individual plots on log-scaled
+  axes; non-positive values, which cannot be shown on a log axis, are dropped
+  (#32).
+* `vpcPlot()`, `vpcPlotTad()`, `vpcCens()` and `vpcCensTad()` now use a
+  supplied `nlmixr2est::vpcSim()` simulation instead of discarding it and
+  re-simulating with the default `n = 300`.  Supplying `n` alongside a
+  simulation warns that it is ignored, and `pred_corr = TRUE` errors unless the
+  simulation was created with `pred = TRUE` (#57).  The observed-data
+  prediction correction for a supplied simulation is computed from that
+  simulation's own fit rather than from whichever `vpcSim(pred = TRUE)` ran
+  last.
 * Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the `data`
   argument; the observed data was rebuilt from the fit's dataset instead of the
   supplied `data` (#62).
