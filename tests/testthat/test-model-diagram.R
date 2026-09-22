@@ -279,7 +279,7 @@ test_that("interaction arrows do not cross other compartments", {
   rownames(n) <- n$name
   for (.e in paste0("eff", 1:4)) {
     .others <- setdiff(n$name, c("center", .e))
-    expect_false(nlmixr2plot:::.mdSegmentCrosses(
+    expect_false(.mdSegmentCrosses(
       n["center", "x"], n["center", "y"], n[.e, "x"], n[.e, "y"],
       n[.others, "x"], n[.others, "y"]), label = .e)
   }
@@ -380,7 +380,7 @@ test_that("no interaction arrow crosses a compartment in the final layout", {
   expect_gt(nrow(e), 0L)
   for (.i in seq_len(nrow(e))) {
     .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
-    expect_false(nlmixr2plot:::.mdSegmentCrosses(
+    expect_false(.mdSegmentCrosses(
       n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
       n[.others, "x"], n[.others, "y"]), label = paste(e$from[.i], e$to[.i]))
   }
@@ -477,8 +477,8 @@ test_that("variables used in residual error lines are still substituted", {
 })
 
 test_that("negative numeric constants keep their sign", {
-  expect_equal(nlmixr2plot:::.mdTerms(-0.5)[[1]]$sign, -1)
-  t <- nlmixr2plot:::.mdTerms(as.call(list(quote(`*`), -0.5, quote(center))))
+  expect_equal(.mdTerms(-0.5)[[1]]$sign, -1)
+  t <- .mdTerms(as.call(list(quote(`*`), -0.5, quote(center))))
   expect_equal(t[[1]]$sign, -1)
 })
 
@@ -529,7 +529,7 @@ test_that("an effect compartment with several drivers is placed clear of all arr
   expect_equal(sort(e$from), c("central", "peri"))
   for (.i in seq_len(nrow(e))) {
     .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
-    expect_false(nlmixr2plot:::.mdSegmentCrosses(
+    expect_false(.mdSegmentCrosses(
       n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
       n[.others, "x"], n[.others, "y"]), label = e$from[.i])
   }
@@ -590,7 +590,7 @@ test_that("PD inputs go above, outputs below and exchange compartments right", {
   expect_lt(n["periph", "x"], n["center", "x"])
   expect_gt(n["resp", "x"], n["center", "x"])
   expect_gt(n["resp2", "x"], n["resp", "x"])
-  ec <- nlmixr2plot:::.mdEdgeCoords(g)
+  ec <- .mdEdgeCoords(g)
   inp <- ec[ec$type == "input" & ec$to == "resp", ]
   expect_equal(nrow(inp), 1L)
   expect_gt(inp$y0, inp$y1)
@@ -641,7 +641,7 @@ test_that("compartments acting on central are placed clear of other arrows", {
   expect_equal(e$sign, c(-1, -1))
   for (.i in seq_len(nrow(e))) {
     .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
-    expect_false(nlmixr2plot:::.mdSegmentCrosses(
+    expect_false(.mdSegmentCrosses(
       n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
       n[.others, "x"], n[.others, "y"]), label = e$from[.i])
   }
@@ -683,7 +683,7 @@ test_that("exchange partners of effect compartments stay off interaction arrows"
   expect_true(any(e$to == "eff2"))
   for (.i in seq_len(nrow(e))) {
     .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
-    expect_false(nlmixr2plot:::.mdSegmentCrosses(
+    expect_false(.mdSegmentCrosses(
       n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
       n[.others, "x"], n[.others, "y"]), label = paste(e$from[.i], e$to[.i]))
   }
@@ -731,7 +731,7 @@ test_that("mass transfer arrows do not cross compartments", {
   e <- g$edges[!is.na(g$edges$from) & !is.na(g$edges$to), ]
   for (.i in seq_len(nrow(e))) {
     .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
-    expect_false(nlmixr2plot:::.mdSegmentCrosses(
+    expect_false(.mdSegmentCrosses(
       n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
       n[.others, "x"], n[.others, "y"]), label = paste(e$from[.i], e$to[.i]))
   }
