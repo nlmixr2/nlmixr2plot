@@ -1,0 +1,305 @@
+---
+title: "Automatic model diagrams"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Automatic model diagrams}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 4.5
+)
+hasDiagrammeR <- requireNamespace("DiagrammeR", quietly = TRUE)
+```
+
+A compartment diagram is often the fastest way to explain a model in a report
+or to check that the equations say what you meant.  `nlmixr2plot` can draw one
+directly from a model's differential equations:
+
+- `modelGraph()` parses the equations into a graph of compartments and flows.
+- `modelDiagram()` lays that graph out following common pharmacometric
+  conventions and draws it.
+
+```{r setup}
+library(nlmixr2plot)
+```
+
+## A first diagram
+
+Any model function, `rxode2` model, `rxode2` user interface object or fitted
+`nlmixr2` object can be diagrammed.  Here is a two-compartment model with
+first-order absorption:
+
+```{r}
+two.cmt <- function() {
+  ini({
+    tka <- log(1.5)
+    tcl <- log(3)
+    tv <- log(20)
+    tq <- log(2)
+    tvp <- log(40)
+    add.sd <- 0.2
+  })
+  model({
+    ka <- exp(tka)
+    cl <- exp(tcl)
+    v <- exp(tv)
+    q <- exp(tq)
+    vp <- exp(tvp)
+    d/dt(depot) <- -ka * depot
+    d/dt(central) <- ka * depot - cl / v * central - q / v * central +
+      q / vp * periph
+    d/dt(periph) <- q / v * central - q / vp * periph
+    cp <- central / v
+    cp ~ add(add.sd)
+  })
+}
+```
+
+```{r}
+modelDiagram(two.cmt, engine = "ggplot2")
+```
+
+The dosing compartment (`depot`, drawn with a heavy border) is on top and feeds
+the central compartment.  The peripheral compartment, which exchanges mass with
+`central` in both directions, is to the left, and elimination leaves the
+central compartment downwards.
+
+## Drawing engines
+
+The same graph can be drawn several ways, chosen with `engine`:
+
+- `"DiagrammeR"` draws an interactive Graphviz widget with the 'DiagrammeR'
+  package.  This is the default when 'DiagrammeR' is installed.
+- `"ggplot2"` returns a `ggplot` object that can be themed, saved with
+  `ggplot2::ggsave()` or combined with other plots.  It needs no extra
+  packages.
+- `"dot"` returns the Graphviz DOT source as a string, to edit or to render
+  with any Graphviz tool.
+
+```{r, eval = hasDiagrammeR}
+modelDiagram(two.cmt, engine = "DiagrammeR")
+```
+
+```{r}
+cat(modelDiagram(two.cmt, engine = "dot"))
+```
+
+The default engine can be set once per session:
+
+```{r, eval = FALSE}
+options(nlmixr2plot.diagram.engine = "ggplot2")
+```
+
+Arrows can be labeled with the model terms that drive them:
+
+```{r}
+modelDiagram(two.cmt, engine = "ggplot2", labels = TRUE)
+```
+
+## The graph behind the diagram
+
+`modelGraph()` returns the parsed graph, which is useful for checking how the
+equations were interpreted (or for drawing it some other way):
+
+```{r}
+g <- modelGraph(two.cmt)
+g
+```
+
+The `nodes` data frame gives each compartment's role and layout position, and
+the `edges` data frame lists every flow.  A graph can be passed straight to
+`modelDiagram()` or `plot()`:
+
+```{r, eval = FALSE}
+plot(g, engine = "ggplot2")
+```
+
+### How the equations are read
+
+Each `d/dt()` equation is split into signed additive terms (products are
+distributed over sums), and then:
+
+- **Mass transfer**: a term subtracted from one compartment and added,
+  identically, to another moves mass between them.  The order of factors does
+  not matter (`ka*depot` matches `depot*ka`), and first-order, zero-order and
+  enzyme-driven rates are all recognized.
+- **Elimination**: a remaining loss that contains the compartment's own
+  amount (like `cl/v*central` or Michaelis-Menten `vmax*C/(km + C)`).
+- **Input**: a remaining gain that does not depend on any compartment (like a
+  zero-order `kin`).
+- **Interaction**: a term that depends on another compartment without moving
+  mass, like an effect compartment or a pharmacodynamic stimulation or
+  inhibition.  It is drawn dashed.  Its direction comes from the equation:
+  inhibition when the term decreases as the driving compartment increases
+  (including `1 - emax*C/(ec50 + C)`, `kin/(1 + C)` and `exp(-k*C)` forms),
+  stimulation when it increases, and "modulation" when the direction cannot be
+  determined.
+
+Intermediate variables (like `cp <- central/v`) are followed, `if`/`else`
+blocks and `ifelse()` keep their conditions, and residual error lines are
+ignored.
+
+## Pharmacodynamic models
+
+Compartments that interact with the pharmacokinetic model without mass
+transfer go to the right, with their own inputs above and outputs below.  Here
+is an indirect response (turnover) model where the drug inhibits the
+production of the response:
+
+```{r}
+pk.turnover <- function() {
+  ini({
+    tktr <- log(1)
+    tka <- log(1)
+    tcl <- log(0.1)
+    tv <- log(10)
+    poplogit <- 2
+    tec50 <- log(0.5)
+    tkout <- log(0.05)
+    te0 <- log(100)
+    prop.err <- 0.1
+    pdadd.err <- 10
+  })
+  model({
+    ktr <- exp(tktr)
+    ka <- exp(tka)
+    cl <- exp(tcl)
+    v <- exp(tv)
+    emax <- expit(poplogit)
+    ec50 <- exp(tec50)
+    kout <- exp(tkout)
+    e0 <- exp(te0)
+    DCP <- center / v
+    PD <- 1 - emax * DCP / (ec50 + DCP)
+    effect(0) <- e0
+    kin <- e0 * kout
+    d/dt(depot) <- -ktr * depot
+    d/dt(gut) <- ktr * depot - ka * gut
+    d/dt(center) <- ka * gut - cl / v * center
+    d/dt(effect) <- kin * PD - kout * effect
+    cp <- center / v
+    cp ~ prop(prop.err)
+    effect ~ add(pdadd.err)
+  })
+}
+modelDiagram(pk.turnover, engine = "ggplot2")
+```
+
+The transit compartment `gut` stacks between the dosing compartment and the
+central compartment.  The response has a zero-order input (`kin`) above it, an
+elimination below it, and a dotted arrow from `center`: the drug *inhibits*
+the response, because `PD` decreases as the concentration increases.  With
+'DiagrammeR' the inhibition is drawn with a "tee" arrow head:
+
+```{r, eval = hasDiagrammeR}
+modelDiagram(pk.turnover, engine = "DiagrammeR")
+```
+
+A more involved example, with a metabolite, two peripheral compartments, an
+effect compartment and a response driven by the effect compartment:
+
+```{r}
+pkpd <- rxode2::rxode2({
+  C2 <- centr / V2
+  C3 <- peri / V3
+  C4 <- peri2 / V4
+  d/dt(depot) <- -KA * depot
+  d/dt(centr) <- KA * depot - CL * C2 - Q * C2 + Q * C3 - Q2 * C2 + Q2 * C4 -
+    kmet * centr
+  d/dt(peri) <- Q * C2 - Q * C3
+  d/dt(peri2) <- Q2 * C2 - Q2 * C4
+  d/dt(met) <- kmet * centr - kelm * met
+  d/dt(ce) <- ke0 * (C2 - ce)
+  d/dt(resp) <- kin - kout * (1 - ce / (ec50 + ce)) * resp
+})
+modelDiagram(pkpd, engine = "ggplot2")
+```
+
+## Target-mediated drug disposition
+
+Binding and unbinding are recognized as mass transfer from both binding
+partners into the complex (and back):
+
+```{r}
+tmdd <- rxode2::rxode2({
+  d/dt(central) <- -kel * central - kon * central * target + koff * complex
+  d/dt(target) <- ksyn - kdeg * target - kon * central * target +
+    koff * complex
+  d/dt(complex) <- kon * central * target - koff * complex - kint * complex
+})
+modelGraph(tmdd, dosing = "central")
+modelDiagram(tmdd, dosing = "central", engine = "ggplot2")
+```
+
+## Dosing compartments
+
+Dosing compartments are detected from the dosing records of the data: for a
+fitted model this is the data it was fit to, and for other models it can be
+supplied with `data`.  Both numeric and named `cmt` values are understood:
+
+```{r}
+d <- data.frame(
+  id = 1, time = c(0, 0, 1, 2),
+  amt = c(100, 50, 0, 0), evid = c(1, 1, 0, 0),
+  cmt = c("depot", "central", "central", "central"), dv = 0
+)
+modelGraph(two.cmt, data = d)$nodes
+```
+
+With no data, the first compartment (`rxode2`'s default dosing compartment) is
+assumed.  The dosing compartments can also be given directly:
+
+```{r}
+modelDiagram(two.cmt, dosing = "central", engine = "ggplot2")
+```
+
+For a fit, `modelDiagram(fit)` uses the fitted model and data:
+
+```{r, eval = FALSE}
+fit <- nlmixr2(two.cmt, nlmixr2data::theo_sd, est = "focei")
+modelDiagram(fit)
+```
+
+## `linCmt()` models
+
+Models written with `linCmt()` are converted to their ODE form with
+`rxode2::linToOde()` before they are diagrammed (this requires a version of
+'rxode2' that provides it):
+
+```{r, eval = "linToOde" %in% getNamespaceExports("rxode2")}
+one.cmt <- function() {
+  ini({
+    tka <- 0.45
+    tcl <- 1
+    tv <- 3.45
+    add.sd <- 0.7
+  })
+  model({
+    ka <- exp(tka)
+    cl <- exp(tcl)
+    v <- exp(tv)
+    linCmt() ~ add(add.sd)
+  })
+}
+modelDiagram(one.cmt, engine = "ggplot2")
+```
+
+## Limitations
+
+The diagram is only as good as the parsing of the equations, so a few
+conventions matter:
+
+- Mass transfer is only detected when the same term is subtracted from the
+  source and added to the destination.  A transfer scaled in only one of the
+  equations (for example a volume or stoichiometric conversion) is drawn as an
+  elimination plus an interaction.
+- A gain driven only by another compartment (like `ke0*cp` into an effect
+  compartment) is represented by the dashed interaction arrow alone.
+- The layout is automatic; for publication-quality tweaks, start from the DOT
+  source (`engine = "dot"`) or the `ggplot` object and adjust it.
