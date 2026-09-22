@@ -135,6 +135,22 @@ test_that(".vpcFitColForData does not guess between identical-looking fitted row
   expect_equal(.vpcFitColForData(.fit2, .orig2[2, c("ID", "TIME", "DV")],
                                  "tad", supplied=TRUE), 0)
 
+  # a missing value and the literal text "NA" are different values
+  .orig4 <- data.frame(ID=1, TIME=5, DV=2, GROUP=NA_character_, EVID=0)
+  .fit4 <- list(origData=.orig4, tad=5, env=list(.rownum=1L))
+  .sub4 <- .orig4
+  .sub4$GROUP <- "NA"
+  expect_warning(.r <- .vpcFitColForData(.fit4, .sub4, "tad", supplied=TRUE),
+                 "1 observation\\(s\\) in 'data' do not match")
+  expect_true(is.na(.r))
+  expect_equal(.vpcFitColForData(.fit4, .orig4, "tad", supplied=TRUE), 5)
+
+  # records vpcPlot() drops (mdv = 1, even with evid = 0) do not warn
+  .sub5 <- data.frame(ID=1, TIME=7, DV=0, EVID=0, MDV=1)
+  expect_warning(.r <- .vpcFitColForData(.fit4, .sub5, "tad", supplied=TRUE),
+                 NA)
+  expect_true(is.na(.r))
+
   # duplicated supplied rows each get the fitted value
   expect_equal(.vpcFitColForData(.fit, .orig[c(4, 4), ], "tad", supplied=TRUE),
                c(6, 6))

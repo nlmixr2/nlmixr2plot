@@ -507,8 +507,11 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
                    .lorig[!(.lorig %in% .lorig[duplicated(.lorig)])])
   .key <- function(d, lower) {
     do.call(paste, c(lapply(.by, function(n) {
-      # as.character() so numbers read in as text still match
-      as.character(d[[which(lower == n)]])
+      # as.character() so numbers read in as text still match; prefix each
+      # value with its length (and code NA separately) so no two different
+      # rows share a key, even with a literal "NA" or the separator in a value
+      .v <- as.character(d[[which(lower == n)]])
+      ifelse(is.na(.v), "NA", paste0(nchar(.v, type="bytes"), ":", .v))
     }), sep="\r"))
   }
   .amb <- rep(FALSE, nrow(obs))
@@ -534,14 +537,14 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   } else {
     .m <- rep(NA_integer_, nrow(obs))
   }
-  .w <- which(tolower(names(obs)) == "evid")
-  if (length(.w) == 1L) {
-    .isObs <- obs[[.w]] == 0
-  } else {
-    .w <- which(tolower(names(obs)) == "mdv")
-    .isObs <- if (length(.w) == 1L) obs[[.w]] == 0 else rep(TRUE, nrow(obs))
+  # observations as vpcPlot() keeps them: evid == 0 and mdv == 0 when present
+  .isObs <- rep(TRUE, nrow(obs))
+  for (.c in c("evid", "mdv")) {
+    .w <- which(tolower(names(obs)) == .c)
+    if (length(.w) == 1L) {
+      .isObs <- .isObs & !is.na(obs[[.w]]) & obs[[.w]] == 0
+    }
   }
-  .isObs <- !is.na(.isObs) & .isObs
   # observations without a dv are dropped from the VPC, so do not warn for them
   .w <- which(tolower(names(obs)) == "dv")
   if (length(.w) == 1L) {
