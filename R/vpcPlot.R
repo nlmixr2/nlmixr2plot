@@ -141,17 +141,19 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   .evid <- which(tolower(names(.obs)) == "evid")
   if (length(.evid) == 1L) {
     .obs <- .obs[.obs[[.evid]] == 0,,drop=FALSE]
-  } else {
-    .mdv <- which(tolower(names(.obs)) == "mdv")
-    if (length(.mdv) == 1L) {
-      .obs <- .obs[.obs[[.mdv]] == 0,,drop=FALSE]
-    }
+  }
+  # an EVID=0 record flagged MDV=1 is still not an observation
+  .mdv <- which(tolower(names(.obs)) == "mdv")
+  if (length(.mdv) == 1L) {
+    .obs <- .obs[.obs[[.mdv]] == 0,,drop=FALSE]
   }
   if (cens & !tidyvpc) {
     if (is.null(lloq) && is.null(uloq)) {
       stop("this data is not censored")
     }
-    .obs <- .vpcCensAddStratify(as.data.frame(fit), fit, stratify)
+    # Use the observed data prepared above (which honours `data`, #55) instead
+    # of re-deriving it from the fit.
+    .obs <- .vpcCensObs(.obs)
     # Pass the column mappings explicitly (as in the non-censored vpc path)
     # instead of letting vpc_cens guess them.  Guessing maps idv to "TIME"/"time"
     # and, when idv is "tad", left an extra "idv" column that collided with vpc's
@@ -457,44 +459,6 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   names(data)[.wo]
 }
 
-#' Carry stratification columns into the censored observed data
-#'
-#' The censored VPC uses `as.data.frame(fit)` as its observed data, which drops
-#' the input covariates, so `vpc::vpc_cens()` rejects any covariate
-#' stratification (#56).  Copy each stratify column missing from `obs` out of
-#' the fit's original data, aligning rows with `fit$env$.rownum` (the
-#' original-data row of each fit-table row) rather than assuming the two are in
-#' the same order.
-#'
-#' @param obs fit table (`as.data.frame(fit)`)
-#' @param fit nlmixr2 fit
-#' @param stratify stratification columns (may be `NULL`)
-#' @return `obs` with the missing stratify columns added
-#' @noRd
-.vpcCensAddStratify <- function(obs, fit, stratify=NULL) {
-  .miss <- setdiff(stratify, names(obs))
-  if (length(.miss) == 0L) return(obs)
-  .src <- nlmixr2est::vpcNameDataCmts(fit, fit$origData)
-  .rn <- fit$env$.rownum
-  if (length(.rn) != nrow(obs) || any(is.na(.rn)) ||
-        any(.rn < 1L | .rn > nrow(.src))) {
-    stop("cannot align the fit table with the original data to add the ",
-         "stratification column(s): ", paste(.miss, collapse=", "),
-         call.=FALSE)
-  }
-  # match exactly: vpcSimExpand() and vpc_cens() both need the exact name, so
-  # a case-insensitive match here would only move the error into vpc
-  .notFound <- setdiff(.miss, names(.src))
-  if (length(.notFound) > 0L) {
-    stop("stratification column(s) not found in the data: ",
-         paste(.notFound, collapse=", "), call.=FALSE)
-  }
-  for (.s in .miss) {
-    obs[[.s]] <- .src[[.s]][.rn]
-  }
-  obs
-}
-
 #' Drop columns that collide with vpc's standardized names
 #'
 #' `vpc` renames the mapped columns to "id"/"dv"/"idv"; an unrelated column
@@ -512,6 +476,43 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
                     c(unlist(cols), stratify))
   if (length(.stray) == 0L) return(data)
   data[, setdiff(names(data), .stray), drop=FALSE]
+}
+
+#' Mark censored observations for a censored VPC
+#'
+#' nlmixr2 data encodes a censored record at its censoring limit (`DV` equal to
+#' the limit) with a non-zero `CENS` column.  `vpc` decides whether an observation
+#' is censored by comparing `dv` strictly against the limit (`dv < lloq`,
+#' `dv > uloq`), so a record sitting exactly at the limit would be counted as
+#' uncensored.  Move the flagged records past their limit instead: `-Inf` for
+#' below the limit (`CENS == 1`) and `Inf` for above it (`CENS == -1`), so each
+#' is counted only on its own side of the censoring.  Without a `CENS` column
+#' `vpc` relies on the `dv`/limit comparison alone, so warn: records encoded at
+#' the limit are then counted as uncensored.
+#'
+#' `vpc` also counts a missing `dv` as censored, so records without an
+#' observation (e.g. a missed sample) are dropped first, as the fitted data does.
+#'
+#' @param obs observed data with a `dv` column (any case)
+#' @return `obs` without missing observations, with `dv` moved past the limit
+#'   for censored records
+#' @noRd
+.vpcCensObs <- function(obs) {
+  .wd <- .vpcCensCol(obs, "dv", "observed")
+  obs <- obs[!is.na(obs[[.wd]]), , drop=FALSE]
+  if (!any(tolower(names(obs)) == "cens")) {
+    warning("the observed data has no 'cens' column; censoring for the VPC is ",
+            "judged by comparing 'dv' to the limit, so records at the limit ",
+            "count as uncensored", call.=FALSE)
+    return(obs)
+  }
+  .cens <- obs[[.vpcCensCol(obs, "cens", "observed")]]
+  if (is.factor(.cens)) .cens <- as.numeric(as.character(.cens))
+  .dv <- obs[[.wd]]
+  .dv[!is.na(.cens) & .cens == 1] <- -Inf
+  .dv[!is.na(.cens) & .cens == -1] <- Inf
+  obs[[.wd]] <- .dv
+  obs
 }
 
 #' Setup Observation data for VPC

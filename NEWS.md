@@ -1,5 +1,15 @@
 # nlmixr2plot 5.1.1
 
+* The censored VPC (`vpcCens()`, `vpcCensTad()`, or `vpcPlot()` with
+  `cens = TRUE` and the `vpc` backend) now honours the `data` argument; it
+  previously always used the fitted data, whatever `data` was supplied (#55).
+  The observed data now comes from the original (or supplied) dataset instead of
+  the fit, so censored records are identified from the `CENS` column rather than
+  from the fit's imputed `DV` (which, for `censMethod = "cdf"`, could land above
+  the limit and be counted as uncensored).  Records without an observation are
+  dropped, as in the fit.
+* The VPC observed data now drops records with `MDV = 1` even when an `EVID`
+  column is also present (previously only `EVID` was checked when both existed).
 * `plot()` of an `augPred()` object now accepts a base-R style `log` argument
   (`log = "y"`, `"x"` or `"xy"`) to draw the individual plots on log-scaled
   axes; non-positive values, which cannot be shown on a log axis, are dropped
@@ -17,9 +27,9 @@
   supplied `data` (#62).
 * Fixed stratified censored VPCs (`vpcCens()`/`vpcCensTad()`, or `vpcPlot()`
   with `cens = TRUE`) failing with "The following specified stratification
-  columns were NOT found in observation data"; stratification columns missing
-  from the fit table are now carried over from the original data, matched by
-  row (#56).
+  columns were NOT found in observation data"; the observed data now comes
+  from the original (or supplied) dataset, which keeps the stratification
+  columns that the fit table drops (#56, #55).
 * Fixed the confidence-band width (and its legend label) for `vpcPlot()`/
   `vpcPlotTad()` with the `tidyvpc` backend; `ci = c(lower, upper)` was passed
   to `tidyvpc::vpcstats()` as `conf.level = ci[2]` instead of the actual
