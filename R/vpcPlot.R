@@ -343,7 +343,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     }
     .vpcStats <- nlmixr2est::.collectWarn(eval(str2lang(paste0("tidyvpc::vpcstats(.tidyBin, qpred = c(", pi[1],
                                                               ", 0.5, ", pi[2],
-                                                              "), conf.level=", ci[2], ")"))),
+                                                              "), conf.level=", ci[2] - ci[1], ")"))),
                                          lst=TRUE)
     .warn <- .vpcStats[[2]]
     .warn <- .warn[.warn != "", drop=FALSE]
