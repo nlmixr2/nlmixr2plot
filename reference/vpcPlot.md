@@ -50,7 +50,14 @@ vpcCens(..., cens = TRUE, idv = "time")
 
 - fit:
 
-  nlmixr2 fit object
+  nlmixr2 fit object, or a simulation from
+  [`vpcSim()`](https://nlmixr2.github.io/nlmixr2est/reference/vpcSim.html).
+  A supplied simulation is used as-is (`n` is then ignored). For
+  `pred_corr = TRUE` it must have been created with
+  `vpcSim(..., pred = TRUE)`, and the observed data are pred-corrected
+  by re-solving the population predictions of the simulation's fit with
+  `...`, so pass the same `...` that was given to
+  [`vpcSim()`](https://nlmixr2.github.io/nlmixr2est/reference/vpcSim.html).
 
 - data:
 
@@ -61,7 +68,9 @@ vpcCens(..., cens = TRUE, idv = "time")
 
 - n:
 
-  Number of VPC simulations
+  Number of VPC simulations (ignored when `fit` is a
+  [`vpcSim()`](https://nlmixr2.github.io/nlmixr2est/reference/vpcSim.html)
+  simulation)
 
 - bins:
 

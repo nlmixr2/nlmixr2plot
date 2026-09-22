@@ -84,7 +84,13 @@
 
 
 <dl><dt id="arg-fit">fit<a class="anchor" aria-label="anchor" href="#arg-fit"></a></dt>
-<dd><p>nlmixr2 fit object</p></dd>
+<dd><p>nlmixr2 fit object, or a simulation from
+<code><a href="https://nlmixr2.github.io/nlmixr2est/reference/vpcSim.html" class="external-link">vpcSim()</a></code>.  A supplied simulation is used
+as-is (<code>n</code> is then ignored).  For <code>pred_corr = TRUE</code> it must have been
+created with <code>vpcSim(..., pred = TRUE)</code>, and the observed data are
+pred-corrected by re-solving the population predictions of the
+simulation's fit with <code>...</code>, so pass the same <code>...</code> that was given to
+<code><a href="https://nlmixr2.github.io/nlmixr2est/reference/vpcSim.html" class="external-link">vpcSim()</a></code>.</p></dd>
 
 
 <dt id="arg-data">data<a class="anchor" aria-label="anchor" href="#arg-data"></a></dt>
@@ -95,7 +101,8 @@ this argument.</p></dd>
 
 
 <dt id="arg-n">n<a class="anchor" aria-label="anchor" href="#arg-n"></a></dt>
-<dd><p>Number of VPC simulations</p></dd>
+<dd><p>Number of VPC simulations (ignored when <code>fit</code> is a
+<code><a href="https://nlmixr2.github.io/nlmixr2est/reference/vpcSim.html" class="external-link">vpcSim()</a></code> simulation)</p></dd>
 
 
 <dt id="arg-bins">bins<a class="anchor" aria-label="anchor" href="#arg-bins"></a></dt>

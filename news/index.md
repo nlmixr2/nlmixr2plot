@@ -1,11 +1,28 @@
 # Changelog
 
-## nlmixr2plot 5.1.0.9000
+## nlmixr2plot (development version)
+
+- [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
+  [`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
+  [`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
+  and
+  [`vpcCensTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
+  now use a supplied
+  [`nlmixr2est::vpcSim()`](https://nlmixr2.github.io/nlmixr2est/reference/vpcSim.html)
+  simulation instead of discarding it and re-simulating with the default
+  `n = 300`. Supplying `n` alongside a simulation warns that it is
+  ignored, and `pred_corr = TRUE` errors unless the simulation was
+  created with `pred = TRUE`
+  ([\#57](https://github.com/nlmixr2/nlmixr2plot/issues/57)). The
+  observed-data prediction correction for a supplied simulation is
+  computed from that simulation’s own fit rather than from whichever
+  `vpcSim(pred = TRUE)` ran last. \# nlmixr2plot 5.1.0.9000
 
 - Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the
   `data` argument; the observed data was rebuilt from the fit’s dataset
   instead of the supplied `data`
   ([\#62](https://github.com/nlmixr2/nlmixr2plot/issues/62)).
+
 - Fixed stratified censored VPCs
   ([`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/[`vpcCensTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
   or
@@ -15,6 +32,7 @@
   stratification columns missing from the fit table are now carried over
   from the original data, matched by row
   ([\#56](https://github.com/nlmixr2/nlmixr2plot/issues/56)).
+
 - Fixed the confidence-band width (and its legend label) for
   [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/
   [`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
