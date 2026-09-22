@@ -11,7 +11,9 @@
   the right, and draws it with the `"DiagrammeR"` (Graphviz), `"ggplot2"` or
   `"dot"` (DOT source) engine.  Dosing properties (`lag()`, `f()`, `rate()`,
   `dur()`) are shown as annotations on their compartment, and `delay()` terms
-  are understood.  `plot()` of an `rxode2` user interface
+  are understood.  The diagrams were checked against all 3043 models of
+  'nlmixr2lib', including large QSP/PBPK models.  `plot()` of an `rxode2`
+  user interface
   (`rxUi`) object or compiled `rxode2` model draws its diagram, and the new
   "Automatic model diagrams" vignette describes the feature.
 
