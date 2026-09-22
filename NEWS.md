@@ -1,5 +1,10 @@
 # nlmixr2plot 5.1.0.9000
 
+* Fixed stratified censored VPCs (`vpcCens()`/`vpcCensTad()`, or `vpcPlot()`
+  with `cens = TRUE`) failing with "The following specified stratification
+  columns were NOT found in observation data"; stratification columns missing
+  from the fit table are now carried over from the original data, matched by
+  row (#56).
 * Fixed the confidence-band width (and its legend label) for `vpcPlot()`/
   `vpcPlotTad()` with the `tidyvpc` backend; `ci = c(lower, upper)` was passed
   to `tidyvpc::vpcstats()` as `conf.level = ci[2]` instead of the actual
