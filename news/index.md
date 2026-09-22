@@ -2,6 +2,15 @@
 
 ## nlmixr2plot 5.1.0.9000
 
+- Fixed stratified censored VPCs
+  ([`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/[`vpcCensTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
+  or
+  [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
+  with `cens = TRUE`) failing with “The following specified
+  stratification columns were NOT found in observation data”;
+  stratification columns missing from the fit table are now carried over
+  from the original data, matched by row
+  ([\#56](https://github.com/nlmixr2/nlmixr2plot/issues/56)).
 - Fixed the confidence-band width (and its legend label) for
   [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/
   [`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
