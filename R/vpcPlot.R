@@ -505,12 +505,26 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   .lorig <- tolower(names(.orig))
   .by <- intersect(.lo[!(.lo %in% .lo[duplicated(.lo)])],
                    .lorig[!(.lorig %in% .lorig[duplicated(.lorig)])])
+  # columns that are numbers in the fitted data are compared as numbers at full
+  # precision (as.character() keeps only 15 digits); numbers supplied as text
+  # are read as numbers so they still match
+  .num <- vapply(.by, function(n) {
+    is.numeric(.orig[[which(.lorig == n)]])
+  }, logical(1))
   .key <- function(d, lower) {
     do.call(paste, c(lapply(.by, function(n) {
-      # as.character() so numbers read in as text still match; prefix each
-      # value with its length (and code NA separately) so no two different
-      # rows share a key, even with a literal "NA" or the separator in a value
-      .v <- as.character(d[[which(lower == n)]])
+      .x <- d[[which(lower == n)]]
+      .v <- as.character(.x)
+      if (.num[[n]]) {
+        .y <- if (is.numeric(.x)) as.double(.x) else
+          suppressWarnings(as.numeric(.v))
+        # text that is not a number is kept as text, so it cannot match
+        .ok <- !is.na(.y)
+        .v[.ok] <- sprintf("%.17g", .y[.ok])
+      }
+      # prefix each value with its length (and code NA separately) so no two
+      # different rows share a key, even with a literal "NA" or the separator
+      # in a value
       ifelse(is.na(.v), "NA", paste0(nchar(.v, type="bytes"), ":", .v))
     }), sep="\r"))
   }

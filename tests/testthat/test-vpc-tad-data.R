@@ -145,6 +145,24 @@ test_that(".vpcFitColForData does not guess between identical-looking fitted row
   expect_true(is.na(.r))
   expect_equal(.vpcFitColForData(.fit4, .orig4, "tad", supplied=TRUE), 5)
 
+  # numbers are compared at full precision (not the 15 digits of
+  # as.character()), while numbers given as text still match
+  .orig6 <- data.frame(ID=1e15, TIME=0.1 + 0.2, DV=2, EVID=0)
+  .fit6 <- list(origData=.orig6, tad=5, env=list(.rownum=1L))
+  .sub6 <- .orig6
+  .sub6$ID <- 1e15 + 1
+  expect_warning(.r <- .vpcFitColForData(.fit6, .sub6, "tad", supplied=TRUE),
+                 "1 observation\\(s\\) in 'data' do not match")
+  expect_true(is.na(.r))
+  .sub6 <- .orig6
+  .sub6$TIME <- 0.3
+  expect_warning(.vpcFitColForData(.fit6, .sub6, "tad", supplied=TRUE),
+                 "1 observation\\(s\\) in 'data' do not match")
+  .sub6 <- .orig6
+  .sub6$ID <- factor("1e15")
+  .sub6$DV <- "2"
+  expect_equal(.vpcFitColForData(.fit6, .sub6, "tad", supplied=TRUE), 5)
+
   # records vpcPlot() drops (mdv = 1, even with evid = 0) do not warn
   .sub5 <- data.frame(ID=1, TIME=7, DV=0, EVID=0, MDV=1)
   expect_warning(.r <- .vpcFitColForData(.fit4, .sub5, "tad", supplied=TRUE),
