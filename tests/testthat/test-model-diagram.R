@@ -592,3 +592,22 @@ test_that("PD inputs go above, outputs below and exchange compartments right", {
   out <- ec[ec$type == "elimination" & ec$from %in% c("resp", "center"), ]
   expect_true(all(out$y1 < out$y0))
 })
+
+test_that("ifelse branches with several negative terms are losses", {
+  m <- rxode2::rxode2({
+    d/dt(central) = ifelse(time > 12, -CL1*central - Q*central, -CL2*central - Q*central)
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "central", NA, "elimination")), 1L)
+  expect_equal(sum(g$edges$type == "input"), 0L)
+})
+
+test_that("transfer matching ignores the order of sums and products", {
+  m <- rxode2::rxode2({
+    d/dt(A) = -Vmax*A/(Km + A)
+    d/dt(B) = A*Vmax/(A + Km) - kel*B
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "A", "B", "transfer")), 1L)
+  expect_equal(sum(g$edges$type == "interaction"), 0L)
+})

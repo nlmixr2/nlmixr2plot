@@ -585,18 +585,56 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   }
   if (is.call(x) && identical(x[[1]], quote(ifelse)) && length(x) == 4L) {
     # `ifelse(cond, -a, -b)`: a common sign of both branches is kept
-    .a <- .mdTerms(x[[3]])
-    .b <- .mdTerms(x[[4]])
-    if (length(.a) == 1L && length(.b) == 1L && .a[[1]]$sign == .b[[1]]$sign) {
-      return(list(list(sign = .a[[1]]$sign,
+    .signs <- vapply(c(.mdTerms(x[[3]]), .mdTerms(x[[4]])),
+                     function(t) t$sign, numeric(1))
+    if (all(.signs == -1)) {
+      return(list(list(sign = -1,
                        expr = as.call(list(quote(ifelse), x[[2]],
-                                           .a[[1]]$expr, .b[[1]]$expr)))))
+                                           .mdNegExpr(x[[3]]),
+                                           .mdNegExpr(x[[4]]))))))
     }
   }
   if (is.numeric(x) && length(x) == 1L && !is.na(x) && x < 0) {
     return(list(list(sign = -1, expr = -x)))
   }
   list(list(sign = 1, expr = x))
+}
+
+#' Negate an expression, removing a leading unary minus when possible
+#' @noRd
+.mdNegExpr <- function(x) {
+  if (is.call(x) && identical(x[[1]], quote(`(`))) return(.mdNegExpr(x[[2]]))
+  if (is.call(x) && identical(x[[1]], quote(`-`)) && length(x) == 2L) return(x[[2]])
+  as.call(list(quote(`-`), x))
+}
+
+#' Canonical form of an expression: operands of sums and products sorted
+#' @noRd
+.mdCanon <- function(x) {
+  if (!is.call(x)) return(x)
+  if (identical(x[[1]], quote(`(`))) return(.mdCanon(x[[2]]))
+  for (.op in list(quote(`+`), quote(`*`))) {
+    if (identical(x[[1]], .op) && length(x) == 3L) {
+      .ops <- list()
+      .flat <- function(e) {
+        if (is.call(e) && identical(e[[1]], quote(`(`))) return(.flat(e[[2]]))
+        if (is.call(e) && identical(e[[1]], .op) && length(e) == 3L) {
+          .flat(e[[2]])
+          .flat(e[[3]])
+        } else {
+          .ops[[length(.ops) + 1L]] <<- .mdCanon(e)
+        }
+      }
+      .flat(x)
+      .ops <- .ops[order(vapply(.ops, .mdDeparse, character(1)))]
+      return(Reduce(function(a, b) as.call(list(.op, a, b)), .ops))
+    }
+  }
+  for (.i in seq_along(x)[-1]) {
+    .v <- .mdCanon(x[[.i]])
+    if (!is.null(.v)) x[[.i]] <- .v
+  }
+  x
 }
 
 #' @noRd
@@ -752,8 +790,8 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @noRd
 .mdTermKey <- function(x) {
   .f <- .mdTermFactors(x)
-  .num <- vapply(.f$num, .mdDeparse, character(1))
-  .den <- vapply(.f$den, .mdDeparse, character(1))
+  .num <- vapply(.f$num, function(e) .mdDeparse(.mdCanon(e)), character(1))
+  .den <- vapply(.f$den, function(e) .mdDeparse(.mdCanon(e)), character(1))
   paste0(paste(sort(.num), collapse = "*"), "/",
          paste(sort(.den), collapse = "*"))
 }
