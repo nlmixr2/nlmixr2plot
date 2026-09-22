@@ -1,5 +1,11 @@
 # nlmixr2plot 5.1.1
 
+* Fixed `vpcPlot()` with `method = "tidyvpc"` when the observed data has
+  observation records with a missing `DV`.  Those records were dropped from
+  the observed data but kept in the simulation, so a stratified (e.g.
+  multiple-endpoint) VPC errored and a single-endpoint VPC paired simulated
+  values with the wrong observations.  The matching simulated records are now
+  dropped too (#74).
 * `plot()` of a multiple-endpoint fit no longer creates empty
   "Endpoint: " groups for state compartments without observations (like
   `depot` or `central`); only observed endpoints are plotted.  `plot()` of an
