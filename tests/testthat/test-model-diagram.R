@@ -306,3 +306,65 @@ test_that("terms inside if/else blocks are used", {
   expect_equal(nrow(.edge(g, "center", NA, "elimination")), 1L)
   expect_equal(g$nodes$role[g$nodes$name == "periph"], "peripheral")
 })
+
+test_that("interaction direction accounts for denominators and intermediate variables", {
+  m <- rxode2::rxode2({
+    d/dt(center) = -cl*center
+    d/dt(e1) = kin/(1 + imax*center) - kout*e1
+    d/dt(e2) = kin*(1 + emax*center/(ec50 + center)) - kout*e2
+  })
+  g <- modelGraph(m, dosing = "center")
+  expect_equal(.edge(g, "center", "e1", "interaction")$sign, -1)
+  expect_equal(.edge(g, "center", "e2", "interaction")$sign, 1)
+  # inhibition written through an intermediate variable
+  g <- suppressMessages(modelGraph(.pkTurnover))
+  e <- .edge(g, "center", "effect", "interaction")
+  expect_equal(nrow(e), 1L)
+  expect_equal(e$sign, -1)
+  expect_equal(nrow(.edge(g, NA, "effect", "input")), 1L)
+})
+
+test_that("parallel and externally driven transfers are mass transfer", {
+  m <- rxode2::rxode2({
+    d/dt(A) = -k1*A - k2*A
+    d/dt(B) = k1*A + k2*A - kel*B
+  })
+  g <- modelGraph(m)
+  e <- .edge(g, "A", "B", "transfer")
+  expect_equal(nrow(e), 1L)
+  expect_match(e$label, "k1 * A", fixed = TRUE)
+  expect_match(e$label, "k2 * A", fixed = TRUE)
+  expect_equal(nrow(.edge(g, "A", NA, "elimination")), 0L)
+  expect_equal(sum(g$edges$type == "interaction"), 0L)
+  m <- rxode2::rxode2({
+    d/dt(A) = -Vmax*E
+    d/dt(B) = Vmax*E
+    d/dt(E) = kin - kout*E
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "A", "B", "transfer")), 1L)
+})
+
+test_that("no interaction arrow crosses a compartment in the final layout", {
+  m <- rxode2::rxode2({
+    d/dt(depot) = -ka*depot
+    d/dt(center) = ka*depot - cl*center - kmet1*center - kmet2*center
+    d/dt(met1) = kmet1*center - kel1*met1
+    d/dt(met2) = kmet2*center - kel2*met2
+    d/dt(eff1) = kin - kout*eff1*center - k12*eff1 + k21*eff2
+    d/dt(eff2) = k12*eff1 - k21*eff2
+    d/dt(ce) = ke0*(center - ce)
+  })
+  g <- modelGraph(m)
+  n <- g$nodes
+  rownames(n) <- n$name
+  e <- g$edges[g$edges$type == "interaction", ]
+  expect_gt(nrow(e), 0L)
+  for (.i in seq_len(nrow(e))) {
+    .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
+    expect_false(nlmixr2plot:::.mdSegmentCrosses(
+      n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
+      n[.others, "x"], n[.others, "y"]), label = paste(e$from[.i], e$to[.i]))
+  }
+  expect_equal(nrow(unique(n[, c("x", "y")])), nrow(n))
+})

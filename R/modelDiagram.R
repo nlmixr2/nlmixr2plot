@@ -50,7 +50,9 @@
 #'
 #' - `edges`: data frame with `from`, `to` (`NA` for inputs/eliminations),
 #'   `type` (`"transfer"`, `"elimination"`, `"input"` or `"interaction"`),
-#'   `sign` (`1` when the term is added, `-1` when it is subtracted),
+#'   `sign` (`1` when the term is added, `-1` when it is subtracted; for
+#'   interactions `1` is stimulation and `-1` inhibition, taking into account
+#'   compartments that only appear in a denominator),
 #'   `bidirectional` (for transfers) and `label` (the model term(s)).
 #' @export
 #' @author Matthew L. Fidler
@@ -114,8 +116,8 @@ modelGraph <- function(object, dosing = NULL, data = NULL) {
 #' mass with (peripheral compartments) to its left; unidirectional transfer
 #' (e.g. to a metabolite) and eliminations go below; compartments that
 #' interact with the model without mass transfer (e.g. effect compartments or
-#' pharmacodynamic models) go to the right, with their own inputs above and
-#' outputs below.
+#' pharmacodynamic models) go to the right, with their own inputs above,
+#' outputs below and exchange compartments further right.
 #'
 #' Mass transfer is drawn with solid arrows; interactions without mass
 #' transfer are dashed (with a "tee" arrow head for inhibition when using
@@ -271,7 +273,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       state = .s,
       sign = vapply(.t, function(x) x$sign, numeric(1)),
       key = vapply(.t, function(x) .mdTermKey(x$expr), character(1)),
-      label = vapply(.t, function(x) .mdDeparse(x$expr), character(1)),
+      label = vapply(.t, function(x) {
+        .mdDeparse(.mdFold(x$expr, .parsed$defs))
+      }, character(1)),
       stringsAsFactors = FALSE
     )
   }))
@@ -279,6 +283,17 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .terms$states <- unlist(lapply(.states, function(.s) {
       lapply(.parsed$ode[[.s]], function(x) {
         .mdExprStates(x$expr, .states, .deps)
+      })
+    }), recursive = FALSE)
+    # compartments that only appear in a term's denominator decrease it
+    .terms$denOnly <- unlist(lapply(.states, function(.s) {
+      lapply(.parsed$ode[[.s]], function(x) {
+        .f <- .mdTermFactors(x$expr)
+        .num <- unique(unlist(lapply(.f$num, .mdExprStates, states = .states,
+                                     deps = .deps)))
+        .den <- unique(unlist(lapply(.f$den, .mdExprStates, states = .states,
+                                     deps = .deps)))
+        setdiff(.den, .num)
       })
     }), recursive = FALSE)
   }
@@ -351,6 +366,12 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 
 #' Parse model lines into ODE terms and variable -> state dependencies
 #'
+#' Variables that are assigned once (outside of `if` blocks) and depend on a
+#' compartment amount are substituted into the differential equations before
+#' they are split into terms, so that the direction of an effect expressed
+#' through an intermediate variable (e.g. `PD <- 1 - emax*cp/(ec50 + cp)`) is
+#' seen.
+#'
 #' @param lines list of model expressions
 #' @return list(ode = named list of term lists, deps = named list of
 #'   variables to the (possibly empty) set of variables they depend on)
@@ -359,6 +380,38 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .env <- new.env(parent = emptyenv())
   .env$ode <- list()
   .env$deps <- list()
+  .env$defs <- list()
+  .env$count <- list()
+  .env$states <- character(0)
+  .isAssign <- function(x) {
+    length(x) == 3L &&
+      (identical(x[[1]], quote(`<-`)) || identical(x[[1]], quote(`=`)) ||
+         identical(x[[1]], quote(`~`)))
+  }
+  # first pass: compartment names and how often (and where) variables are
+  # assigned
+  .count <- function(x, inIf) {
+    if (!is.call(x)) return(invisible())
+    .f <- x[[1]]
+    if (identical(.f, quote(`{`))) {
+      for (.i in seq_along(x)[-1]) .count(x[[.i]], inIf)
+    } else if (identical(.f, quote(`if`))) {
+      .count(x[[3]], TRUE)
+      if (length(x) == 4L) .count(x[[4]], TRUE)
+    } else if (.isAssign(x)) {
+      .state <- .mdDdtState(x[[2]])
+      if (!is.null(.state)) {
+        .env$states <- union(.env$states, .state)
+      } else if (is.name(x[[2]])) {
+        .n <- as.character(x[[2]])
+        # an assignment inside `if` can never be substituted
+        .env$count[[.n]] <- (if (is.null(.env$count[[.n]])) 0 else .env$count[[.n]]) +
+          (if (inIf) 2 else 1)
+      }
+    }
+    invisible()
+  }
+  for (.l in lines) .count(.l, FALSE)
   .walk <- function(x) {
     if (!is.call(x)) return(invisible())
     .f <- x[[1]]
@@ -367,23 +420,51 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     } else if (identical(.f, quote(`if`))) {
       .walk(x[[3]])
       if (length(x) == 4L) .walk(x[[4]])
-    } else if (length(x) == 3L &&
-                 (identical(.f, quote(`<-`)) || identical(.f, quote(`=`)) ||
-                    identical(.f, quote(`~`)))) {
+    } else if (.isAssign(x)) {
       .lhs <- x[[2]]
-      .rhs <- x[[3]]
+      .rhs <- .mdSubstitute(x[[3]], .env$defs)
       .state <- .mdDdtState(.lhs)
       if (!is.null(.state)) {
         .env$ode[[.state]] <- c(.env$ode[[.state]], .mdTerms(.rhs))
       } else if (is.name(.lhs)) {
         .n <- as.character(.lhs)
-        .env$deps[[.n]] <- union(.env$deps[[.n]], all.vars(.rhs))
+        .env$deps[[.n]] <- union(.env$deps[[.n]], all.vars(x[[3]]))
+        if (identical(.env$count[[.n]], 1) && !(.n %in% .env$states) &&
+              any(all.vars(.rhs) %in% .env$states)) {
+          .env$defs[[.n]] <- .rhs
+        }
       }
     }
     invisible()
   }
   for (.l in lines) .walk(.l)
-  list(ode = .env$ode, deps = .env$deps)
+  list(ode = .env$ode, deps = .env$deps, defs = .env$defs)
+}
+
+#' Replace substituted definitions by their variable names (for labels)
+#' @noRd
+.mdFold <- function(expr, defs) {
+  if (length(defs) == 0L) return(expr)
+  .keys <- vapply(defs, .mdDeparse, character(1))
+  .fold <- function(e) {
+    if (is.call(e)) {
+      .w <- which(.keys == .mdDeparse(e))
+      if (length(.w) > 0L) return(as.name(names(defs)[.w[length(.w)]]))
+      for (.i in seq_along(e)[-1]) {
+        .v <- .fold(e[[.i]])
+        if (!is.null(.v)) e[[.i]] <- .v
+      }
+    }
+    e
+  }
+  .fold(expr)
+}
+
+#' Substitute variable definitions into an expression
+#' @noRd
+.mdSubstitute <- function(expr, defs) {
+  if (length(defs) == 0L) return(expr)
+  do.call(substitute, list(expr, defs))
 }
 
 #' Return the state name for a `d/dt(state)` expression or NULL
@@ -499,12 +580,13 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   paste(deparse(.mdStripParen(x), width.cutoff = 500L), collapse = " ")
 }
 
-#' Canonical key of a product/quotient term (factor order ignored)
+#' Numerator and denominator factors of a product/quotient term
+#' @return list(num = list of expressions, den = list of expressions)
 #' @noRd
-.mdTermKey <- function(x) {
+.mdTermFactors <- function(x) {
   .env <- new.env(parent = emptyenv())
-  .env$num <- character(0)
-  .env$den <- character(0)
+  .env$num <- list()
+  .env$den <- list()
   .flat <- function(e, num) {
     if (is.call(e) && identical(e[[1]], quote(`(`))) return(.flat(e[[2]], num))
     if (is.call(e) && length(e) == 3L && identical(e[[1]], quote(`*`))) {
@@ -514,14 +596,23 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .flat(e[[2]], num)
       .flat(e[[3]], !num)
     } else if (num) {
-      .env$num <- c(.env$num, .mdDeparse(e))
+      .env$num[[length(.env$num) + 1L]] <- e
     } else {
-      .env$den <- c(.env$den, .mdDeparse(e))
+      .env$den[[length(.env$den) + 1L]] <- e
     }
   }
   .flat(x, TRUE)
-  paste0(paste(sort(.env$num), collapse = "*"), "/",
-         paste(sort(.env$den), collapse = "*"))
+  list(num = .env$num, den = .env$den)
+}
+
+#' Canonical key of a product/quotient term (factor order ignored)
+#' @noRd
+.mdTermKey <- function(x) {
+  .f <- .mdTermFactors(x)
+  .num <- vapply(.f$num, .mdDeparse, character(1))
+  .den <- vapply(.f$den, .mdDeparse, character(1))
+  paste0(paste(sort(.num), collapse = "*"), "/",
+         paste(sort(.den), collapse = "*"))
 }
 
 # ---------------------------------------------------------------------------
@@ -556,9 +647,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   for (.i in seq_len(.n)) {
     if (.used[.i] || terms$sign[.i] > 0) next
     .src <- terms$state[.i]
-    # the -term must contain the source amount, or no compartment at all
-    # (zero-order transfer like `-rate` / `+rate`)
-    if (!(.src %in% terms$states[[.i]]) && length(terms$states[[.i]]) > 0L) next
+    # a term subtracted from one compartment and added to another is
+    # conserved flow, whatever drives it (first-order `k*A`, zero-order
+    # `rate`, or another compartment like an enzyme `Vmax*E`)
     .j <- which(terms$sign > 0 & terms$state != .src &
                   terms$key == terms$key[.i] &
                   !vapply(.matchedFrom, function(m) .src %in% m, logical(1)))
@@ -576,17 +667,18 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .s <- terms$state[.i]
     .st <- terms$states[[.i]]
     .others <- setdiff(.st, .s)
+    # direction of the effect of each other compartment on d/dt(.s)
+    .dir <- function(o) {
+      terms$sign[.i] * (if (o %in% terms$denOnly[[.i]]) -1 else 1)
+    }
     if (terms$sign[.i] < 0) {
       if (.s %in% .st || length(.others) == 0L) {
         .add(.s, NA_character_, "elimination", -1, terms$label[.i])
       }
-      for (.o in .others) .add(.o, .s, "interaction", -1, terms$label[.i])
-    } else {
-      if (length(.others) == 0L) {
-        .add(NA_character_, .s, "input", 1, terms$label[.i])
-      }
-      for (.o in .others) .add(.o, .s, "interaction", 1, terms$label[.i])
+    } else if (length(.others) == 0L) {
+      .add(NA_character_, .s, "input", 1, terms$label[.i])
     }
+    for (.o in .others) .add(.o, .s, "interaction", .dir(.o), terms$label[.i])
   }
   .e <- do.call(rbind, .rows)
   if (is.null(.e)) .e <- .empty
@@ -647,7 +739,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .y[s] <<- y
   }
   # breadth-first placement of the (mass transfer) neighbors of placed nodes
-  .spread <- function(start) {
+  # `side` is where exchange (bidirectional) partners go: left of the PK
+  # model, right of PD models so they stay off the arrows coming in from the
+  # left
+  .spread <- function(start, side = -1) {
     .queue <- start
     while (length(.queue) > 0L) {
       .s <- .queue[1]
@@ -665,7 +760,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .nb <- length(.lr)
       .off <- (seq_len(.nb) - 1) - (.nb - 1) / 2
       for (.k in seq_along(.lr)) {
-        .place(.lr[.k], .x[.s] - 1, .y[.s] + .off[.k], -1)
+        .place(.lr[.k], .x[.s] + side, .y[.s] + .off[.k], -1)
         if (.role[.lr[.k]] == "other") .role[.lr[.k]] <<- "peripheral"
       }
       # downstream (unidirectional out of .s): below
@@ -706,7 +801,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       }
       .place(.s, .nx, .ny, -1)
       .role[.s] <- "effect"
-      .spread(.s)
+      .spread(.s, side = 1)
       next
     }
     .left <- states[is.na(.x)]
