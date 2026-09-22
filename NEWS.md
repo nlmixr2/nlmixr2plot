@@ -47,6 +47,9 @@
   (#68).  Because the simulation now follows `data`, an endpoint without
   observations in `data` is no longer simulated either, so it drops out of a
   multiple-endpoint VPC instead of being shown as a simulated-only panel.
+  For a model with a non-normal endpoint, `data` now needs a `CMT` column,
+  since the compartments would otherwise be taken from the fitted data by row
+  number and would not match `data`.
 * Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the `data`
   argument; the observed data was rebuilt from the fit's dataset instead of the
   supplied `data` (#62).

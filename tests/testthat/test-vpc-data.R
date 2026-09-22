@@ -72,6 +72,20 @@ test_that("pred_corr VPC uses the supplied data (#62)", {
   expect_equal(length(unique(db$sim$id)), length(unique(od$ID)))
   expect_setequal(unique(db$sim$WT), unique(od$WT))
 
+  # the fit's data is restored even when the simulation errors
+  expect_error(.vpcSimData(fit, half, nretry=-1))
+  expect_equal(fit$origData, od)
+  expect_equal(nrow(fit$simInfo$events), nrow(od))
+
+  # a supplied simulation was made from its own data, so `data` only replaces
+  # the observed side (and says so)
+  .sim <- nlmixr2est::vpcSim(fit, n=3, pred=TRUE)
+  expect_warning(
+    db <- vpcPlot(.sim, data=half, vpcdb=TRUE, method="vpc"),
+    "does not change a supplied")
+  expect_equal(length(unique(db$obs$id)), 4L)
+  expect_equal(length(unique(db$sim$id)), length(unique(od$ID)))
+
   skip_if_not_installed("tidyvpc")
   for (.pc in c(FALSE, TRUE)) {
     .warn <- character(0)

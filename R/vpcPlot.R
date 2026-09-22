@@ -445,6 +445,20 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' @noRd
 .vpcSimData <- function(fit, data, ...) {
   if (!is.null(data)) {
+    # For a model with a non-normal endpoint, nlmixr2est takes the compartment
+    # of each record from the fit's saved data by row number when the events
+    # have no "CMT" column.  Those row numbers are the fitted data's, so they
+    # do not line up with a different `data` and the normal-endpoint records
+    # would be picked out wrongly (silently dropping observations).  Only the
+    # fit knows that translation, so ask for the column instead of guessing.
+    .dist <- fit$ui$predDf$distribution
+    if (!all(.dist %in% c("norm", "dnorm", "t", "cauchy")) &&
+          !any(names(data) == "CMT")) {
+      stop("'data' needs a 'CMT' column to simulate this model, which has a ",
+           "non-normal endpoint; without it the compartments are taken from ",
+           "the fitted data by row number, which does not match 'data'",
+           call.=FALSE)
+    }
     .env <- fit$env
     .origData <- .env$origData
     on.exit(assign("origData", .origData, envir=.env))

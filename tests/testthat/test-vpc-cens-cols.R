@@ -103,3 +103,24 @@ test_that("vpc_cens counts each censored record only on its own side (#55)", {
   expect_equal(.frac(lloq=1), 1/4)
   expect_equal(.frac(uloq=5), 1/4)
 })
+
+test_that(".vpcSimData needs a CMT column for a non-normal endpoint (#68)", {
+  # the compartments of a model with a non-normal endpoint are taken from the
+  # fit's saved data by row number, which does not match a supplied `data`
+  .fit <- list(ui=list(predDf=data.frame(distribution=c("norm", "pois"))),
+               env=new.env(parent=emptyenv()))
+  .d <- data.frame(ID=1, TIME=0, DV=1, cmt=1)
+  expect_error(.vpcSimData(.fit, .d), "needs a 'CMT' column")
+
+  # the guard does not fire with an uppercase CMT column, nor for an
+  # all-normal model (the fake fit still fails later, inside vpcSim())
+  .msg <- function(fit, data) {
+    tryCatch(.vpcSimData(fit, data), error=function(e) conditionMessage(e))
+  }
+  .d$CMT <- 1
+  expect_false(grepl("needs a 'CMT' column", .msg(.fit, .d)))
+
+  .fit$ui$predDf <- data.frame(distribution="norm")
+  .d$CMT <- NULL
+  expect_false(grepl("needs a 'CMT' column", .msg(.fit, .d)))
+})
