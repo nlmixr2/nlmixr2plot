@@ -44,6 +44,7 @@ test_that("test plots with vdiffr", {
 
   apo <- nlmixr2est::augPred(fit)
   expect_error(plot(apo), NA)
+  expect_error(plot(apo, log = "y"), NA)
   expect_error(vpcPlot(fit, n = 10), NA)
   expect_error(vpcPlot(fitSim), NA)
   expect_error(vpcPlotTad(fit, n = 10), NA)
