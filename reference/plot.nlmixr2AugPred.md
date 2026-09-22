@@ -6,7 +6,7 @@ Plot a nlmixr2 augPred object
 
 ``` r
 # S3 method for class 'nlmixr2AugPred'
-plot(x, y, ...)
+plot(x, y, ..., log = "")
 ```
 
 ## Arguments
@@ -22,6 +22,15 @@ plot(x, y, ...)
 - ...:
 
   Other arguments (ignored)
+
+- log:
+
+  a character string which contains `"x"` if the x axis is to be
+  logarithmic, `"y"` if the y axis is to be logarithmic and `"xy"` or
+  `"yx"` if both axes are to be logarithmic (as in
+  [`graphics::plot.default()`](https://rdrr.io/r/graphics/plot.default.html)).
+  The default `""` uses linear axes. Non-positive values cannot be shown
+  on a log axis and are dropped.
 
 ## Value
 
@@ -108,6 +117,10 @@ a <- nlmixr2est::augPred(fit)
 
 # you can plot it with plot(augPred object)
 plot(a)
+
+
+# or with a log-scaled y axis
+plot(a, log = "y")
 
 
 # }

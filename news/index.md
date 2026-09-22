@@ -1,7 +1,13 @@
 # Changelog
 
-## nlmixr2plot (development version)
+## nlmixr2plot 5.1.1
 
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of an
+  [`augPred()`](https://rdrr.io/pkg/nlme/man/augPred.html) object now
+  accepts a base-R style `log` argument (`log = "y"`, `"x"` or `"xy"`)
+  to draw the individual plots on log-scaled axes; non-positive values,
+  which cannot be shown on a log axis, are dropped
+  ([\#32](https://github.com/nlmixr2/nlmixr2plot/issues/32)).
 - [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
   [`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
   [`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
@@ -16,13 +22,11 @@
   ([\#57](https://github.com/nlmixr2/nlmixr2plot/issues/57)). The
   observed-data prediction correction for a supplied simulation is
   computed from that simulation’s own fit rather than from whichever
-  `vpcSim(pred = TRUE)` ran last. \# nlmixr2plot 5.1.0.9000
-
+  `vpcSim(pred = TRUE)` ran last.
 - Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the
   `data` argument; the observed data was rebuilt from the fit’s dataset
   instead of the supplied `data`
   ([\#62](https://github.com/nlmixr2/nlmixr2plot/issues/62)).
-
 - Fixed stratified censored VPCs
   ([`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/[`vpcCensTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
   or
@@ -32,7 +36,6 @@
   stratification columns missing from the fit table are now carried over
   from the original data, matched by row
   ([\#56](https://github.com/nlmixr2/nlmixr2plot/issues/56)).
-
 - Fixed the confidence-band width (and its legend label) for
   [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/
   [`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
