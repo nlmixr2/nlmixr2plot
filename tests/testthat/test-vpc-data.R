@@ -57,6 +57,7 @@ test_that("pred_corr VPC uses the supplied data (#62)", {
 
   # the fit's data is restored after simulating from the supplied data
   expect_equal(fit$origData, od)
+  expect_equal(nrow(fit$simInfo$events), nrow(od))
 
   # stratifying by a data covariate keeps the supplied subjects and rows
   db <- suppressWarnings(
