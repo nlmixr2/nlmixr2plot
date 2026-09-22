@@ -4,20 +4,46 @@
   "Endpoint: " groups for state compartments without observations (like
   `depot` or `central`); only observed endpoints are plotted.  `plot()` of an
   `augPred()` object likewise skips endpoints without data (#44).
-  
 * `vpcPlot()`/`vpcPlotTad()` of a multiple-endpoint fit whose data codes the
   endpoints with `cmt` no longer shows an extra `NA` panel (or a single `NA`
   panel with `pred_corr = TRUE`); the simulated compartment labels are now
   matched to the observed ones by name (#44).
-  
-* Censored `vpcPlot(cens = TRUE)`/`vpcCens()` with the `vpc` method no longer
-  errors for multiple-endpoint fits ("stratification columns were NOT found in
-  observation data"); the observed endpoints are now used for stratification
-  (#44).
+* The censored VPC (`vpcCens()`, or `vpcPlot()` with `cens = TRUE` and the
+  `vpc` backend) of a multiple-endpoint fit now stratifies by the observed
+  endpoints only, matching the simulated endpoints to them (#44).
 * `plot()` of a censored multiple-endpoint fit no longer errors in
   `geom_cens()` ("argument must be coercible to non-negative integer") for an
   endpoint without censored observations (#44).
-
+* The censored VPC (`vpcCens()`, `vpcCensTad()`, or `vpcPlot()` with
+  `cens = TRUE` and the `vpc` backend) now honours the `data` argument; it
+  previously always used the fitted data, whatever `data` was supplied (#55).
+  The observed data now comes from the original (or supplied) dataset instead of
+  the fit, so censored records are identified from the `CENS` column rather than
+  from the fit's imputed `DV` (which, for `censMethod = "cdf"`, could land above
+  the limit and be counted as uncensored).  Records without an observation are
+  dropped, as in the fit.
+* The VPC observed data now drops records with `MDV = 1` even when an `EVID`
+  column is also present (previously only `EVID` was checked when both existed).
+* `plot()` of an `augPred()` object now accepts a base-R style `log` argument
+  (`log = "y"`, `"x"` or `"xy"`) to draw the individual plots on log-scaled
+  axes; non-positive values, which cannot be shown on a log axis, are dropped
+  (#32).
+* `vpcPlot()`, `vpcPlotTad()`, `vpcCens()` and `vpcCensTad()` now use a
+  supplied `nlmixr2est::vpcSim()` simulation instead of discarding it and
+  re-simulating with the default `n = 300`.  Supplying `n` alongside a
+  simulation warns that it is ignored, and `pred_corr = TRUE` errors unless the
+  simulation was created with `pred = TRUE` (#57).  The observed-data
+  prediction correction for a supplied simulation is computed from that
+  simulation's own fit rather than from whichever `vpcSim(pred = TRUE)` ran
+  last.
+* Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the `data`
+  argument; the observed data was rebuilt from the fit's dataset instead of the
+  supplied `data` (#62).
+* Fixed stratified censored VPCs (`vpcCens()`/`vpcCensTad()`, or `vpcPlot()`
+  with `cens = TRUE`) failing with "The following specified stratification
+  columns were NOT found in observation data"; the observed data now comes
+  from the original (or supplied) dataset, which keeps the stratification
+  columns that the fit table drops (#56, #55).
 * Fixed the confidence-band width (and its legend label) for `vpcPlot()`/
   `vpcPlotTad()` with the `tidyvpc` backend; `ci = c(lower, upper)` was passed
   to `tidyvpc::vpcstats()` as `conf.level = ci[2]` instead of the actual

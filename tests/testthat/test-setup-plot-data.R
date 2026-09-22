@@ -60,19 +60,20 @@ test_that("plot.nlmixr2AugPred skips endpoints without data (#44)", {
   expect_false(anyNA(.p[[1]]$data$values))
 })
 
-test_that(".vpcCensEndpoint stratifies censored VPCs by observed endpoints (#44)", {
-  .obs <- data.frame(CMT = factor(c("cp", "pca"),
-                                  levels = c("depot", "center", "cp", "pca")))
-  # integer dvid codes are decoded with the observed dvid levels
-  .r <- .vpcCensEndpoint(.obs, data.frame(dvid = c(2L, 1L)), "dvid",
-                         data.frame(dvid = factor(c("cp", "pca"))))
-  expect_equal(.r$obs$dvid, factor(c("cp", "pca")))
+test_that(".vpcMatchStrata stratifies by observed endpoints only (#44)", {
+  .lvl <- c("depot", "center", "cp", "pca")
+  .obs <- data.frame(cmt = factor(c("cp", "pca"), levels = .lvl),
+                     dvid = factor(c("cp", "pca")))
+  # labels, integer compartment codes and integer dvid codes all decode
+  for (.sim in list(data.frame(cmt = c("pca", "cp")),
+                    data.frame(cmt = c(4L, 3L)))) {
+    .r <- .vpcMatchStrata(.obs, .sim, "cmt")
+    expect_equal(.r$obs$cmt, factor(c("cp", "pca")))
+    expect_equal(.r$sim$cmt, factor(c("pca", "cp"), levels = c("cp", "pca")))
+  }
+  .r <- .vpcMatchStrata(.obs, data.frame(dvid = c(2L, 1L)), "dvid")
   expect_equal(.r$sim$dvid, factor(c("pca", "cp"), levels = c("cp", "pca")))
-  # integer cmt codes are model compartment numbers
-  .r <- .vpcCensEndpoint(.obs, data.frame(cmt = c(4L, 3L)), "cmt")
-  expect_equal(.r$sim$cmt, factor(c("pca", "cp"), levels = c("cp", "pca")))
-  # an uppercase CMT stratification is recoded in place
-  .r <- .vpcCensEndpoint(.obs, data.frame(CMT = c("pca", "cp")), "CMT")
-  expect_equal(levels(.r$obs$CMT), c("cp", "pca"))
-  expect_equal(.r$sim$CMT, factor(c("pca", "cp"), levels = c("cp", "pca")))
+  # columns that are not stratified keep their levels
+  .r <- .vpcMatchStrata(.obs, data.frame(cmt = c(4L, 3L)), NULL)
+  expect_equal(levels(.r$obs$cmt), .lvl)
 })
