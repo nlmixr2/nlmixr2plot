@@ -190,7 +190,7 @@ vpcPlot <- function(
   if (length(.mdv) == 1L) {
     .obs <- .obs[.obs[[.mdv]] == 0, , drop = FALSE]
   }
-  if (cens & !tidyvpc) {
+  if (cens && !tidyvpc) {
     if (is.null(lloq) && is.null(uloq)) {
       stop("this data is not censored")
     }
@@ -343,7 +343,10 @@ vpcPlot <- function(
         .tidyObs <- c(.tidyObs, "blq=blq", "alq=alq", "lloq=lloq", "uloq=uloq")
       } else {
         stop(
-          "it is unclear the censoring type of the data, please make sure the 'cens' column is coded as 0 for non-censored, 1 for blq, and -1 for alq",
+          paste0(
+            "it is unclear the censoring type of the data, please make sure the 'cens' column ",
+            "is coded as 0 for non-censored, 1 for blq, and -1 for alq"
+          ),
           call. = FALSE
         )
       }

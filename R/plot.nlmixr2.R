@@ -26,7 +26,7 @@
   if (any(names(.dat) == "CENS")) {
     .censLeft <- any(.dat$CENS == 1)
     .censRight <- any(.dat$CENS == -1)
-    if (.censLeft & .censRight) {
+    if (.censLeft && .censRight) {
       .dat$CENS <- factor(.dat$CENS, c(-1, 0, 1), c("Right censored data", "Observed data", "Left censored data"))
     } else if (.censLeft) {
       .dat$CENS <- factor(.dat$CENS, c(0, 1), c("Observed data", "Censored data"))
@@ -217,7 +217,7 @@ plotCmt <- function(x, cmt, bsv = NULL) {
   .hasIpred <- any(names(x) == "IPRED")
   .datCmt <- x[which(x$CMT == cmt), , drop = FALSE]
   if (nrow(.datCmt) > 0) {
-    if (.hasPred & .hasIpred) {
+    if (.hasPred && .hasIpred) {
       .lst[["dv_pred_ipred_linear"]] <-
         .dvPlot(.datCmt, c("PRED", "IPRED")) +
         ggplot2::ggtitle(cmt, "DV vs PRED/IPRED")
