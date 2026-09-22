@@ -66,6 +66,12 @@ test_that("pred_corr VPC uses the supplied data (#62)", {
   expect_equal(nrow(db$sim), 5L * .nobs)
   expect_setequal(unique(db$sim$WT), unique(half$WT))
 
+  # ...and without data, stratifying still uses the full fitted data
+  db <- suppressWarnings(
+    vpcPlot(fit, n=5, stratify="WT", vpcdb=TRUE, method="vpc"))
+  expect_equal(length(unique(db$sim$id)), length(unique(od$ID)))
+  expect_setequal(unique(db$sim$WT), unique(od$WT))
+
   skip_if_not_installed("tidyvpc")
   for (.pc in c(FALSE, TRUE)) {
     .warn <- character(0)
