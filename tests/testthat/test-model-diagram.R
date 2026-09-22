@@ -1127,3 +1127,20 @@ test_that("a reused variable keeps one identity per assignment", {
   # the internal name is not shown
   expect_false(any(grepl("#", g$edges$label, fixed = TRUE)))
 })
+
+test_that("a variable assigned in if branches keeps every branch's dependencies", {
+  m <- rxode2::rxode2({
+    d/dt(A) = -k*A
+    d/dt(B) = -k*B
+    if (t < 12) {
+      drive = ka*A
+    } else {
+      drive = kb*B
+    }
+    d/dt(C) = drive - kout*C
+  })
+  g <- modelGraph(m, dosing = "A")
+  # C is driven by both branches
+  expect_equal(nrow(.edge(g, "A", "C", "interaction")), 1L)
+  expect_equal(nrow(.edge(g, "B", "C", "interaction")), 1L)
+})

@@ -560,8 +560,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
         .dep <- union(all.vars(x[[3]]), cond)
         # a conditional assignment also depends on its condition
         .env$deps[[.n]] <- union(.env$deps[[.n]], .dep)
-        if (!identical(.env$count[[.n]], 1)) {
-          # one name per assignment of a reassigned variable
+        if (!identical(.env$count[[.n]], 1) && !(.n %in% .env$inIf)) {
+          # one name per assignment of a reassigned variable; a variable
+          # assigned in `if` branches keeps one name, since its value is one
+          # of the branches (and depends on all of them)
           .v <- (if (is.null(.env$version[[.n]])) 0L else .env$version[[.n]]) + 1L
           .env$version[[.n]] <- .v
           .vn <- paste0(.n, "#", .v)
