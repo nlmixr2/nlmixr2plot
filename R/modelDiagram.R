@@ -346,13 +346,16 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   if (is.null(.cmt)) return(intersect(states, order[1]))
   .cmt <- .cmt[.dose]
   if (is.factor(.cmt)) .cmt <- as.character(.cmt)
+  # a missing compartment doses the default (first) compartment
+  .ret <- if (anyNA(.cmt)) order[1] else character(0)
+  .cmt <- .cmt[!is.na(.cmt)]
   if (is.character(.cmt)) {
     .num <- suppressWarnings(as.numeric(.cmt))
-    .ret <- .cmt[is.na(.num)]
-    .ret[.ret == "(default)"] <- order[1]
+    .chr <- .cmt[is.na(.num)]
+    .chr[.chr %in% c("(default)", "")] <- order[1]
+    .ret <- c(.ret, .chr)
     .cmt <- .num[!is.na(.num)]
   } else {
-    .ret <- character(0)
     .cmt <- as.numeric(.cmt)
   }
   # negative compartment numbers turn compartments off; they are not doses

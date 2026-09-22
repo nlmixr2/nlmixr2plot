@@ -764,3 +764,21 @@ test_that("scaled transfer is an elimination plus an interaction", {
   expect_equal(nrow(e), 1L)
   expect_equal(e$sign, 1)
 })
+
+test_that("missing cmt on a dose record doses the default compartment", {
+  m <- rxode2::rxode2({
+    d/dt(depot) = -ka*depot
+    d/dt(central) = ka*depot - cl*central
+  })
+  d <- data.frame(time = 0:1, amt = c(100, 0), evid = c(1, 0),
+                  cmt = c(NA_character_, "central"))
+  expect_equal(modelGraph(m, data = d)$nodes$name[modelGraph(m, data = d)$nodes$dosing],
+               "depot")
+  d$cmt <- c(NA, 2)
+  expect_equal(modelGraph(m, data = d)$nodes$name[modelGraph(m, data = d)$nodes$dosing],
+               "depot")
+  d <- data.frame(time = 0:2, amt = c(100, 50, 0), evid = c(1, 1, 0),
+                  cmt = factor(c(NA, "central", "central")))
+  g <- modelGraph(m, data = d)
+  expect_equal(g$nodes$name[g$nodes$dosing], c("depot", "central"))
+})
