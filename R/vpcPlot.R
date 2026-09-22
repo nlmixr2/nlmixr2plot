@@ -167,6 +167,11 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       .keep <- c(.keep, names(.obs)[tolower(names(.obs)) == "cens"])
     }
     .si$keep <- unique(.keep)
+    if (!is.null(data)) {
+      # .si carries the fit's dataset; rebuild the observations from the
+      # user-supplied data instead (#62)
+      .si$events <- data
+    }
     .si$addDosing <- FALSE
     .si$subsetNonmem <- TRUE
     .obs1 <- .obs

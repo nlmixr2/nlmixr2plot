@@ -1,5 +1,8 @@
 # nlmixr2plot 5.1.0.9000
 
+* Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the `data`
+  argument; the observed data was rebuilt from the fit's dataset instead of the
+  supplied `data` (#62).
 * Fixed stratified censored VPCs (`vpcCens()`/`vpcCensTad()`, or `vpcPlot()`
   with `cens = TRUE`) failing with "The following specified stratification
   columns were NOT found in observation data"; stratification columns missing
