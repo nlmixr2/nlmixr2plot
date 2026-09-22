@@ -452,12 +452,24 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
     # would be picked out wrongly (silently dropping observations).  Only the
     # fit knows that translation, so ask for the column instead of guessing.
     .dist <- fit$ui$predDf$distribution
-    if (!all(.dist %in% c("norm", "dnorm", "t", "cauchy")) &&
-          !any(names(data) == "CMT")) {
-      stop("'data' needs a 'CMT' column to simulate this model, which has a ",
-           "non-normal endpoint; without it the compartments are taken from ",
-           "the fitted data by row number, which does not match 'data'",
-           call.=FALSE)
+    .dots <- list(...)
+    .normRelated <- !identical(.dots$normRelated, FALSE)
+    if (.normRelated && !all(.dist %in% c("norm", "dnorm", "t", "cauchy"))) {
+      .wc <- which(names(data) == "CMT")
+      if (length(.wc) != 1L) {
+        stop("'data' needs a 'CMT' column to simulate this model, which has ",
+             "a non-normal endpoint; without it the compartments are taken ",
+             "from the fitted data by row number, which does not match 'data'",
+             call.=FALSE)
+      }
+      # the filter reads this column as-is, so a factor would be read by its
+      # level order and a label would not be read at all
+      if (!is.numeric(data[[.wc]])) {
+        stop("the 'CMT' column of 'data' must be the model's compartment ",
+             "number (", paste(fit$ui$predDf$cmt, collapse=", "),
+             " for the endpoints), not a factor or a label",
+             call.=FALSE)
+      }
     }
     .env <- fit$env
     .origData <- .env$origData
