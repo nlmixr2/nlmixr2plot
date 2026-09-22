@@ -1,13 +1,15 @@
-# nlmixr2plot (development version)
+# nlmixr2plot 5.1.1
 
 * `plot()` of a multiple-endpoint fit no longer creates empty
   "Endpoint: " groups for state compartments without observations (like
   `depot` or `central`); only observed endpoints are plotted.  `plot()` of an
   `augPred()` object likewise skips endpoints without data (#44).
+  
 * `vpcPlot()`/`vpcPlotTad()` of a multiple-endpoint fit whose data codes the
   endpoints with `cmt` no longer shows an extra `NA` panel (or a single `NA`
   panel with `pred_corr = TRUE`); the simulated compartment labels are now
   matched to the observed ones by name (#44).
+  
 * Censored `vpcPlot(cens = TRUE)`/`vpcCens()` with the `vpc` method no longer
   errors for multiple-endpoint fits ("stratification columns were NOT found in
   observation data"); the observed endpoints are now used for stratification
@@ -15,6 +17,12 @@
 * `plot()` of a censored multiple-endpoint fit no longer errors in
   `geom_cens()` ("argument must be coercible to non-negative integer") for an
   endpoint without censored observations (#44).
+
+* Fixed the confidence-band width (and its legend label) for `vpcPlot()`/
+  `vpcPlotTad()` with the `tidyvpc` backend; `ci = c(lower, upper)` was passed
+  to `tidyvpc::vpcstats()` as `conf.level = ci[2]` instead of the actual
+  interval width `ci[2] - ci[1]`, so the default `ci = c(0.05, 0.95)` (a 90% CI)
+  was drawn and labeled as a 95% CI.
 
 # nlmixr2plot 5.1.0
 
