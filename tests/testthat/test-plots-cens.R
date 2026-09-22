@@ -220,5 +220,23 @@ test_that("plot censoring", {
     expect_error(vpcPlot(sim57, pred_corr = TRUE, method = "tidyvpc"), NA)
     expect_error(
       vpcCens(sim57, pred_corr = TRUE, method = "tidyvpc"), NA)
+    # #74: missing DV observations are dropped from the simulation too, so
+    # tidyvpc still gets a replicate of the observed records
+    .na <- theo_cens
+    .w <- which(.na$AMT == 0)
+    .na$DV[.w[c(5, 50, 100)]] <- NA
+    for (.pc in c(FALSE, TRUE)) {
+      .warn <- character(0)
+      withCallingHandlers(
+        .p <- vpcCens(fit1, data = .na, n = 5, pred_corr = .pc,
+                      method = "tidyvpc"),
+        warning = function(w) {
+          .warn <<- c(.warn, conditionMessage(w))
+          invokeRestart("muffleWarning")
+        })
+      expect_s3_class(.p, "ggplot")
+      expect_false(any(grepl("not a replicate|recycled", .warn)),
+                   info = paste("pred_corr =", .pc))
+    }
   }
 })
