@@ -1041,3 +1041,39 @@ test_that("long products keep their input and elimination parts", {
   # `-b*inh`) also inhibit it
   expect_equal(sort(.edge(g, "s01", "y", "interaction")$sign), c(-1, 1))
 })
+
+test_that("a hub with many compartments is fanned out without crossings", {
+  n <- 12
+  code <- c(
+    "d/dt(central) = -kel*central" ,
+    sprintf("d/dt(t%02d) = q%02d*central - q%02d*t%02d", 1:n, 1:n, 1:n, 1:n),
+    sprintf("d/dt(central) = d/dt(central) - q%02d*central + q%02d*t%02d",
+            1:n, 1:n, 1:n)
+  )
+  m <- rxode2::rxode2(paste(code, collapse = "\n"))
+  g <- modelGraph(m, dosing = "central")
+  n2 <- g$nodes
+  rownames(n2) <- n2$name
+  # the tissues are not all in one column
+  expect_gt(length(unique(n2$x[n2$name != "central"])), 2L)
+  e <- g$edges[!is.na(g$edges$from) & !is.na(g$edges$to), ]
+  crossing <- vapply(seq_len(nrow(e)), function(.i) {
+    .o <- setdiff(n2$name, c(e$from[.i], e$to[.i]))
+    .mdSegmentCrosses(n2[e$from[.i], "x"], n2[e$from[.i], "y"],
+                      n2[e$to[.i], "x"], n2[e$to[.i], "y"],
+                      n2[.o, "x"], n2[.o, "y"])
+  }, logical(1))
+  expect_equal(sum(crossing), 0L)
+  expect_equal(nrow(unique(n2[, c("x", "y")])), nrow(n2))
+})
+
+test_that("large graphs use straight edges in DOT", {
+  m <- rxode2::rxode2({
+    d/dt(depot) = -ka*depot
+    d/dt(central) = ka*depot - cl*central
+  })
+  expect_match(modelDiagram(m, engine = "dot"), "splines = true", fixed = TRUE)
+  g <- modelGraph(m)
+  g$edges <- g$edges[rep(seq_len(nrow(g$edges)), length.out = 201), ]
+  expect_match(modelDiagram(g, engine = "dot"), "splines = line", fixed = TRUE)
+})

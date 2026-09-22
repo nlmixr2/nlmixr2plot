@@ -682,6 +682,12 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 # a summand is only expanded when its terms stay within this multiple of its
 # size
 .mdMaxTermGrowth <- 50L
+# more neighbors than this in one direction are fanned out on an arc
+.mdMaxLine <- 4L
+# models with more compartments than this use a bounded placement search
+.mdMaxWideSearch <- 100L
+# graphs with more edges than this are drawn with straight edges in DOT
+.mdMaxSplineEdges <- 200L
 .mdMaxSmallDefSize <- 200L
 
 #' Split an equation into terms, bounding the growth of each summand
@@ -1403,9 +1409,12 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     # move away (in the `step` direction) until the position is clear,
     # trying neighboring columns in each row
     # large models search fewer rows before falling back
-    .kmax <- if (length(states) <= 40L) 2L * length(states) + 4L else 12L
+    # a wide search gives cleaner diagrams; very large models use a
+    # bounded one so the layout stays fast
+    .wide <- length(states) <= .mdMaxWideSearch
+    .kmax <- if (.wide) 2L * length(states) + 4L else 12L
     for (.k in 0:.kmax) {
-      for (.dx in c(0, 1, -1, 2, -2)) {
+      for (.dx in if (.wide) c(0, 1, -1, 2, -2, 3, -3, 4, -4) else c(0, 1, -1, 2, -2)) {
         if (.ok(s, x + .dx, y + .k * step)) {
           .x[s] <<- x + .dx
           .y[s] <<- y + .k * step
@@ -1422,6 +1431,33 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # `side` is where exchange (bidirectional) partners go: left of the PK
   # model, right of PD models so they stay off the arrows coming in from the
   # left
+  # place a group of neighbors of `s` in direction `dir` (radians: up is
+  # pi/2, down -pi/2, left pi, right 0).  A few neighbors are placed in the
+  # usual line; many (a PBPK hub with its tissues) are fanned out on an arc
+  # whose radius grows with their number, so the arrows radiate out instead
+  # of grazing the boxes in between
+  .placeGroup <- function(nodes, s, dir, step) {
+    .m <- length(nodes)
+    if (.m == 0L) return(invisible())
+    if (.m <= .mdMaxLine) {
+      .off <- (seq_len(.m) - 1) - if (abs(cos(dir)) > 0.5) 0 else (.m - 1) / 2
+      for (.k in seq_len(.m)) {
+        .dx <- if (abs(cos(dir)) > 0.5) round(cos(dir)) else .off[.k]
+        .dy <- if (abs(cos(dir)) > 0.5) .off[.k] else round(sin(dir))
+        .place(nodes[.k], .x[s] + .dx, .y[s] + .dy, step)
+      }
+      return(invisible())
+    }
+    .sector <- pi * 2 / 3
+    .d <- .sector / (.m - 1)
+    .r <- max(1.5, 1.3 / .d)
+    .a <- dir - .sector / 2 + (seq_len(.m) - 1) * .d
+    for (.k in seq_len(.m)) {
+      .place(nodes[.k], round((.x[s] + .r * cos(.a[.k])) * 2) / 2,
+             round((.y[s] + .r * sin(.a[.k])) * 2) / 2, step)
+    }
+    invisible()
+  }
   .spread <- function(start, side = -1) {
     .queue <- start
     while (length(.queue) > 0L) {
@@ -1430,30 +1466,25 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .isCentral <- .s == .central
       # upstream (unidirectional into .s): above
       .up <- setdiff(unique(.uni$from[.uni$to == .s]), names(.x)[!is.na(.x)])
-      for (.k in seq_along(.up)) {
-        .place(.up[.k], .x[.s] + (.k - 1), .y[.s] + 1, 1)
-        if (.role[.up[.k]] == "other") .role[.up[.k]] <<- "transit"
-      }
-      # bidirectional exchange: to the left, fanned up and down
+      .placeGroup(.up, .s, pi / 2, 1)
+      for (.n in .up) if (.role[.n] == "other") .role[.n] <<- "transit"
+      # bidirectional exchange: to the left (PD models: right), fanned
       .lr <- unique(c(.bi$to[.bi$from == .s], .bi$from[.bi$to == .s]))
       .lr <- setdiff(.lr, names(.x)[!is.na(.x)])
-      .nb <- length(.lr)
-      .off <- (seq_len(.nb) - 1) - (.nb - 1) / 2
-      for (.k in seq_along(.lr)) {
-        .place(.lr[.k], .x[.s] + side, .y[.s] + .off[.k], -1)
-        if (.role[.lr[.k]] == "other") .role[.lr[.k]] <<- "peripheral"
-      }
+      .placeGroup(.lr, .s, if (side < 0) pi else 0, -1)
+      for (.n in .lr) if (.role[.n] == "other") .role[.n] <<- "peripheral"
       # downstream (unidirectional out of .s): below
       .dn <- setdiff(unique(.uni$to[.uni$from == .s]), names(.x)[!is.na(.x)])
-      for (.k in seq_along(.dn)) {
-        .place(.dn[.k], .x[.s] + (.k - 1), .y[.s] - 1, -1)
-        if (.role[.dn[.k]] == "other") {
-          .role[.dn[.k]] <<- if (.isCentral) "metabolite" else "other"
+      .placeGroup(.dn, .s, -pi / 2, -1)
+      for (.n in .dn) {
+        if (.role[.n] == "other") {
+          .role[.n] <<- if (.isCentral) "metabolite" else "other"
         }
       }
       .queue <- c(.queue, .up, .lr, .dn)
     }
   }
+
   .role[.central] <- "central"
   .place(.central, 0, 0, -1)
   .spread(.central)
@@ -1461,7 +1492,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # arrows between `s` and the already placed compartments (either
   # direction) are clear of the other compartments
   .pickRow <- function(s, nx, y0) {
-    .m <- if (length(states) <= 40L) length(states) else 12L
+    .m <- if (length(states) <= .mdMaxWideSearch) length(states) else 12L
     for (.d in c(0, rbind(-seq_len(.m), seq_len(.m)))) {
       .cy <- y0 + .d
       if (.ok(s, nx, .cy)) return(.cy)
@@ -1604,8 +1635,13 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   }
   .n <- graph$nodes
   .e <- .mdEdgeCoords(graph)
+  # routing curved edges around the boxes is slow for large graphs, which
+  # do not gain much from it (the positions are pinned)
+  .splines <- if (nrow(graph$edges) > .mdMaxSplineEdges) "line" else "true"
   .lines <- c("digraph model {",
-              "  graph [layout = neato, splines = true, outputorder = edgesfirst, forcelabels = true];",
+              sprintf(paste0("  graph [layout = neato, splines = %s, ",
+                             "outputorder = edgesfirst, forcelabels = true];"),
+                      .splines),
               "  node [shape = box, style = \"rounded,filled\", fontname = Helvetica];",
               "  edge [fontname = Helvetica, fontsize = 10];")
   for (.i in seq_len(nrow(.n))) {
