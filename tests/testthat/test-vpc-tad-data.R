@@ -163,6 +163,14 @@ test_that(".vpcFitColForData does not guess between identical-looking fitted row
   .sub6$DV <- "2"
   expect_equal(.vpcFitColForData(.fit6, .sub6, "tad", supplied=TRUE), 5)
 
+  # -0 is 0, and the same text in another encoding is the same text
+  .orig7 <- data.frame(ID=1, TIME=0, DV=2, GROUP="\u00e9", EVID=0)
+  .fit7 <- list(origData=.orig7, tad=5, env=list(.rownum=1L))
+  .sub7 <- .orig7
+  .sub7$TIME <- -0
+  .sub7$GROUP <- iconv(.sub7$GROUP, "UTF-8", "latin1")
+  expect_equal(.vpcFitColForData(.fit7, .sub7, "tad", supplied=TRUE), 5)
+
   # records vpcPlot() drops (mdv = 1, even with evid = 0) do not warn
   .sub5 <- data.frame(ID=1, TIME=7, DV=0, EVID=0, MDV=1)
   expect_warning(.r <- .vpcFitColForData(.fit4, .sub5, "tad", supplied=TRUE),

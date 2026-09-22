@@ -514,12 +514,14 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   .key <- function(d, lower) {
     do.call(paste, c(lapply(.by, function(n) {
       .x <- d[[which(lower == n)]]
-      .v <- as.character(.x)
+      # enc2utf8() so the same text in another encoding still matches
+      .v <- enc2utf8(as.character(.x))
       if (.num[[n]]) {
         .y <- if (is.numeric(.x)) as.double(.x) else
           suppressWarnings(as.numeric(.v))
         # text that is not a number is kept as text, so it cannot match
         .ok <- !is.na(.y)
+        .y[.ok & .y == 0] <- 0 # -0 prints as "-0"
         .v[.ok] <- sprintf("%.17g", .y[.ok])
       }
       # prefix each value with its length (and code NA separately) so no two
