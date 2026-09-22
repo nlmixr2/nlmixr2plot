@@ -134,7 +134,11 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     # vpc's censored VPC does not pred-correct, so it needs no refresh.
     nlmixr2est::vpcSim(fit, ..., n=2, pred=TRUE, seed=seed)
   }
-  .sim <- .vpcSimDropMissingDv(.sim, .obsLst$missingDvRows)
+  if (tidyvpc) {
+    # tidyvpc needs the simulation to replicate the observed records (#74);
+    # vpc does not, and keeps simulated endpoints without observations (#44)
+    .sim <- .vpcSimDropMissingDv(.sim, .obsLst$missingDvRows)
+  }
   .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, .obs)
   if (any(names(.sim) == "evid")) {
     .sim <- .sim[.sim$evid == 0,]
@@ -171,6 +175,9 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       id=.vpcCensCol(.obs, "id", "observed"),
       dv=.vpcCensCol(.obs, "dv", "observed"),
       idv=.vpcCensCol(.obs, idv, "observed"))
+    .strat <- .vpcMatchStrata(.obs, .sim, stratify)
+    .obs <- .strat$obs
+    .sim <- .strat$sim
     .sim <- .vpcCensDropStray(.sim, .simCens, stratify)
     .obs <- .vpcCensDropStray(.obs, .obsCens, stratify)
     rxode2::rxReq("vpc")
@@ -207,12 +214,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .obs <- do.call(rxode2::rxSolve, .si)
     .both <- intersect(names(.obs1), names(.obs))
     for (.n in .both) {
-      if (inherits(.obs1[[.n]], "factor") && !inherits(.obs[[.n]], "factor")) {
-        .tmp <- as.integer(.obs[[.n]])
-        attr(.tmp, "levels") <- attr(.obs1[[.n]], "levels")
-        class(.tmp) <- "factor"
-        .obs[[.n]] <- .tmp
-      }
+      .obs[[.n]] <- .vpcMatchFactor(.obs[[.n]], .obs1[[.n]])
     }
     .no <- names(.obs)
     .w <- which(.no == "sim")
@@ -224,15 +226,9 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       .obsCols$dv <- "dv"
     }
    }
-  .both <- intersect(names(.sim), names(.obs))
-  for (.n in .both) {
-    if (inherits(.obs[[.n]], "factor") && !inherits(.sim[[.n]], "factor")) {
-      .tmp <- as.integer(.sim[[.n]])
-      attr(.tmp, "levels") <- attr(.obs[[.n]], "levels")
-      class(.tmp) <- "factor"
-      .sim[[.n]] <- .tmp
-    }
-  }
+  .strat <- .vpcMatchStrata(.obs, .sim, stratify)
+  .obs <- .strat$obs
+  .sim <- .strat$sim
   .w <- which(tolower(names(.obs)) == "evid")
   if (length(.w) == 1L) {
     .obs <- .obs[.obs[, .w] == 0 | .obs[, .w] == 2, ]
@@ -538,6 +534,69 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
     return(sim)
   }
   sim[!(sim$nlmixrRowNums %in% rows), , drop=FALSE]
+}
+
+#' Match simulated stratification columns to the observed ones
+#'
+#' Recode each column shared by `sim` and `obs` to the observed factor levels
+#' (see `.vpcMatchFactor()`), then keep only the levels that occur in the
+#' observed or simulated stratification columns, so compartments that are never
+#' endpoints (like `depot`) do not become strata (#44).  A simulated endpoint
+#' without observations (e.g. all its `DV` missing) keeps its level instead of
+#' becoming an `NA` stratum.
+#'
+#' @param obs observed data
+#' @param sim simulated data
+#' @param stratify stratification columns
+#' @return list with `obs` and `sim`
+#' @noRd
+.vpcMatchStrata <- function(obs, sim, stratify) {
+  .both <- intersect(names(sim), names(obs))
+  for (.n in .both) {
+    # simulated labels missing from the observed levels (e.g. `data` without
+    # an endpoint, with its levels dropped) are added rather than made NA
+    if (inherits(obs[[.n]], "factor") &&
+          (is.character(sim[[.n]]) || inherits(sim[[.n]], "factor"))) {
+      .extra <- setdiff(unique(as.character(sim[[.n]])),
+                        c(levels(obs[[.n]]), NA))
+      if (length(.extra) > 0L) {
+        obs[[.n]] <- factor(as.character(obs[[.n]]),
+                            levels=c(levels(obs[[.n]]), .extra))
+      }
+    }
+    sim[[.n]] <- .vpcMatchFactor(sim[[.n]], obs[[.n]])
+  }
+  for (.n in intersect(stratify, .both)) {
+    if (inherits(obs[[.n]], "factor")) {
+      .lvl <- levels(obs[[.n]])
+      .lvl <- .lvl[.lvl %in% c(as.character(obs[[.n]]), as.character(sim[[.n]]))]
+      obs[[.n]] <- factor(as.character(obs[[.n]]), levels=.lvl)
+      sim[[.n]] <- factor(as.character(sim[[.n]]), levels=.lvl)
+    }
+  }
+  list(obs=obs, sim=sim)
+}
+
+#' Recode a column to match a reference factor
+#'
+#' Simulated and pred-corrected data can return a stratification column (like
+#' `cmt`) as an integer code or as character labels, while the observed data
+#' has it as a factor.  Integer codes are taken as level indices and character
+#' values are matched by label (#44).
+#'
+#' @param x column to recode
+#' @param ref reference column
+#' @return `x` as a factor with the levels of `ref`, or `x` unchanged when
+#'   `ref` is not a factor or `x` already is one
+#' @noRd
+.vpcMatchFactor <- function(x, ref) {
+  if (!inherits(ref, "factor") || inherits(x, "factor")) return(x)
+  .lvl <- levels(ref)
+  if (is.character(x)) return(factor(x, levels=.lvl))
+  .tmp <- as.integer(x)
+  attr(.tmp, "levels") <- .lvl
+  class(.tmp) <- "factor"
+  .tmp
 }
 
 #' Setup Observation data for VPC

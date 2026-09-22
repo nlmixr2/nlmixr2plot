@@ -6,7 +6,21 @@
   multiple-endpoint) VPC errored and a single-endpoint VPC paired simulated
   values with the wrong observations.  The matching simulated records are now
   dropped too (#74).
-
+* `plot()` of a multiple-endpoint fit no longer creates empty
+  "Endpoint: " groups for state compartments without observations (like
+  `depot` or `central`); only observed endpoints are plotted.  `plot()` of an
+  `augPred()` object likewise skips endpoints without data (#44).
+* `vpcPlot()`/`vpcPlotTad()` of a multiple-endpoint fit whose data codes the
+  endpoints with `cmt` no longer shows an extra `NA` panel (or a single `NA`
+  panel with `pred_corr = TRUE`); the simulated compartment labels are now
+  matched to the observed ones by name (#44).
+* The censored VPC (`vpcCens()`, or `vpcPlot()` with `cens = TRUE` and the
+  `vpc` backend) of a multiple-endpoint fit now stratifies by its endpoints
+  only, matching the simulated endpoints to the observed ones; an endpoint
+  whose observations are all missing no longer becomes an `NA` panel (#44).
+* `plot()` of a censored multiple-endpoint fit no longer errors in
+  `geom_cens()` ("argument must be coercible to non-negative integer") for an
+  endpoint without censored observations (#44).
 * The censored VPC (`vpcCens()`, `vpcCensTad()`, or `vpcPlot()` with
   `cens = TRUE` and the `vpc` backend) now honours the `data` argument; it
   previously always used the fitted data, whatever `data` was supplied (#55).
