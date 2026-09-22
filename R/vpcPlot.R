@@ -134,7 +134,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     # vpc's censored VPC does not pred-correct, so it needs no refresh.
     nlmixr2est::vpcSim(fit, ..., n=2, pred=TRUE, seed=seed)
   }
-  .sim <- .vpcSimDropMissingDv(.sim, .obs, .obsCols$dv)
+  .sim <- .vpcSimDropMissingDv(.sim, .obsLst$missingDvRows)
   .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, .obs)
   if (any(names(.sim) == "evid")) {
     .sim <- .sim[.sim$evid == 0,]
@@ -522,32 +522,31 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' still has a value for each of them.  tidyvpc needs the simulation to be an
 #' exact replicate of the observed records, so drop the same records from every
 #' simulated replicate (#74).  Records are matched on `nlmixrRowNums`, the row
-#' of the dataset each simulated record came from.  That is the row of `obs`,
-#' unless `obs` already carries `nlmixrRowNums` (added, before a merge that can
-#' reorder the rows, when `idv` comes from the fit).
+#' of the dataset each simulated record came from.
 #'
 #' @param sim simulation from `nlmixr2est::vpcSim()`
-#' @param obs observed data, before any rows are dropped
-#' @param dv name of the `dv` column in `obs`
+#' @param rows rows of the observed dataset with a missing `dv` (the
+#'   `missingDvRows` from `.vpcUiSetupObservationData()`)
 #' @return `sim` without the records whose observation is missing
 #' @noRd
-.vpcSimDropMissingDv <- function(sim, obs, dv) {
-  if (!any(names(sim) == "nlmixrRowNums")) return(sim)
-  .na <- is.na(obs[[dv]])
-  if (!any(.na)) return(sim)
-  if (any(names(obs) == "nlmixrRowNums")) {
-    .na <- obs$nlmixrRowNums[.na]
-  } else {
-    .na <- which(.na)
+.vpcSimDropMissingDv <- function(sim, rows) {
+  if (length(rows) == 0L) return(sim)
+  if (!any(names(sim) == "nlmixrRowNums")) {
+    warning("the simulation has no 'nlmixrRowNums' column, so records with a ",
+            "missing observation cannot be dropped from it; the VPC may pair ",
+            "simulated and observed values incorrectly", call.=FALSE)
+    return(sim)
   }
-  sim[!(sim$nlmixrRowNums %in% .na), , drop=FALSE]
+  sim[!(sim$nlmixrRowNums %in% rows), , drop=FALSE]
 }
 
 #' Setup Observation data for VPC
 #'
 #' @param fit nlmixr2 fit
 #' @param data replacement data
-#' @return List with `namesObs`, `namesObsLower`, `obs` and `obsCols`
+#' @return List with `namesObs`, `namesObsLower`, `obs`, `obsCols` and
+#'   `missingDvRows` (the rows of the dataset with a missing `dv`, numbered
+#'   before any reordering, as the simulation's `nlmixrRowNums` are)
 #' @author Matthew L. Fidler
 #' @noRd
 .vpcUiSetupObservationData <- function(fit, data=NULL, idv="time", cens=FALSE) {
@@ -572,6 +571,7 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   }
   .obsCols <- c(.obsCols,
                 list(dv=.no[.wo]))
+  .missingDvRows <- which(is.na(.obs[[.wo]]))
   .wo <- which(.nol == idv)
   if (length(.wo) != 1) {
     if (any(names(fit) == idv)) {
@@ -600,5 +600,6 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   list(namesObs=.no,
        namesObsLower=tolower(.nol),
               obs=.obs,
-              obsCols=.obsCols)
+              obsCols=.obsCols,
+              missingDvRows=.missingDvRows)
 }

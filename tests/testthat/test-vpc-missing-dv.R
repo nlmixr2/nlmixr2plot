@@ -1,17 +1,13 @@
 test_that(".vpcSimDropMissingDv() drops simulated records of missing observations (#74)", {
-  obs <- data.frame(ID=1, DV=c(NA, 1, NA, 3, 4))
   sim <- data.frame(sim.id=rep(1:2, each=4), id=1,
                     nlmixrRowNums=rep(2:5, 2), sim=1:8)
-  ret <- .vpcSimDropMissingDv(sim, obs, "DV")
+  ret <- .vpcSimDropMissingDv(sim, c(1L, 3L))
   expect_equal(ret$nlmixrRowNums, rep(c(2L, 4L, 5L), 2))
-  # nothing missing, or no row numbers to match on: unchanged
-  expect_identical(.vpcSimDropMissingDv(sim, data.frame(ID=1, DV=1:5), "DV"), sim)
-  expect_identical(.vpcSimDropMissingDv(sim[, -3], obs, "DV"), sim[, -3])
-  # reordered observed data matches on its own row numbers
-  obs2 <- obs[c(3, 1, 2, 4, 5), ]
-  obs2$nlmixrRowNums <- c(3L, 1L, 2L, 4L, 5L)
-  ret <- .vpcSimDropMissingDv(sim, obs2, "DV")
-  expect_equal(ret$nlmixrRowNums, rep(c(2L, 4L, 5L), 2))
+  # nothing missing: unchanged
+  expect_identical(.vpcSimDropMissingDv(sim, integer(0)), sim)
+  # no row numbers to match on: unchanged, with a warning
+  expect_warning(ret <- .vpcSimDropMissingDv(sim[, -3], 3L), "nlmixrRowNums")
+  expect_identical(ret, sim[, -3])
 })
 
 .vpcBadSimWarn <- function(expr) {
@@ -58,11 +54,22 @@ test_that("tidyvpc VPC handles missing DV observations (#74)", {
   expect_s3_class(p, "ggplot")
   sim <- nlmixr2est::vpcSim(fit, n=5)
   # exactly the records of the missing observations are dropped
-  ret <- .vpcSimDropMissingDv(sim, d, "DV")
+  rows <- .vpcUiSetupObservationData(fit, data=d)$missingDvRows
+  expect_equal(rows, w[c(5, 50, 100)])
+  ret <- .vpcSimDropMissingDv(sim, rows)
   expect_equal(nrow(ret), 5 * sum(d$EVID == 0 & !is.na(d$DV)))
   expect_false(anyNA(d$DV[ret$nlmixrRowNums]))
   expect_true(all(d$EVID[ret$nlmixrRowNums] == 0))
   p <- .vpcBadSimWarn(vpcPlot(sim, data=d, method="tidyvpc"))
+  expect_s3_class(p, "ggplot")
+
+  # the row numbers are taken before any reordering or an existing
+  # nlmixrRowNums column: tad comes from the fit, which merges and reorders
+  d2 <- d
+  d2$nlmixrRowNums <- rev(seq_len(nrow(d2)))
+  rows <- .vpcUiSetupObservationData(fit, data=d2, idv="tad")$missingDvRows
+  expect_equal(rows, w[c(5, 50, 100)])
+  p <- .vpcBadSimWarn(vpcPlotTad(fit, data=d2, n=5, method="tidyvpc"))
   expect_s3_class(p, "ggplot")
 })
 
