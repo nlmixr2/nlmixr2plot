@@ -584,36 +584,31 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     }
   }
   if (is.call(x) && identical(x[[1]], quote(ifelse)) && length(x) == 4L) {
-    # `ifelse(cond, -a, -b)`: a common sign of both branches is kept
-    .t <- c(.mdTerms(x[[3]]), .mdTerms(x[[4]]))
-    # a zero branch (switching the flow off) has no sign
-    .t <- .t[!vapply(.t, function(t) is.numeric(t$expr) && all(t$expr == 0),
-                     logical(1))]
-    .signs <- vapply(.t, function(t) t$sign, numeric(1))
-    if (length(.signs) > 0L && all(.signs == -1)) {
-      return(list(list(sign = -1,
-                       expr = as.call(list(quote(ifelse), x[[2]],
-                                           .mdNegExpr(x[[3]]),
-                                           .mdNegExpr(x[[4]]))))))
+    # distribute `ifelse(cond, a, b)` over the terms of each branch:
+    # `ifelse(cond, a1, 0) + ... + ifelse(cond, 0, b1) + ...`; a term in both
+    # branches applies either way
+    .isZero <- function(t) is.numeric(t$expr) && all(t$expr == 0)
+    .id <- function(t) paste(t$sign, .mdTermKey(t$expr))
+    .a <- Filter(Negate(.isZero), .mdTerms(x[[3]]))
+    .b <- Filter(Negate(.isZero), .mdTerms(x[[4]]))
+    .aId <- vapply(.a, .id, character(1))
+    .bId <- vapply(.b, .id, character(1))
+    .wrap <- function(t, yes) {
+      list(sign = t$sign,
+           expr = as.call(list(quote(ifelse), x[[2]],
+                               if (yes) t$expr else 0,
+                               if (yes) 0 else t$expr)))
     }
+    return(c(
+      .a[.aId %in% .bId],
+      lapply(.a[!(.aId %in% .bId)], .wrap, yes = TRUE),
+      lapply(.b[!(.bId %in% .aId)], .wrap, yes = FALSE)
+    ))
   }
   if (is.numeric(x) && length(x) == 1L && !is.na(x) && x < 0) {
     return(list(list(sign = -1, expr = -x)))
   }
   list(list(sign = 1, expr = x))
-}
-
-#' Negate an expression, removing a leading unary minus when possible
-#' @noRd
-.mdNegExpr <- function(x) {
-  if (is.numeric(x) && all(x == 0)) return(x)
-  .t <- .mdTerms(x)
-  if (all(vapply(.t, function(t) t$sign, numeric(1)) == -1)) {
-    # every term is subtracted (`-ka*depot` parses as `(-ka)*depot`)
-    return(Reduce(function(a, b) as.call(list(quote(`+`), a, b)),
-                  lapply(.t, function(t) t$expr)))
-  }
-  as.call(list(quote(`-`), x))
 }
 
 #' Canonical form of an expression: operands of sums and products sorted
@@ -749,10 +744,11 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     if (.fn %in% c("^", "**") && length(e) == 3L) {
       .b <- .d(e[[2]])
       if (.dep(e[[3]])) return(NA_real_)
-      if (is.numeric(e[[3]])) return(sign(e[[3]]) * .b)
-      if (is.call(e[[3]]) && identical(e[[3]][[1]], quote(`-`)) &&
-            length(e[[3]]) == 2L && is.numeric(e[[3]][[2]])) {
-        return(-sign(e[[3]][[2]]) * .b)
+      .p <- .mdStripParen(e[[3]])
+      if (is.numeric(.p)) return(sign(.p) * .b)
+      # `C^(-gamma)`: a negated exponent decreases
+      if (is.call(.p) && identical(.p[[1]], quote(`-`)) && length(.p) == 2L) {
+        return(-.sgn(.p[[2]]) * .b)
       }
       # a symbolic exponent (e.g. a Hill coefficient) is assumed positive
       return(.b)
@@ -932,8 +928,39 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .free <- function(x, y) {
     !any(!is.na(.x) & abs(.x - x) < 0.9 & abs(.y - y) < 0.9)
   }
+  # is (x, y) free for `s`, with the interaction arrows between `s` and the
+  # placed compartments clear of other compartments, and no placed arrow
+  # running through the new box?
+  .ok <- function(s, x, y) {
+    if (!.free(x, y)) return(FALSE)
+    .placed <- names(.x)[!is.na(.x)]
+    .partners <- intersect(unique(c(.int$from[.int$to == s],
+                                    .int$to[.int$from == s])), .placed)
+    for (.f in .partners) {
+      .w <- !is.na(.x) & names(.x) != .f
+      if (.mdSegmentCrosses(.x[.f], .y[.f], x, y, .x[.w], .y[.w])) return(FALSE)
+    }
+    .pe <- .int[.int$from %in% .placed & .int$to %in% .placed, , drop = FALSE]
+    for (.i in seq_len(nrow(.pe))) {
+      if (.mdSegmentCrosses(.x[.pe$from[.i]], .y[.pe$from[.i]],
+                            .x[.pe$to[.i]], .y[.pe$to[.i]], x, y)) {
+        return(FALSE)
+      }
+    }
+    TRUE
+  }
   .place <- function(s, x, y, step) {
-    while (!.free(x, y)) y <- y + step
+    .y0 <- y
+    .n <- 0L
+    while (!.ok(s, x, y) && .n < 4L * length(states) + 10L) {
+      y <- y + step
+      .n <- .n + 1L
+    }
+    # give up on arrow clearance rather than loop forever
+    if (!.ok(s, x, y)) {
+      y <- .y0
+      while (!.free(x, y)) y <- y + step
+    }
     .x[s] <<- x
     .y[s] <<- y
   }
@@ -980,16 +1007,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # arrows between `s` and the already placed compartments (either
   # direction) are clear of the other compartments
   .pickRow <- function(s, nx, y0) {
-    .placed <- names(.x)[!is.na(.x)]
-    .partners <- unique(c(.int$from[.int$to == s], .int$to[.int$from == s]))
-    .partners <- intersect(.partners, .placed)
     for (.d in c(0, rbind(-seq_along(states), seq_along(states)))) {
       .cy <- y0 + .d
-      .clear <- all(vapply(.partners, function(.f) {
-        .w <- !is.na(.x) & names(.x) != .f
-        !.mdSegmentCrosses(.x[.f], .y[.f], nx, .cy, .x[.w], .y[.w])
-      }, logical(1)))
-      if (.free(nx, .cy) && .clear) return(.cy)
+      if (.ok(s, nx, .cy)) return(.cy)
     }
     y0
   }

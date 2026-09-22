@@ -125,8 +125,10 @@ test_that("dosing compartments come from data or the dosing argument", {
   expect_equal(g$nodes$name[g$nodes$dosing], c("gut", "center"))
   expect_equal(g$nodes$role[g$nodes$name == "center"], "central")
   expect_equal(g$nodes$role[g$nodes$name == "gut"], "dosing")
-  d$CMT <- c(1, 1, 3, -3)
+  # a negative cmt turns a compartment off; it is not a dose
+  d$CMT <- c(1, 1, 3, -2)
   d$EVID <- c(1, 0, 1, 1)
+  d$AMT <- c(100, 0, 50, 50)
   g <- suppressMessages(modelGraph(.pkTurnover, data = d))
   expect_equal(g$nodes$name[g$nodes$dosing], c("depot", "center"))
   d$CMT <- NULL
@@ -639,6 +641,48 @@ test_that("compartments acting on central are placed clear of other arrows", {
     expect_false(nlmixr2plot:::.mdSegmentCrosses(
       n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
       n[.others, "x"], n[.others, "y"]), label = e$from[.i])
+  }
+  expect_equal(nrow(unique(n[, c("x", "y")])), nrow(n))
+})
+
+test_that("ifelse with a transfer and an elimination is split into flows", {
+  m <- rxode2::rxode2({
+    d/dt(depot) = ifelse(t < 12, -ka*depot, 0)
+    d/dt(center) = ifelse(t < 12, ka*depot - cl*center, -cl*center)
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "depot", "center", "transfer")), 1L)
+  e <- .edge(g, "center", NA, "elimination")
+  expect_equal(nrow(e), 1L)
+  expect_equal(e$label, "cl * center")
+  expect_equal(sum(g$edges$type == "interaction"), 0L)
+})
+
+test_that("negated symbolic exponents are inhibition", {
+  m <- rxode2::rxode2({
+    d/dt(C) = -cl*C
+    d/dt(effect) = kin*C^(-gamma) - kout*effect
+  })
+  g <- modelGraph(m, dosing = "C")
+  expect_equal(.edge(g, "C", "effect", "interaction")$sign, -1)
+})
+
+test_that("exchange partners of effect compartments stay off interaction arrows", {
+  m <- rxode2::rxode2({
+    d/dt(C) = -cl*C
+    d/dt(eff1) = kin - kout*eff1*C - k12*eff1 + k21*eff2
+    d/dt(eff2) = k12*eff1 - k21*eff2*C
+  })
+  g <- modelGraph(m, dosing = "C")
+  n <- g$nodes
+  rownames(n) <- n$name
+  e <- g$edges[g$edges$type == "interaction", ]
+  expect_true(any(e$to == "eff2"))
+  for (.i in seq_len(nrow(e))) {
+    .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
+    expect_false(nlmixr2plot:::.mdSegmentCrosses(
+      n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
+      n[.others, "x"], n[.others, "y"]), label = paste(e$from[.i], e$to[.i]))
   }
   expect_equal(nrow(unique(n[, c("x", "y")])), nrow(n))
 })
