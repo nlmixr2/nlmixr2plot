@@ -305,7 +305,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .states <- .parsed$states
   # keep rxode2's compartment order (used to map numeric `cmt` values)
   .states <- c(intersect(.order, .states), setdiff(.states, .order))
-  .deps <- .parsed$deps
+  .deps <- .mdStateClosure(.states, .parsed$deps)
+  .foldIndex <- .mdFoldIndex(.parsed$defs)
+  .dependents <- stats::setNames(lapply(.states, .mdDependents, states = .states,
+                                        closure = .deps), .states)
   .terms <- do.call(rbind, lapply(.states, function(.s) {
     .t <- .parsed$ode[[.s]]
     if (length(.t) == 0L) return(NULL)
@@ -314,7 +317,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       sign = vapply(.t, function(x) x$sign, numeric(1)),
       key = vapply(.t, function(x) .mdTermKey(x$expr), character(1)),
       label = vapply(.t, function(x) {
-        .mdDeparse(.mdFold(x$expr, .parsed$defs))
+        .mdDeparse(.mdFold(x$expr, .parsed$defs, .foldIndex))
       }, character(1)),
       stringsAsFactors = FALSE
     )
@@ -331,7 +334,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       lapply(.parsed$ode[[.s]], function(x) {
         .st <- .mdExprStates(x$expr, .states, .deps)
         stats::setNames(vapply(.st, function(o) {
-          as.numeric(.mdDirection(x$expr, o, .states, .deps))
+          as.numeric(.mdDirection(x$expr, o, .states, .deps, .dependents[[o]]))
         }, numeric(1)), .st)
       })
     }), recursive = FALSE)
@@ -514,8 +517,11 @@ print.nlmixr2ModelGraph <- function(x, ...) {
         .n <- as.character(.lhs)
         # a conditional assignment also depends on its condition
         .env$deps[[.n]] <- union(.env$deps[[.n]], union(all.vars(x[[3]]), cond))
-        if (.n %in% .env$states || .n %in% .env$inIf) {
-          # values from `if` branches cannot be substituted
+        if (.n %in% .env$states || .n %in% .env$inIf ||
+              length(all.names(.rhs)) > .mdMaxDefSize) {
+          # values from `if` branches cannot be substituted, and very large
+          # definitions (QSP/PBPK models) are kept as variables so the
+          # equations do not grow combinatorially
           .env$defs[[.n]] <- NULL
         } else if (!identical(.env$count[[.n]], 1)) {
           # a reassigned variable is substituted with its current value so
@@ -539,13 +545,15 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 
 #' Replace substituted definitions by their variable names (for labels)
 #' @noRd
-.mdFold <- function(expr, defs) {
+.mdFold <- function(expr, defs, index = .mdFoldIndex(defs)) {
   if (length(defs) == 0L) return(expr)
-  .keys <- vapply(defs, .mdDeparse, character(1))
   .fold <- function(e) {
     if (is.call(e)) {
-      .w <- which(.keys == .mdDeparse(e))
-      if (length(.w) > 0L) return(as.name(names(defs)[.w[length(.w)]]))
+      # only deparse sub-expressions the size of some definition
+      if (length(all.names(e)) %in% index$size) {
+        .w <- which(index$key == .mdDeparse(e))
+        if (length(.w) > 0L) return(as.name(names(defs)[.w[length(.w)]]))
+      }
       for (.i in seq_along(e)[-1]) {
         .v <- .fold(e[[.i]])
         if (!is.null(.v)) e[[.i]] <- .v
@@ -554,6 +562,13 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     e
   }
   .fold(expr)
+}
+
+#' Deparsed keys and sizes of definitions, computed once per model
+#' @noRd
+.mdFoldIndex <- function(defs) {
+  list(key = vapply(defs, .mdDeparse, character(1)),
+       size = vapply(defs, function(d) length(all.names(d)), numeric(1)))
 }
 
 #' Substitute variable definitions into an expression
@@ -605,23 +620,47 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   NULL
 }
 
-#' States an expression depends on (directly or through variables)
+#' Compartments each variable depends on (through any chain of assignments)
+#'
+#' Computed once per model so that dependency checks are lookups.
+#' @param states compartment names
+#' @param deps named list of variables to the variables they are assigned from
+#' @return named list of variables to the compartments they depend on
 #' @noRd
-.mdExprStates <- function(expr, states, deps) {
-  .seen <- character(0)
-  .todo <- all.vars(expr)
-  while (length(.todo) > 0L) {
-    .v <- .todo[1]
-    .todo <- .todo[-1]
-    if (.v %in% .seen) next
-    .seen <- c(.seen, .v)
-    # a state's own amount is not expanded through assignments
-    if (!(.v %in% states) && !is.null(deps[[.v]])) {
-      .todo <- c(.todo, setdiff(deps[[.v]], .seen))
+.mdStateClosure <- function(states, deps) {
+  .memo <- new.env(parent = emptyenv())
+  .visit <- function(v, path) {
+    if (!is.null(.memo[[v]])) return(.memo[[v]])
+    if (v %in% path) return(character(0)) # a variable updated from itself
+    .d <- deps[[v]]
+    .ret <- intersect(.d, states)
+    for (.w in setdiff(.d, states)) {
+      if (!is.null(deps[[.w]])) .ret <- union(.ret, .visit(.w, c(path, v)))
     }
+    .memo[[v]] <- .ret
+    .ret
   }
-  intersect(states, .seen)
+  .ret <- lapply(names(deps), .visit, path = character(0))
+  names(.ret) <- names(deps)
+  .ret
 }
+
+#' States an expression depends on (directly or through variables)
+#' @param closure result of `.mdStateClosure()`
+#' @noRd
+.mdExprStates <- function(expr, states, closure) {
+  .v <- all.vars(expr)
+  # a state's own amount is not expanded through assignments
+  .direct <- .v[.v %in% states]
+  .via <- unlist(closure[setdiff(.v, states)], use.names = FALSE)
+  intersect(states, c(.direct, .via))
+}
+
+# limits that keep large (QSP/PBPK) models fast: the size (number of names)
+# of a definition substituted into the equations, and the number of terms a
+# single product may be distributed into
+.mdMaxDefSize <- 200L
+.mdMaxTerms <- 64L
 
 #' Split an expression into signed additive terms
 #'
@@ -645,6 +684,11 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     if (identical(.f, quote(`*`)) && length(x) == 3L) {
       .a <- .mdTerms(x[[2]])
       .b <- .mdTerms(x[[3]])
+      # distributing a product of long sums grows combinatorially; beyond a
+      # limit keep the product as one term
+      if (length(.a) * length(.b) > .mdMaxTerms) {
+        return(list(list(sign = 1, expr = x)))
+      }
       .ret <- list()
       for (.i in .a) {
         for (.j in .b) {
@@ -794,8 +838,11 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @param o compartment name
 #' @return 1 (increasing), -1 (decreasing), 0 (independent) or NA (unknown)
 #' @noRd
-.mdDirection <- function(expr, o, states, deps) {
-  .dep <- function(e) o %in% .mdExprStates(e, states, deps)
+.mdDirection <- function(expr, o, states, deps,
+                         dependents = .mdDependents(o, states, deps)) {
+  # `dependents`: `o` and the variables that depend on it, so a dependency
+  # check is one lookup
+  .dep <- function(e) any(all.vars(e) %in% dependents)
   .comb <- function(d) {
     d <- d[is.na(d) | d != 0]
     if (length(d) == 0L) return(0)
@@ -939,6 +986,13 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     if (.dep(e)) NA_real_ else 0
   }
   .d(expr)
+}
+
+#' A compartment and the variables that depend on it
+#' @noRd
+.mdDependents <- function(o, states, closure) {
+  .v <- names(closure)[vapply(closure, function(s) o %in% s, logical(1))]
+  c(o, setdiff(.v, states))
 }
 
 #' Interaction sign from a direction (unknown directions are 0)
@@ -1123,29 +1177,45 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # is (x, y) free for `s`, with the arrows between `s` and the placed
   # compartments clear of other compartments, and no placed arrow running
   # through the new box?
+  # arrow partners of each compartment and edge end point indices, computed
+  # once (large QSP/PBPK models have thousands of edges)
+  .fromI <- match(.links$from, states)
+  .toI <- match(.links$to, states)
+  .adj <- lapply(seq_along(states), function(.i) {
+    unique(c(.fromI[.toI == .i], .toI[.fromI == .i]))
+  })
+  names(.adj) <- states
   .ok <- function(s, x, y) {
     if (!.free(x, y)) return(FALSE)
-    .placed <- names(.x)[!is.na(.x)]
-    .partners <- intersect(unique(c(.links$from[.links$to == s],
-                                    .links$to[.links$from == s])), .placed)
-    for (.f in .partners) {
-      .w <- !is.na(.x) & names(.x) != .f
-      if (.mdSegmentCrosses(.x[.f], .y[.f], x, y, .x[.w], .y[.w])) return(FALSE)
-    }
-    .pe <- .links[.links$from %in% .placed & .links$to %in% .placed, ,
-                  drop = FALSE]
-    for (.i in seq_len(nrow(.pe))) {
-      if (.mdSegmentCrosses(.x[.pe$from[.i]], .y[.pe$from[.i]],
-                            .x[.pe$to[.i]], .y[.pe$to[.i]], x, y)) {
+    .isPlaced <- !is.na(.x)
+    # arrows between `s` and placed partners must be clear of the other
+    # placed compartments
+    .p <- .adj[[s]]
+    .p <- .p[.isPlaced[.p]]
+    if (length(.p) > 0L) {
+      .others <- which(.isPlaced)
+      .g <- expand.grid(p = .p, o = .others)
+      .g <- .g[.g$p != .g$o, , drop = FALSE]
+      if (nrow(.g) > 0L &&
+            any(.mdSegRect(.x[.g$p], .y[.g$p], x, y, .x[.g$o], .y[.g$o]))) {
         return(FALSE)
       }
+    }
+    # no placed arrow may run through the new box
+    .pe <- .isPlaced[.fromI] & .isPlaced[.toI]
+    if (any(.pe) &&
+          any(.mdSegRect(.x[.fromI[.pe]], .y[.fromI[.pe]],
+                         .x[.toI[.pe]], .y[.toI[.pe]], x, y))) {
+      return(FALSE)
     }
     TRUE
   }
   .place <- function(s, x, y, step) {
     # move away (in the `step` direction) until the position is clear,
     # trying neighboring columns in each row
-    for (.k in 0:(2L * length(states) + 4L)) {
+    # large models search fewer rows before falling back
+    .kmax <- if (length(states) <= 40L) 2L * length(states) + 4L else 12L
+    for (.k in 0:.kmax) {
       for (.dx in c(0, 1, -1, 2, -2)) {
         if (.ok(s, x + .dx, y + .k * step)) {
           .x[s] <<- x + .dx
@@ -1202,7 +1272,8 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # arrows between `s` and the already placed compartments (either
   # direction) are clear of the other compartments
   .pickRow <- function(s, nx, y0) {
-    for (.d in c(0, rbind(-seq_along(states), seq_along(states)))) {
+    .m <- if (length(states) <= 40L) length(states) else 12L
+    for (.d in c(0, rbind(-seq_len(.m), seq_len(.m)))) {
       .cy <- y0 + .d
       if (.ok(s, nx, .cy)) return(.cy)
     }
@@ -1244,12 +1315,40 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @noRd
 .mdSegmentCrosses <- function(x0, y0, x1, y1, x, y, hw = 0.35, hh = 0.25) {
   if (length(x) == 0L) return(FALSE)
-  .t <- seq(0, 1, length.out = 101L)
-  .px <- x0 + .t * (x1 - x0)
-  .py <- y0 + .t * (y1 - y0)
-  any(vapply(seq_along(x), function(.i) {
-    any(abs(.px - x[.i]) < hw & abs(.py - y[.i]) < hh)
-  }, logical(1)))
+  any(.mdSegRect(x0, y0, x1, y1, x, y, hw, hh))
+}
+
+#' Exact segment / open rectangle intersection (Liang-Barsky), vectorized
+#'
+#' @param x0,y0,x1,y1 segment end points (recycled)
+#' @param cx,cy rectangle centers (recycled)
+#' @param hw,hh rectangle half width and half height
+#' @return logical vector: does each segment pass through the interior of
+#'   its rectangle?
+#' @noRd
+.mdSegRect <- function(x0, y0, x1, y1, cx, cy, hw = 0.35, hh = 0.25) {
+  .n <- max(length(x0), length(cx))
+  x0 <- rep_len(x0, .n)
+  y0 <- rep_len(y0, .n)
+  x1 <- rep_len(x1, .n)
+  y1 <- rep_len(y1, .n)
+  cx <- rep_len(cx, .n)
+  cy <- rep_len(cy, .n)
+  .lo <- rep(0, .n)
+  .hi <- rep(1, .n)
+  .ok <- rep(TRUE, .n)
+  .slab <- function(p0, d, c, h) {
+    .z <- abs(d) < 1e-12
+    # parallel to the slab: inside only when strictly within it
+    .ok <<- .ok & (!.z | abs(p0 - c) < h)
+    .t1 <- ifelse(.z, -Inf, (c - h - p0) / d)
+    .t2 <- ifelse(.z, Inf, (c + h - p0) / d)
+    .lo <<- pmax(.lo, pmin(.t1, .t2))
+    .hi <<- pmin(.hi, pmax(.t1, .t2))
+  }
+  .slab(x0, x1 - x0, cx, hw)
+  .slab(y0, y1 - y0, cy, hh)
+  .ok & .lo < .hi
 }
 
 #' Positions of the invisible input/output end points
