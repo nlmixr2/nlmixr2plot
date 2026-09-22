@@ -333,9 +333,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .terms$dir <- unlist(lapply(.states, function(.s) {
       lapply(.parsed$ode[[.s]], function(x) {
         .st <- .mdExprStates(x$expr, .states, .deps)
-        stats::setNames(vapply(.st, function(o) {
-          as.numeric(.mdDirection(x$expr, o, .states, .deps, .dependents[[o]]))
-        }, numeric(1)), .st)
+        stats::setNames(.mdDirections(x$expr, .st, .dependents[.st]), .st)
       })
     }), recursive = FALSE)
   }
@@ -438,6 +436,24 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .env$inIf <- character(0)
   .env$states <- character(0)
   .env$props <- list()
+  .env$defsSmall <- list()
+  # the definition to substitute for variable `n` (NULL: keep the variable)
+  .mdDefinition <- function(n, rhs, maxSize) {
+    if (n %in% .env$states || n %in% .env$inIf ||
+          length(all.names(rhs)) > maxSize) {
+      # values from `if` branches cannot be substituted, and very large
+      # definitions (QSP/PBPK models) are kept as variables so the
+      # equations do not grow combinatorially
+      return(NULL)
+    }
+    if (!identical(.env$count[[n]], 1)) {
+      # a reassigned variable is substituted with its current value so
+      # that a reused name (like `flux`) is not mistaken for one flow
+      return(rhs)
+    }
+    if (any(all.vars(rhs) %in% .env$states)) return(rhs)
+    NULL
+  }
   .isAssign <- function(x) {
     length(x) == 3L &&
       (identical(x[[1]], quote(`<-`)) || identical(x[[1]], quote(`=`)) ||
@@ -500,7 +516,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       }
     } else if (.isAssign(x)) {
       .lhs <- x[[2]]
+      # full substitution, and substitution of small definitions only (used
+      # when full substitution makes an equation too large)
       .rhs <- .mdSubstitute(x[[3]], .env$defs)
+      .rhsSmall <- .mdSubstitute(x[[3]], .env$defsSmall)
       .state <- .mdDdtState(.lhs)
       .prop <- .mdDoseProperty(.lhs)
       if (!is.null(.prop)) {
@@ -512,31 +531,27 @@ print.nlmixr2ModelGraph <- function(x, ...) {
           paste(.cur, .val, sep = " / ")
         .env$props[[.prop$state]] <- .old
       } else if (!is.null(.state)) {
-        .addTerms(.state, .mdTerms(.rhs))
+        if (length(all.names(.rhs)) > .mdMaxOdeSize) .rhs <- .rhsSmall
+        # still too large: use the equation as written (variables are
+        # followed through their dependencies)
+        if (length(all.names(.rhs)) > .mdMaxOdeSize) .rhs <- x[[3]]
+        .addTerms(.state, .mdSplitTerms(.rhs, .env$states, .state))
       } else if (is.name(.lhs)) {
         .n <- as.character(.lhs)
         # a conditional assignment also depends on its condition
         .env$deps[[.n]] <- union(.env$deps[[.n]], union(all.vars(x[[3]]), cond))
-        if (.n %in% .env$states || .n %in% .env$inIf ||
-              length(all.names(.rhs)) > .mdMaxDefSize) {
-          # values from `if` branches cannot be substituted, and very large
-          # definitions (QSP/PBPK models) are kept as variables so the
-          # equations do not grow combinatorially
-          .env$defs[[.n]] <- NULL
-        } else if (!identical(.env$count[[.n]], 1)) {
-          # a reassigned variable is substituted with its current value so
-          # that a reused name (like `flux`) is not mistaken for one flow
-          .env$defs[[.n]] <- .rhs
-        } else if (any(all.vars(.rhs) %in% .env$states)) {
-          .env$defs[[.n]] <- .rhs
-        }
+        # a NULL definition removes the variable from the substitutions
+        .env$defs[[.n]] <- .mdDefinition(.n, .rhs, .mdMaxDefSize)
+        .env$defsSmall[[.n]] <- .mdDefinition(.n, .rhsSmall, .mdMaxSmallDefSize)
       }
     }
     invisible()
   }
   for (.l in lines) .walk(.l, character(0))
   # only single-assignment definitions can be folded back into labels
-  .fold <- .env$defs[vapply(names(.env$defs), function(.n) {
+  .defs <- c(.env$defs, .env$defsSmall)
+  .defs <- .defs[!vapply(.defs, is.null, logical(1))]
+  .fold <- .defs[vapply(names(.defs), function(.n) {
     identical(.env$count[[.n]], 1)
   }, logical(1))]
   list(ode = .env$ode, deps = .env$deps, defs = .fold,
@@ -659,36 +674,130 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 # limits that keep large (QSP/PBPK) models fast: the size (number of names)
 # of a definition substituted into the equations, and the number of terms a
 # single product may be distributed into
-.mdMaxDefSize <- 200L
+.mdMaxDefSize <- 2000L
 .mdMaxTerms <- 64L
+# beyond this size (after substitution) an equation only gets definitions up
+# to `.mdMaxSmallDefSize` substituted
+.mdMaxOdeSize <- 5000L
+# a summand is only expanded when its terms stay within this multiple of its
+# size
+.mdMaxTermGrowth <- 50L
+.mdMaxSmallDefSize <- 200L
+
+#' Split an equation into terms, bounding the growth of each summand
+#'
+#' The top-level sum is split first (which never grows); each summand is then
+#' expanded with `.mdTerms()` unless that would make it much larger (e.g. a
+#' long numerator split over a large denominator), in which case it is kept
+#' as one term.
+#' @param x expression
+#' @param states compartment names
+#' @return list of list(sign, expr)
+#' @noRd
+.mdSplitTerms <- function(x, states = character(0), own = NULL) {
+  .top <- .mdTopSum(x)
+  # expand within a size budget; NULL when the budget runs out
+  .try <- function(expr, own, limit) {
+    .budget <- new.env(parent = emptyenv())
+    .budget$left <- limit
+    tryCatch(.mdTerms(expr, states, own, .budget),
+             mdBudget = function(e) NULL)
+  }
+  unlist(lapply(.top, function(.t) {
+    .limit <- .mdMaxTermGrowth * length(all.names(.t$expr)) + 200
+    .e <- .try(.t$expr, NULL, .limit)
+    if (is.null(.e) && !is.null(own)) {
+      # coarse expansion (own compartment / other compartments / constants)
+      .e <- .try(.t$expr, own, .limit)
+    }
+    if (is.null(.e)) return(list(.t))
+    if (.t$sign < 0) .e <- .mdNeg(.e)
+    .e
+  }), recursive = FALSE)
+}
+
+#' Total size (number of names) of a list of terms
+#' @noRd
+.mdSize <- function(terms) {
+  sum(vapply(terms, function(t) length(all.names(t$expr)), numeric(1)))
+}
+
+#' Charge an expansion budget, signalling `mdBudget` when it runs out
+#' @noRd
+.mdCharge <- function(budget, size) {
+  if (is.null(budget)) return(invisible())
+  budget$left <- budget$left - size
+  if (budget$left < 0) {
+    stop(structure(class = c("mdBudget", "error", "condition"),
+                   list(message = "expansion budget exceeded", call = NULL)))
+  }
+  invisible()
+}
+
+#' Split only the top-level sum of an expression into signed summands
+#' @noRd
+.mdTopSum <- function(x, sign = 1) {
+  if (is.call(x)) {
+    .f <- x[[1]]
+    if (identical(.f, quote(`(`))) return(.mdTopSum(x[[2]], sign))
+    if (identical(.f, quote(`+`))) {
+      if (length(x) == 2L) return(.mdTopSum(x[[2]], sign))
+      return(c(.mdTopSum(x[[2]], sign), .mdTopSum(x[[3]], sign)))
+    }
+    if (identical(.f, quote(`-`))) {
+      if (length(x) == 2L) return(.mdTopSum(x[[2]], -sign))
+      return(c(.mdTopSum(x[[2]], sign), .mdTopSum(x[[3]], -sign)))
+    }
+  }
+  list(list(sign = sign, expr = x))
+}
 
 #' Split an expression into signed additive terms
 #'
 #' Sums and differences are split, products distribute over sums and a sum
 #' in a numerator is split over its denominator.
 #' @param x expression
+#' @param states compartment names, used to group long sums (see
+#'   `.mdCollapse()`)
+#' @param own when given, the equation's own compartment: products are only
+#'   expanded into terms with and without it, with other compartments and
+#'   without any (a coarse expansion that stays small)
 #' @return list of list(sign, expr)
 #' @noRd
-.mdTerms <- function(x) {
+.mdTerms <- function(x, states = character(0), own = NULL, budget = NULL) {
   if (is.call(x)) {
     .f <- x[[1]]
-    if (identical(.f, quote(`(`))) return(.mdTerms(x[[2]]))
+    if (identical(.f, quote(`(`))) return(.mdTerms(x[[2]], states, own, budget))
     if (identical(.f, quote(`+`))) {
-      if (length(x) == 2L) return(.mdTerms(x[[2]]))
-      return(c(.mdTerms(x[[2]]), .mdTerms(x[[3]])))
+      if (length(x) == 2L) return(.mdTerms(x[[2]], states, own, budget))
+      return(c(.mdTerms(x[[2]], states, own, budget), .mdTerms(x[[3]], states, own, budget)))
     }
     if (identical(.f, quote(`-`))) {
-      if (length(x) == 2L) return(.mdNeg(.mdTerms(x[[2]])))
-      return(c(.mdTerms(x[[2]]), .mdNeg(.mdTerms(x[[3]]))))
+      if (length(x) == 2L) return(.mdNeg(.mdTerms(x[[2]], states, own, budget)))
+      return(c(.mdTerms(x[[2]], states, own, budget), .mdNeg(.mdTerms(x[[3]], states, own, budget))))
     }
     if (identical(.f, quote(`*`)) && length(x) == 3L) {
-      .a <- .mdTerms(x[[2]])
-      .b <- .mdTerms(x[[3]])
+      .a <- .mdTerms(x[[2]], states, own, budget)
+      .b <- .mdTerms(x[[3]], states, own, budget)
       # distributing a product of long sums grows combinatorially; beyond a
-      # limit keep the product as one term
+      # limit first group like terms (same sign and variables) of the longer
+      # factor, then of the other, and only then keep the product whole
+      if (!is.null(own)) {
+        # coarse expansion: only keep apart what the diagram needs (own
+        # compartment / other compartments / constants)
+        .a <- .mdCollapse(.a, states, own = own)
+        .b <- .mdCollapse(.b, states, own = own)
+      }
+      for (.coarse in c(FALSE, TRUE)) {
+        if (length(.a) * length(.b) > .mdMaxTerms) {
+          .a <- .mdCollapse(.a, states, .coarse)
+          .b <- .mdCollapse(.b, states, .coarse)
+        }
+      }
       if (length(.a) * length(.b) > .mdMaxTerms) {
         return(list(list(sign = 1, expr = x)))
       }
+      .mdCharge(budget, length(.b) * .mdSize(.a) + length(.a) * .mdSize(.b))
       .ret <- list()
       for (.i in .a) {
         for (.j in .b) {
@@ -699,7 +808,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       return(.ret)
     }
     if (identical(.f, quote(`/`)) && length(x) == 3L) {
-      .den <- .mdTerms(x[[3]])
+      .den <- .mdTerms(x[[3]], states, own, budget)
       .denSign <- 1
       if (length(.den) == 1L) {
         # keep a single signed denominator's sign on the term
@@ -708,7 +817,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       } else {
         .denExpr <- x[[3]]
       }
-      return(lapply(.mdTerms(x[[2]]), function(.t) {
+      .num <- .mdTerms(x[[2]], states, own, budget)
+      # each numerator term carries a copy of the denominator
+      .mdCharge(budget, length(.num) * length(all.names(.denExpr)))
+      return(lapply(.num, function(.t) {
         list(sign = .t$sign * .denSign,
              expr = as.call(list(quote(`/`), .t$expr, .denExpr)))
       }))
@@ -720,8 +832,8 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     # branches applies either way
     .isZero <- function(t) is.numeric(t$expr) && all(t$expr == 0)
     return(.mdMergeBranches(x[[2]],
-                            Filter(Negate(.isZero), .mdTerms(x[[3]])),
-                            Filter(Negate(.isZero), .mdTerms(x[[4]]))))
+                            Filter(Negate(.isZero), .mdTerms(x[[3]], states, own, budget)),
+                            Filter(Negate(.isZero), .mdTerms(x[[4]], states, own, budget))))
   }
   if (is.numeric(x) && length(x) == 1L && !is.na(x) && x < 0) {
     return(list(list(sign = -1, expr = -x)))
@@ -794,6 +906,39 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   x
 }
 
+#' Group like terms of a long sum into one term
+#'
+#' Terms are grouped by sign and the compartments they contain (or, when
+#' `coarse`, only whether they contain any compartment), which keeps the
+#' constant, self-dependent and compartment-driven parts of a long sum apart
+#' while bounding the number of terms.
+#' @param terms list of terms
+#' @param states compartment names (without them, the variables are used)
+#' @param coarse group only by sign and whether a compartment appears
+#' @param own group by sign, whether `own` appears and whether other
+#'   compartments appear
+#' @noRd
+.mdCollapse <- function(terms, states = character(0), coarse = FALSE,
+                        own = NULL) {
+  .key <- vapply(terms, function(t) {
+    .v <- all.vars(t$expr)
+    if (length(states) > 0L) .v <- intersect(.v, states)
+    .v <- if (!is.null(own)) {
+      paste(own %in% .v, length(setdiff(.v, own)) > 0L)
+    } else if (coarse) {
+      as.character(length(.v) > 0L)
+    } else {
+      paste(sort(.v), collapse = ",")
+    }
+    paste(t$sign, .v)
+  }, character(1))
+  lapply(split(terms, factor(.key, levels = unique(.key))), function(g) {
+    list(sign = g[[1]]$sign,
+         expr = Reduce(function(a, b) as.call(list(quote(`+`), a, b)),
+                       lapply(g, function(t) t$expr)))
+  })
+}
+
 #' @noRd
 .mdNeg <- function(terms) {
   lapply(terms, function(.t) {
@@ -840,30 +985,56 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @noRd
 .mdDirection <- function(expr, o, states, deps,
                          dependents = .mdDependents(o, states, deps)) {
-  # `dependents`: `o` and the variables that depend on it, so a dependency
-  # check is one lookup
-  .dep <- function(e) any(all.vars(e) %in% dependents)
-  .comb <- function(d) {
-    d <- d[is.na(d) | d != 0]
-    if (length(d) == 0L) return(0)
-    if (anyNA(d) || length(unique(d)) > 1L) return(NA_real_)
-    d[1]
+  .mdDirections(expr, o, list(dependents))[[1]]
+}
+
+#' Directions of an expression in several compartments at once
+#'
+#' The expression is walked once; each node's direction is a vector with
+#' one entry per compartment in `os` (1 increasing, -1 decreasing, 0
+#' independent, NA unknown).
+#' @param expr expression
+#' @param os compartment names
+#' @param dependents list (one per compartment) of the compartment and the
+#'   variables that depend on it
+#' @return numeric vector, one direction per compartment
+#' @noRd
+.mdDirections <- function(expr, os, dependents) {
+  .k <- length(os)
+  if (.k == 0L) return(numeric(0))
+  .zero <- rep(0, .k)
+  # does `e` depend on each compartment?
+  .dep <- function(e) {
+    .v <- all.vars(e)
+    if (length(.v) == 0L) return(rep(FALSE, .k))
+    vapply(dependents, function(d) any(.v %in% d), logical(1))
   }
-  # the part of a product that depends on `o` (NULL when none)
-  .depPart <- function(e) {
+  # combine the directions of the parts of a sum/product, per compartment
+  .comb <- function(m) {
+    if (!is.matrix(m)) m <- matrix(m, nrow = .k)
+    apply(m, 1L, function(d) {
+      d <- d[is.na(d) | d != 0]
+      if (length(d) == 0L) return(0)
+      if (anyNA(d) || length(unique(d)) > 1L) return(NA_real_)
+      d[1]
+    })
+  }
+  # the part of a product that depends on compartment `i` (NULL when none)
+  .depPart <- function(e, i) {
     e <- .mdStripParen(e)
     if (is.call(e) && identical(e[[1]], quote(`*`)) && length(e) == 3L) {
-      .a <- .depPart(e[[2]])
-      .b <- .depPart(e[[3]])
+      .a <- .depPart(e[[2]], i)
+      .b <- .depPart(e[[3]], i)
       if (is.null(.a)) return(.b)
       if (is.null(.b)) return(.a)
       return(as.call(list(quote(`*`), .a, .b)))
     }
-    if (.dep(e)) e else NULL
+    if (.dep(e)[i]) e else NULL
   }
-  # is `num/den` of the form `c*N/(K + N)`, with K independent of `o`?
-  .saturating <- function(e) {
-    .n <- .depPart(e[[2]])
+  # is `num/den` of the form `c*N/(K + N)` in compartment `i`, with K
+  # positive and independent of it?
+  .saturating <- function(e, i) {
+    .n <- .depPart(e[[2]], i)
     .den <- .mdStripParen(e[[3]])
     if (is.null(.n) || !(is.call(.den) && identical(.den[[1]], quote(`+`)))) {
       return(FALSE)
@@ -879,14 +1050,15 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       }
     }
     .flat(.den)
-    .ds <- Filter(.dep, .s)
-    .ind <- Filter(Negate(.dep), .s)
+    .isDep <- vapply(.s, function(x) .dep(x)[i], logical(1))
+    .ds <- .s[.isDep]
+    .ind <- .s[!.isDep]
     # K must be positive (`C/(C - 1)` decreases)
     length(.ds) == 1L && length(.ind) > 0L &&
       isTRUE(all(vapply(.ind, .sgn, numeric(1)) > 0)) &&
       identical(.mdDeparse(.mdCanon(.ds[[1]])), .mdDeparse(.mdCanon(.n)))
   }
-  # sign of an expression that does not depend on `o`: parameters and
+  # sign of an expression that does not depend on the compartment: parameters and
   # `exp()`/`sqrt()` are positive, constant arithmetic is evaluated, and
   # anything else is unknown (NA)
   .sgn <- function(e) {
@@ -923,42 +1095,56 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     }
     NA_real_
   }
-
+  # `a` scaled by the sign of an independent factor, where `a` is non-zero
+  .scale <- function(a, e) {
+    .s <- .sgn(e)
+    ifelse(!is.na(a) & a == 0, 0, a * .s)
+  }
   .d <- function(e) {
     if (is.name(e)) {
-      if (identical(as.character(e), o)) return(1)
+      .n <- as.character(e)
+      .r <- ifelse(os == .n, 1, 0)
       # a variable that was not substituted (conditional/reassigned)
-      return(if (.dep(e)) NA_real_ else 0)
+      .r[.r == 0 & .dep(e)] <- NA_real_
+      return(.r)
     }
-    if (!is.call(e)) return(0)
+    if (!is.call(e)) return(.zero)
     .f <- e[[1]]
     .fn <- if (is.name(.f)) as.character(.f) else ""
     if (.fn == "(") return(.d(e[[2]]))
-    if (.fn == "+") return(.comb(vapply(as.list(e)[-1], .d, numeric(1))))
+    if (.fn == "+") return(.comb(vapply(as.list(e)[-1], .d, numeric(.k))))
     if (.fn == "-") {
       if (length(e) == 2L) return(-.d(e[[2]]))
-      return(.comb(c(.d(e[[2]]), -.d(e[[3]]))))
+      return(.comb(cbind(.d(e[[2]]), -.d(e[[3]]))))
     }
     if (.fn == "*") {
       .a <- .d(e[[2]])
       .b <- .d(e[[3]])
-      # a factor that does not depend on `o` may still carry a sign (R
-      # parses `-k*C` as `(-k)*C`)
-      if (identical(.a, 0) && identical(.b, 0)) return(0)
-      if (identical(.a, 0)) return(.b * .sgn(e[[2]]))
-      if (identical(.b, 0)) return(.a * .sgn(e[[3]]))
-      return(.comb(c(.a, .b)))
+      # a factor that does not depend on the compartment may still carry a
+      # sign (R parses `-k*C` as `(-k)*C`)
+      .a0 <- !is.na(.a) & .a == 0
+      .b0 <- !is.na(.b) & .b == 0
+      .r <- .comb(cbind(.a, .b))
+      .r[.a0 & !.b0] <- .scale(.b, e[[2]])[.a0 & !.b0]
+      .r[.b0 & !.a0] <- .scale(.a, e[[3]])[.b0 & !.a0]
+      .r[.a0 & .b0] <- 0
+      return(.r)
     }
     if (.fn == "/") {
       .n <- .d(e[[2]])
       .m <- .d(e[[3]])
-      if (identical(.n, 0) && identical(.m, 0)) return(0)
-      if (identical(.m, 0)) return(.n * .sgn(e[[3]]))
-      if (identical(.n, 0)) return(-.m * .sgn(e[[2]]))
+      .n0 <- !is.na(.n) & .n == 0
+      .m0 <- !is.na(.m) & .m == 0
+      .r <- .comb(cbind(.n, -.m))
+      .r[.m0 & !.n0] <- .scale(.n, e[[3]])[.m0 & !.n0]
+      .r[.n0 & !.m0] <- .scale(-.m, e[[2]])[.n0 & !.m0]
+      .r[.n0 & .m0] <- 0
       # saturating forms `N/(K + N)` (Emax/Hill: `C^g/(ec50^g + C^g)`)
       # increase with C; other quotients may not be monotone
-      if (identical(.n, 1) && identical(.m, 1) && .saturating(e)) return(1)
-      return(.comb(c(.n, -.m)))
+      for (.i in which(!is.na(.n) & .n == 1 & !is.na(.m) & .m == 1)) {
+        if (.saturating(e, .i)) .r[.i] <- 1
+      }
+      return(.r)
     }
     if (.fn %in% c("exp", "log", "sqrt", "expit", "log1p", "log10", "log2") &&
           length(e) == 2L) {
@@ -966,24 +1152,27 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     }
     # a delayed value moves with the value itself (the delay time is a
     # parameter)
-    if (.fn == "delay" && length(e) >= 2L &&
-          all(vapply(as.list(e)[-(1:2)], function(a) identical(.d(a), 0),
-                     logical(1)))) {
-      return(.d(e[[2]]))
+    if (.fn == "delay" && length(e) >= 2L) {
+      .r <- .d(e[[2]])
+      for (.a in as.list(e)[-(1:2)]) .r[.dep(.a)] <- NA_real_
+      return(.r)
     }
     if (.fn %in% c("^", "**") && length(e) == 3L) {
       .b <- .d(e[[2]])
-      if (.dep(e[[3]])) return(NA_real_)
       .p <- .mdStripParen(e[[3]])
-      if (is.numeric(.p)) return(sign(.p) * .b)
-      # `C^(-gamma)`: a negated exponent decreases
-      if (is.call(.p) && identical(.p[[1]], quote(`-`)) && length(.p) == 2L) {
-        return(-.sgn(.p[[2]]) * .b)
+      .r <- if (is.numeric(.p)) {
+        sign(.p) * .b
+      } else if (is.call(.p) && identical(.p[[1]], quote(`-`)) && length(.p) == 2L) {
+        # `C^(-gamma)`: a negated exponent decreases
+        -.sgn(.p[[2]]) * .b
+      } else {
+        # a symbolic exponent (e.g. a Hill coefficient) is assumed positive
+        .b
       }
-      # a symbolic exponent (e.g. a Hill coefficient) is assumed positive
-      return(.b)
+      .r[.dep(e[[3]])] <- NA_real_
+      return(.r)
     }
-    if (.dep(e)) NA_real_ else 0
+    ifelse(.dep(e), NA_real_, 0)
   }
   .d(expr)
 }

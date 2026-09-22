@@ -1006,3 +1006,38 @@ test_that("lag, F, rate and dur are annotations on their compartment", {
   expect_false(grepl("xlabel", grep("^  \"central\" \\[", lines, value = TRUE)))
   expect_error(print(modelDiagram(g, engine = "ggplot2")), NA)
 })
+
+test_that("large sums of flows are still matched as transfers", {
+  # like PBPK models: central gains the sum of many tissue flows
+  n <- 60
+  code <- c(
+    sprintf("j%02d = q%02d * (t%02d/v%02d - central/vc)", 1:n, 1:n, 1:n, 1:n),
+    sprintf("d/dt(t%02d) = -j%02d", 1:n, 1:n),
+    sprintf("jtot = %s", paste(sprintf("j%02d", 1:n), collapse = " + ")),
+    "d/dt(central) = jtot - kel*central"
+  )
+  m <- rxode2::rxode2(paste(code, collapse = "\n"))
+  g <- modelGraph(m, dosing = "central")
+  tr <- g$edges[g$edges$type == "transfer", ]
+  expect_equal(nrow(tr), 2 * n)
+  expect_true(all(tr$bidirectional))
+  expect_equal(sum(g$edges$type == "interaction"), 0L)
+})
+
+test_that("long products keep their input and elimination parts", {
+  n <- 70
+  code <- c(
+    sprintf("d/dt(s%02d) = -k*s%02d", 1:n, 1:n),
+    sprintf("b = b0 + %s", paste(sprintf("w%02d*s%02d", 1:n, 1:n), collapse = " + ")),
+    "d/dt(y) = tau*(b - y)*(1 - inh)"
+  )
+  m <- rxode2::rxode2(paste(code, collapse = "\n"))
+  t0 <- Sys.time()
+  g <- modelGraph(m, dosing = "s01")
+  expect_lt(as.numeric(Sys.time() - t0, units = "secs"), 30)
+  expect_equal(nrow(.edge(g, NA, "y", "input")), 1L)
+  expect_equal(nrow(.edge(g, "y", NA, "elimination")), 1L)
+  # `b*(1 - inh)`: the compartments in `b` stimulate y, and (through
+  # `-b*inh`) also inhibit it
+  expect_equal(sort(.edge(g, "s01", "y", "interaction")$sign), c(-1, 1))
+})
