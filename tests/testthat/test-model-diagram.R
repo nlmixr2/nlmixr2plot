@@ -510,3 +510,39 @@ test_that("factor evid/amt columns use their labels", {
   g <- suppressMessages(modelGraph(.pkTurnover, data = d))
   expect_equal(g$nodes$name[g$nodes$dosing], "gut")
 })
+
+test_that("an effect compartment with several drivers is placed clear of all arrows", {
+  m <- rxode2::rxode2({
+    d/dt(central) = -cl*central - q*central + q*peri
+    d/dt(peri) = q*central - q*peri
+    d/dt(eff) = kin*central - kout*eff*peri
+  })
+  g <- modelGraph(m)
+  n <- g$nodes
+  rownames(n) <- n$name
+  e <- g$edges[g$edges$type == "interaction", ]
+  expect_equal(sort(e$from), c("central", "peri"))
+  for (.i in seq_len(nrow(e))) {
+    .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
+    expect_false(nlmixr2plot:::.mdSegmentCrosses(
+      n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
+      n[.others, "x"], n[.others, "y"]), label = e$from[.i])
+  }
+})
+
+test_that("ggplot2 arrows between the same compartments do not overlap", {
+  m <- rxode2::rxode2({
+    d/dt(C) = -cl*C
+    d/dt(eff) = kin*C - kout*eff*C
+  })
+  g <- modelGraph(m)
+  e <- .edge(g, "C", "eff", "interaction")
+  expect_equal(sort(e$sign), c(-1, 1))
+  p <- modelDiagram(g, engine = "ggplot2")
+  seg <- p$layers[[which(vapply(p$layers, function(l) {
+    inherits(l$geom, "GeomSegment")
+  }, logical(1)))]]$data
+  seg <- seg[seg$flow != "mass transfer", ]
+  expect_equal(nrow(seg), 2L)
+  expect_false(isTRUE(all.equal(seg$y[1], seg$y[2])))
+})

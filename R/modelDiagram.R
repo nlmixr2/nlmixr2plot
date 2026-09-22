@@ -843,10 +843,14 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .ny <- .y[.from]
       for (.d in c(0, rbind(-seq_along(states), seq_along(states)))) {
         .cy <- .y[.from] + .d
-        if (.free(.nx, .cy) &&
-              !.mdSegmentCrosses(.x[.from], .y[.from], .nx, .cy,
-                                 .x[!is.na(.x) & names(.x) != .from],
-                                 .y[!is.na(.x) & names(.x) != .from])) {
+        # every arrow coming in from an already placed compartment must be
+        # clear of the other compartments
+        .srcs <- unique(.int$from[.int$to == .s & .int$from %in% .placed])
+        .clear <- all(vapply(.srcs, function(.f) {
+          .w <- !is.na(.x) & names(.x) != .f
+          !.mdSegmentCrosses(.x[.f], .y[.f], .nx, .cy, .x[.w], .y[.w])
+        }, logical(1)))
+        if (.free(.nx, .cy) && .clear) {
           .ny <- .cy
           break
         }
@@ -1021,6 +1025,13 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .e <- .mdEdgeCoords(graph)
   .e$x0 <- .e$x0 * .xs
   .e$x1 <- .e$x1 * .xs
+  .px <- stats::setNames(.n$x, .n$name)
+  .py <- stats::setNames(.n$y, .n$name)
+  # arrows between the same two compartments (in either direction)
+  .pair <- ifelse(is.na(.e$from) | is.na(.e$to), paste0(".", seq_len(nrow(.e))),
+                  paste(pmin(.e$from, .e$to), pmax(.e$from, .e$to), sep = "\r"))
+  .pairN <- as.integer(stats::ave(seq_along(.pair), .pair, FUN = length))
+  .pairK <- as.integer(stats::ave(seq_along(.pair), .pair, FUN = seq_along))
   .seg <- do.call(rbind, lapply(seq_len(nrow(.e)), function(.i) {
     .x0 <- .e$x0[.i]
     .y0 <- .e$y0[.i]
@@ -1029,11 +1040,17 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     if (.e$type[.i] %in% c("transfer", "interaction") && .e$from[.i] == .e$to[.i]) {
       return(NULL)
     }
-    if (isTRUE(.e$bidirectional[.i])) {
-      # offset the two directions to either side of the center line
-      .len <- sqrt((.x1 - .x0)^2 + (.y1 - .y0)^2)
-      .ox <- -(.y1 - .y0) / .len * 0.06
-      .oy <- (.x1 - .x0) / .len * 0.06
+    if (.pairN[.i] > 1L) {
+      # spread several arrows between the same two compartments (both
+      # directions of an exchange, or a stimulation and an inhibition) to
+      # either side of the center line
+      .a <- c(pmin(.e$from[.i], .e$to[.i]), pmax(.e$from[.i], .e$to[.i]))
+      .dx <- .px[.a[2]] - .px[.a[1]]
+      .dy <- .py[.a[2]] - .py[.a[1]]
+      .len <- sqrt(.dx^2 + .dy^2)
+      .off <- (.pairK[.i] - (.pairN[.i] + 1) / 2) * 0.12
+      .ox <- -.dy / .len * .off
+      .oy <- .dx / .len * .off
       .x0 <- .x0 + .ox
       .x1 <- .x1 + .ox
       .y0 <- .y0 + .oy
