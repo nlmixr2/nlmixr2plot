@@ -31,10 +31,11 @@
   if (is.null(log) || (is.logical(log) && length(log) == 1L && !is.na(log) && !log)) {
     log <- ""
   }
-  if (!is.character(log) || length(log) != 1L || is.na(log) ||
-        !grepl("^[xy]*$", log)) {
-    stop("'log' must be a single string containing only \"x\" and/or \"y\" (like \"\", \"x\", \"y\" or \"xy\")",
-         call. = FALSE)
+  if (!is.character(log) || length(log) != 1L || is.na(log) || !grepl("^[xy]*$", log)) {
+    stop(
+      "'log' must be a single string containing only \"x\" and/or \"y\" (like \"\", \"x\", \"y\" or \"xy\")",
+      call. = FALSE
+    )
   }
   .x <- grepl("x", log, fixed = TRUE)
   .y <- grepl("y", log, fixed = TRUE)
@@ -135,15 +136,18 @@ plot.nlmixr2AugPred <- function(x, y, ..., log = "") {
       # breaks at the gap instead of bridging it.
       .ok <- function(d) {
         .r <- !is.na(d$time) & !is.na(d$values)
-        if (.log$x) .r <- .r & d$time > 0
-        if (.log$y) .r <- .r & d$values > 0
+        if (.log$x) {
+          .r <- .r & d$time > 0
+        }
+        if (.log$y) {
+          .r <- .r & d$values > 0
+        }
         .r
       }
       dobs <- dobs[.ok(dobs), ]
       dpred <- dpred[order(dpred$id, dpred$ind, dpred$time), ]
       .okPred <- .ok(dpred)
-      .seg <- stats::ave(as.integer(!.okPred), dpred$id, dpred$ind,
-                         FUN = cumsum)
+      .seg <- stats::ave(as.integer(!.okPred), dpred$id, dpred$ind, FUN = cumsum)
       dpred$.group <- interaction(dpred$id, dpred$ind, .seg, drop = TRUE)
       dpred <- dpred[.okPred, ]
       x <- rbind(dpred[, names(dpred) != ".group"], dobs)

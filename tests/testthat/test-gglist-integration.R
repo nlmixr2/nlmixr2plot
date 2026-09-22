@@ -31,9 +31,7 @@ test_that("plot(augPred) returns a gglist that broadcasts ggplot2 additions", {
       One.comp.KA.solved,
       PKdata,
       est = "saem",
-      nlmixr2est::saemControl(nBurn = 2,
-                              nEm   = 3,
-                              print = 0)
+      nlmixr2est::saemControl(nBurn = 2, nEm = 3, print = 0)
     ))
 
   ap <- nlmixr2est::augPred(fitOne.comp.KA.solved_S)
@@ -80,7 +78,9 @@ test_that("plot(fit) returns a named, nested gglist", {
 
   fit <-
     suppressMessages(nlmixr2est::nlmixr2(
-      one.compartment, nlmixr2data::theo_sd, est = "saem",
+      one.compartment,
+      nlmixr2data::theo_sd,
+      est = "saem",
       nlmixr2est::saemControl(print = 0, nBurn = 10, nEm = 20)
     ))
 

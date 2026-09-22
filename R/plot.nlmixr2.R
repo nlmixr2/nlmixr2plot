@@ -51,7 +51,8 @@
       .color <- ggplot2::scale_color_manual(values = c("black", "red"))
     }
     .legendPos <- ggplot2::theme(
-      legend.position = "bottom", legend.box = "horizontal",
+      legend.position = "bottom",
+      legend.box = "horizontal",
       legend.title = ggplot2::element_blank()
     )
   } else {
@@ -95,7 +96,8 @@
       .color <- ggplot2::scale_color_manual(values = c("black", "red"))
     }
     .legendPos <- ggplot2::theme(
-      legend.position = "bottom", legend.box = "horizontal",
+      legend.position = "bottom",
+      legend.box = "horizontal",
       legend.title = ggplot2::element_blank()
     )
   } else {
@@ -213,7 +215,7 @@ plotCmt <- function(x, cmt, bsv = NULL) {
   .hasNpde <- any(names(x) == "NPD")
   .hasPred <- any(names(x) == "PRED")
   .hasIpred <- any(names(x) == "IPRED")
-  .datCmt <- x[which(x$CMT == cmt),, drop = FALSE]
+  .datCmt <- x[which(x$CMT == cmt), , drop = FALSE]
   if (nrow(.datCmt) > 0) {
     if (.hasPred & .hasIpred) {
       .lst[["dv_pred_ipred_linear"]] <-
@@ -287,8 +289,10 @@ plotCmt <- function(x, cmt, bsv = NULL) {
     }
     # With multiple endpoints, an endpoint without censoring has only missing
     # limits, which geom_cens() cannot draw (#44)
-    if (any(names(.datCmt) == "lowerLim") &&
-          any(!is.na(.datCmt$lowerLim) | !is.na(.datCmt$upperLim))) {
+    if (
+      any(names(.datCmt) == "lowerLim") &&
+        any(!is.na(.datCmt$lowerLim) | !is.na(.datCmt$upperLim))
+    ) {
       .pIndividual <- .pIndividual +
         geom_cens(ggplot2::aes(lower = .data$lowerLim, upper = .data$upperLim), fill = "purple")
     }

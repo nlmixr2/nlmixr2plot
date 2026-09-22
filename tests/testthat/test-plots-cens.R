@@ -7,7 +7,7 @@ test_that("plot censoring", {
 
   dat <-
     xgxr::case1_pkpd |>
-    dplyr::rename(DV=LIDV) |>
+    dplyr::rename(DV = LIDV) |>
     dplyr::filter(CMT %in% 1:2) |>
     dplyr::filter(TRTACT != "Placebo")
 
@@ -19,7 +19,7 @@ test_that("plot censoring", {
       lapply(doses, function(x) {
         ids <- dat |>
           dplyr::filter(DOSE == x) |>
-          dplyr::reframe(ids=unique(ID)) |>
+          dplyr::reframe(ids = unique(ID)) |>
           dplyr::pull()
         ids <- ids[seq_len(nid)]
         dat |>
@@ -59,15 +59,17 @@ test_that("plot censoring", {
   suppressMessages(
     fit <-
       nlmixr2est::nlmixr(
-        cmt2m, dat2, "saem",
-        control=nlmixr2est::saemControl(print=0, nBurn = 10, nEm = 20),
-        table=nlmixr2est::tableControl(cwres=TRUE, npde=TRUE, nsim = 10)
+        cmt2m,
+        dat2,
+        "saem",
+        control = nlmixr2est::saemControl(print = 0, nBurn = 10, nEm = 20),
+        table = nlmixr2est::tableControl(cwres = TRUE, npde = TRUE, nsim = 10)
       )
   )
 
   apo <- nlmixr2est::augPred(fit)
   expect_error(plot(apo), NA)
-  expect_error(vpcPlot(fit, stratify="DOSE", n = 10), NA)
+  expect_error(vpcPlot(fit, stratify = "DOSE", n = 10), NA)
 
   expect_error(plot(fit), NA)
 
@@ -107,10 +109,13 @@ test_that("plot censoring", {
       linCmt() ~ add(add.err)
     })
   }
-  fit1 <- nlmixr2est::nlmixr(m1, theo_cens,
-                 est = "focei", control=nlmixr2est::foceiControl(print=0),
-                 table = nlmixr2est::tableControl(npde = TRUE, nsim = 10,
-                                                  censMethod = "cdf"))
+  fit1 <- nlmixr2est::nlmixr(
+    m1,
+    theo_cens,
+    est = "focei",
+    control = nlmixr2est::foceiControl(print = 0),
+    table = nlmixr2est::tableControl(npde = TRUE, nsim = 10, censMethod = "cdf")
+  )
   expect_error(vpcPlot(fit = fit1, n = 10), NA)
 
   # nlmixr2#390: censored VPC with a non-time idv (tad) must not error with
@@ -135,9 +140,12 @@ test_that("plot censoring", {
   expect_equal(length(unique(.db$sim$sim)), 5L)
   # the observed pred-correction must come from sim57's own fit, not whatever
   # vpcSim(pred = TRUE) ran last (simulate another model to make it stale)
-  fit2 <- nlmixr2est::nlmixr(rxode2::ini(m1, tcl = 1, tv = 3), theo_cens,
-                             est = "posthoc",
-                             control = nlmixr2est::foceiControl(print = 0))
+  fit2 <- nlmixr2est::nlmixr(
+    rxode2::ini(m1, tcl = 1, tv = 3),
+    theo_cens,
+    est = "posthoc",
+    control = nlmixr2est::foceiControl(print = 0)
+  )
   invisible(nlmixr2est::vpcSim(fit2, n = 2, pred = TRUE))
   .dbStale <- vpcPlot(sim57, pred_corr = TRUE, vpcdb = TRUE)
   # compare with the fit path, which simulates and pred-corrects in one go
@@ -145,16 +153,15 @@ test_that("plot censoring", {
   expect_equal(.dbStale$obs, .dbFit$obs)
   expect_equal(.dbStale$sim, .dbFit$sim)
   .dbSimTad <- vpcPlotTad(sim57, pred_corr = TRUE, vpcdb = TRUE)
-  .dbFitTad <- vpcPlotTad(fit1, n = 5, seed = 7, pred_corr = TRUE,
-                          vpcdb = TRUE)
+  .dbFitTad <- vpcPlotTad(fit1, n = 5, seed = 7, pred_corr = TRUE, vpcdb = TRUE)
   expect_equal(.dbSimTad$obs, .dbFitTad$obs)
   expect_equal(.dbSimTad$sim, .dbFitTad$sim)
   expect_warning(vpcPlot(sim57, n = 10, vpcdb = TRUE), "'n' is ignored")
-  expect_no_warning(vpcPlot(sim57, n = 5, vpcdb = TRUE),
-                    message = "'n' is ignored")
+  expect_no_warning(vpcPlot(sim57, n = 5, vpcdb = TRUE), message = "'n' is ignored")
   expect_error(
     vpcPlot(nlmixr2est::vpcSim(fit1, n = 5), pred_corr = TRUE),
-    "pred = TRUE")
+    "pred = TRUE"
+  )
 
   # The censored VPC must group the simulated data by replicate.  A leftover
   # "sim" column made vpc use the simulated values themselves as the replicate
@@ -202,9 +209,7 @@ test_that("plot censoring", {
   .wt <- unique(fit1$origData[, c("ID", "WT")])
   # WT is constant within ID here, so each observed row's stratum must be its
   # subject's WT
-  expect_equal(as.character(.db$obs$strat),
-               as.character(.wt$WT[match(as.character(.db$obs$id),
-                                         as.character(.wt$ID))]))
+  expect_equal(as.character(.db$obs$strat), as.character(.wt$WT[match(as.character(.db$obs$id), as.character(.wt$ID))]))
 
   # #68: the censored VPC simulation must come from the supplied `data` too,
   # not from every fitted subject
@@ -221,14 +226,19 @@ test_that("plot censoring", {
   expect_error(vpcPlotTad(fit = fit1, pred_corr = TRUE, n = 10), NA)
   if (requireNamespace("tidyvpc", quietly = TRUE)) {
     expect_error(
-      vpcPlot(fit = fit1, pred_corr = TRUE, n = 10, method = "tidyvpc"), NA)
+      vpcPlot(fit = fit1, pred_corr = TRUE, n = 10, method = "tidyvpc"),
+      NA
+    )
     expect_error(
-      vpcPlot(fit = fit1, pred_corr = TRUE, n = 10, method = "tidyvpc",
-              cens = TRUE), NA)
+      vpcPlot(fit = fit1, pred_corr = TRUE, n = 10, method = "tidyvpc", cens = TRUE),
+      NA
+    )
     # #57: a supplied simulation through the pred-corrected tidyvpc paths
     expect_error(vpcPlot(sim57, pred_corr = TRUE, method = "tidyvpc"), NA)
     expect_error(
-      vpcCens(sim57, pred_corr = TRUE, method = "tidyvpc"), NA)
+      vpcCens(sim57, pred_corr = TRUE, method = "tidyvpc"),
+      NA
+    )
     # #74: missing DV observations are dropped from the simulation too, so
     # tidyvpc still gets a replicate of the observed records
     .na <- theo_cens
@@ -237,15 +247,14 @@ test_that("plot censoring", {
     for (.pc in c(FALSE, TRUE)) {
       .warn <- character(0)
       withCallingHandlers(
-        .p <- vpcCens(fit1, data = .na, n = 5, pred_corr = .pc,
-                      method = "tidyvpc"),
+        .p <- vpcCens(fit1, data = .na, n = 5, pred_corr = .pc, method = "tidyvpc"),
         warning = function(w) {
           .warn <<- c(.warn, conditionMessage(w))
           invokeRestart("muffleWarning")
-        })
+        }
+      )
       expect_s3_class(.p, "ggplot")
-      expect_false(any(grepl("not a replicate|recycled", .warn)),
-                   info = paste("pred_corr =", .pc))
+      expect_false(any(grepl("not a replicate|recycled", .warn)), info = paste("pred_corr =", .pc))
     }
   }
 })

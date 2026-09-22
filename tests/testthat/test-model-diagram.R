@@ -51,8 +51,7 @@ test_that("modelGraph classifies transfer, elimination and PD interaction", {
   expect_equal(nrow(.edge(g, "center", NA, "elimination")), 1L)
   expect_equal(nrow(.edge(g, "effect", NA, "elimination")), 1L)
   expect_equal(nrow(.edge(g, "center", "effect", "interaction")), 1L)
-  expect_false(any(g$edges$type == "transfer" & g$edges$to == "effect",
-                   na.rm = TRUE))
+  expect_false(any(g$edges$type == "transfer" & g$edges$to == "effect", na.rm = TRUE))
   n <- g$nodes
   rownames(n) <- n$name
   expect_equal(n["depot", "role"], "dosing")
@@ -93,8 +92,7 @@ test_that("modelGraph handles peripherals, metabolites, effect compartments and 
   # factor order in products does not matter for matching transfers
   expect_equal(nrow(.edge(g, "centr", "met", "transfer")), 1L)
   tr <- g$edges[g$edges$type == "transfer", ]
-  expect_true(all(tr$bidirectional[tr$from %in% c("peri", "peri2") |
-                                     tr$to %in% c("peri", "peri2")]))
+  expect_true(all(tr$bidirectional[tr$from %in% c("peri", "peri2") | tr$to %in% c("peri", "peri2")]))
   expect_false(any(tr$bidirectional[tr$to == "met"]))
   expect_equal(nrow(.edge(g, NA, "eff", "input")), 1L)
   expect_equal(nrow(.edge(g, "centr", "ce", "interaction")), 1L)
@@ -118,9 +116,14 @@ test_that("inhibition is an interaction with a negative sign", {
 })
 
 test_that("dosing compartments come from data or the dosing argument", {
-  d <- data.frame(ID = 1, TIME = 0:3, AMT = c(100, 0, 50, 0),
-                  EVID = c(1, 0, 1, 0), CMT = c("center", "center", "gut", "center"),
-                  DV = 0)
+  d <- data.frame(
+    ID = 1,
+    TIME = 0:3,
+    AMT = c(100, 0, 50, 0),
+    EVID = c(1, 0, 1, 0),
+    CMT = c("center", "center", "gut", "center"),
+    DV = 0
+  )
   g <- suppressMessages(modelGraph(.pkTurnover, data = d))
   expect_equal(g$nodes$name[g$nodes$dosing], c("gut", "center"))
   expect_equal(g$nodes$role[g$nodes$name == "center"], "central")
@@ -136,10 +139,8 @@ test_that("dosing compartments come from data or the dosing argument", {
   expect_equal(g$nodes$name[g$nodes$dosing], "depot")
   g <- suppressMessages(modelGraph(.pkTurnover, dosing = "center"))
   expect_equal(g$nodes$name[g$nodes$dosing], "center")
-  expect_error(suppressMessages(modelGraph(.pkTurnover, dosing = "nope")),
-               "not in the model")
-  expect_error(suppressMessages(modelGraph(.pkTurnover, dosing = 1)),
-               "character")
+  expect_error(suppressMessages(modelGraph(.pkTurnover, dosing = "nope")), "not in the model")
+  expect_error(suppressMessages(modelGraph(.pkTurnover, dosing = 1)), "character")
 })
 
 test_that("modelDiagram engines", {
@@ -229,8 +230,7 @@ test_that("dosing compartments are detected from a fit's data", {
   d <- nlmixr2data::theo_sd
   d$CMT[d$EVID != 0] <- 2
   fit <- suppressMessages(
-    nlmixr2est::nlmixr(f, d, est = "posthoc",
-                       control = nlmixr2est::foceiControl(print = 0))
+    nlmixr2est::nlmixr(f, d, est = "posthoc", control = nlmixr2est::foceiControl(print = 0))
   )
   g <- modelGraph(fit)
   expect_equal(g$nodes$name[g$nodes$dosing], "center")
@@ -279,9 +279,17 @@ test_that("interaction arrows do not cross other compartments", {
   rownames(n) <- n$name
   for (.e in paste0("eff", 1:4)) {
     .others <- setdiff(n$name, c("center", .e))
-    expect_false(.mdSegmentCrosses(
-      n["center", "x"], n["center", "y"], n[.e, "x"], n[.e, "y"],
-      n[.others, "x"], n[.others, "y"]), label = .e)
+    expect_false(
+      .mdSegmentCrosses(
+        n["center", "x"],
+        n["center", "y"],
+        n[.e, "x"],
+        n[.e, "y"],
+        n[.others, "x"],
+        n[.others, "y"]
+      ),
+      label = .e
+    )
   }
   expect_equal(nrow(unique(n[, c("x", "y")])), nrow(n))
 })
@@ -380,9 +388,17 @@ test_that("no interaction arrow crosses a compartment in the final layout", {
   expect_gt(nrow(e), 0L)
   for (.i in seq_len(nrow(e))) {
     .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
-    expect_false(.mdSegmentCrosses(
-      n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
-      n[.others, "x"], n[.others, "y"]), label = paste(e$from[.i], e$to[.i]))
+    expect_false(
+      .mdSegmentCrosses(
+        n[e$from[.i], "x"],
+        n[e$from[.i], "y"],
+        n[e$to[.i], "x"],
+        n[e$to[.i], "y"],
+        n[.others, "x"],
+        n[.others, "y"]
+      ),
+      label = paste(e$from[.i], e$to[.i])
+    )
   }
   expect_equal(nrow(unique(n[, c("x", "y")])), nrow(n))
 })
@@ -395,8 +411,7 @@ test_that("numeric cmt follows rxode2's compartment order", {
     d/dt(blood) = 0
   })
   expect_equal(rxode2::rxModelVars(m)$state[1:2], c("center", "depot"))
-  d <- data.frame(ID = 1, TIME = 0:1, AMT = c(100, 0), EVID = c(1, 0),
-                  CMT = c(2, 2), DV = 0)
+  d <- data.frame(ID = 1, TIME = 0:1, AMT = c(100, 0), EVID = c(1, 0), CMT = c(2, 2), DV = 0)
   g <- modelGraph(m, data = d)
   expect_equal(g$nodes$name[g$nodes$dosing], "depot")
   d$CMT <- 1
@@ -421,8 +436,7 @@ test_that("identical terms in if/else branches are one flow", {
   expect_equal(sum(g$edges$type == "interaction"), 0L)
   e <- .edge(g, "center", NA, "elimination")
   expect_equal(nrow(e), 1L)
-  expect_equal(e$label,
-               "ifelse(sex == 1, cl1 * center, 0) + ifelse(sex == 1, 0, cl2 * center)")
+  expect_equal(e$label, "ifelse(sex == 1, cl1 * center, 0) + ifelse(sex == 1, 0, cl2 * center)")
 })
 
 test_that("transit chains stack above central; Michaelis-Menten is elimination", {
@@ -509,9 +523,14 @@ test_that("a reused variable name is not mistaken for a transfer", {
 })
 
 test_that("factor evid/amt columns use their labels", {
-  d <- data.frame(ID = 1, TIME = 0:2, AMT = factor(c("100", "0", "0")),
-                  EVID = factor(c("1", "0", "0")),
-                  CMT = factor(c("gut", "center", "center")), DV = 0)
+  d <- data.frame(
+    ID = 1,
+    TIME = 0:2,
+    AMT = factor(c("100", "0", "0")),
+    EVID = factor(c("1", "0", "0")),
+    CMT = factor(c("gut", "center", "center")),
+    DV = 0
+  )
   g <- suppressMessages(modelGraph(.pkTurnover, data = d))
   expect_equal(g$nodes$name[g$nodes$dosing], "gut")
 })
@@ -529,9 +548,17 @@ test_that("an effect compartment with several drivers is placed clear of all arr
   expect_equal(sort(e$from), c("central", "peri"))
   for (.i in seq_len(nrow(e))) {
     .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
-    expect_false(.mdSegmentCrosses(
-      n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
-      n[.others, "x"], n[.others, "y"]), label = e$from[.i])
+    expect_false(
+      .mdSegmentCrosses(
+        n[e$from[.i], "x"],
+        n[e$from[.i], "y"],
+        n[e$to[.i], "x"],
+        n[e$to[.i], "y"],
+        n[.others, "x"],
+        n[.others, "y"]
+      ),
+      label = e$from[.i]
+    )
   }
 })
 
@@ -544,9 +571,13 @@ test_that("ggplot2 arrows between the same compartments do not overlap", {
   e <- .edge(g, "C", "eff", "interaction")
   expect_equal(sort(e$sign), c(-1, 1))
   p <- modelDiagram(g, engine = "ggplot2")
-  seg <- p$layers[[which(vapply(p$layers, function(l) {
-    inherits(l$geom, "GeomSegment")
-  }, logical(1)))]]$data
+  seg <- p$layers[[which(vapply(
+    p$layers,
+    function(l) {
+      inherits(l$geom, "GeomSegment")
+    },
+    logical(1)
+  ))]]$data
   seg <- seg[seg$flow != "mass transfer", ]
   expect_equal(nrow(seg), 2L)
   expect_false(isTRUE(all.equal(seg$y[1], seg$y[2])))
@@ -641,9 +672,17 @@ test_that("compartments acting on central are placed clear of other arrows", {
   expect_equal(e$sign, c(-1, -1))
   for (.i in seq_len(nrow(e))) {
     .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
-    expect_false(.mdSegmentCrosses(
-      n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
-      n[.others, "x"], n[.others, "y"]), label = e$from[.i])
+    expect_false(
+      .mdSegmentCrosses(
+        n[e$from[.i], "x"],
+        n[e$from[.i], "y"],
+        n[e$to[.i], "x"],
+        n[e$to[.i], "y"],
+        n[.others, "x"],
+        n[.others, "y"]
+      ),
+      label = e$from[.i]
+    )
   }
   expect_equal(nrow(unique(n[, c("x", "y")])), nrow(n))
 })
@@ -683,9 +722,17 @@ test_that("exchange partners of effect compartments stay off interaction arrows"
   expect_true(any(e$to == "eff2"))
   for (.i in seq_len(nrow(e))) {
     .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
-    expect_false(.mdSegmentCrosses(
-      n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
-      n[.others, "x"], n[.others, "y"]), label = paste(e$from[.i], e$to[.i]))
+    expect_false(
+      .mdSegmentCrosses(
+        n[e$from[.i], "x"],
+        n[e$from[.i], "y"],
+        n[e$to[.i], "x"],
+        n[e$to[.i], "y"],
+        n[.others, "x"],
+        n[.others, "y"]
+      ),
+      label = paste(e$from[.i], e$to[.i])
+    )
   }
   expect_equal(nrow(unique(n[, c("x", "y")])), nrow(n))
 })
@@ -731,9 +778,17 @@ test_that("mass transfer arrows do not cross compartments", {
   e <- g$edges[!is.na(g$edges$from) & !is.na(g$edges$to), ]
   for (.i in seq_len(nrow(e))) {
     .others <- setdiff(n$name, c(e$from[.i], e$to[.i]))
-    expect_false(.mdSegmentCrosses(
-      n[e$from[.i], "x"], n[e$from[.i], "y"], n[e$to[.i], "x"], n[e$to[.i], "y"],
-      n[.others, "x"], n[.others, "y"]), label = paste(e$from[.i], e$to[.i]))
+    expect_false(
+      .mdSegmentCrosses(
+        n[e$from[.i], "x"],
+        n[e$from[.i], "y"],
+        n[e$to[.i], "x"],
+        n[e$to[.i], "y"],
+        n[.others, "x"],
+        n[.others, "y"]
+      ),
+      label = paste(e$from[.i], e$to[.i])
+    )
   }
   expect_equal(nrow(unique(n[, c("x", "y")])), nrow(n))
 })
@@ -770,15 +825,11 @@ test_that("missing cmt on a dose record doses the default compartment", {
     d/dt(depot) = -ka*depot
     d/dt(central) = ka*depot - cl*central
   })
-  d <- data.frame(time = 0:1, amt = c(100, 0), evid = c(1, 0),
-                  cmt = c(NA_character_, "central"))
-  expect_equal(modelGraph(m, data = d)$nodes$name[modelGraph(m, data = d)$nodes$dosing],
-               "depot")
+  d <- data.frame(time = 0:1, amt = c(100, 0), evid = c(1, 0), cmt = c(NA_character_, "central"))
+  expect_equal(modelGraph(m, data = d)$nodes$name[modelGraph(m, data = d)$nodes$dosing], "depot")
   d$cmt <- c(NA, 2)
-  expect_equal(modelGraph(m, data = d)$nodes$name[modelGraph(m, data = d)$nodes$dosing],
-               "depot")
-  d <- data.frame(time = 0:2, amt = c(100, 50, 0), evid = c(1, 1, 0),
-                  cmt = factor(c(NA, "central", "central")))
+  expect_equal(modelGraph(m, data = d)$nodes$name[modelGraph(m, data = d)$nodes$dosing], "depot")
+  d <- data.frame(time = 0:2, amt = c(100, 50, 0), evid = c(1, 1, 0), cmt = factor(c(NA, "central", "central")))
   g <- modelGraph(m, data = d)
   expect_equal(g$nodes$name[g$nodes$dosing], c("depot", "central"))
 })
@@ -870,12 +921,9 @@ test_that("plot() of an rxode2 ui or compiled model draws its diagram", {
   expect_s3_class(ui, "rxUi")
   p <- plot(ui, engine = "ggplot2")
   expect_s3_class(p, "ggplot")
-  expect_identical(plot(ui, engine = "dot"),
-                   suppressMessages(modelDiagram(.pkTurnover, engine = "dot")))
-  expect_match(plot(ui, engine = "dot", dosing = "center", labels = TRUE),
-               "ktr * depot", fixed = TRUE)
-  d <- data.frame(ID = 1, TIME = 0:1, AMT = c(100, 0), EVID = c(1, 0),
-                  CMT = c("gut", "gut"), DV = 0)
+  expect_identical(plot(ui, engine = "dot"), suppressMessages(modelDiagram(.pkTurnover, engine = "dot")))
+  expect_match(plot(ui, engine = "dot", dosing = "center", labels = TRUE), "ktr * depot", fixed = TRUE)
+  d <- data.frame(ID = 1, TIME = 0:1, AMT = c(100, 0), EVID = c(1, 0), CMT = c("gut", "gut"), DV = 0)
   lines <- strsplit(plot(ui, engine = "dot", data = d), "\n")[[1]]
   expect_match(grep("^  \"gut\" \\[", lines, value = TRUE), "penwidth = 2", fixed = TRUE)
   m <- rxode2::rxode2({
@@ -984,9 +1032,10 @@ test_that("lag, F, rate and dur are annotations on their compartment", {
   expect_match(dot, "forcelabels = true", fixed = TRUE)
   p <- plot(ui, engine = "ggplot2")
   txt <- unname(unlist(lapply(p$layers, function(l) {
-    if (inherits(l$geom, "GeomText") &&
-          grepl("annotation", paste(deparse(l$mapping$label), collapse = ""),
-                fixed = TRUE)) {
+    if (
+      inherits(l$geom, "GeomText") &&
+        grepl("annotation", paste(deparse(l$mapping$label), collapse = ""), fixed = TRUE)
+    ) {
       l$data$annotation
     }
   })))
@@ -1045,10 +1094,9 @@ test_that("long products keep their input and elimination parts", {
 test_that("a hub with many compartments is fanned out without crossings", {
   n <- 12
   code <- c(
-    "d/dt(central) = -kel*central" ,
+    "d/dt(central) = -kel*central",
     sprintf("d/dt(t%02d) = q%02d*central - q%02d*t%02d", 1:n, 1:n, 1:n, 1:n),
-    sprintf("d/dt(central) = d/dt(central) - q%02d*central + q%02d*t%02d",
-            1:n, 1:n, 1:n)
+    sprintf("d/dt(central) = d/dt(central) - q%02d*central + q%02d*t%02d", 1:n, 1:n, 1:n)
   )
   m <- rxode2::rxode2(paste(code, collapse = "\n"))
   g <- modelGraph(m, dosing = "central")
@@ -1057,12 +1105,21 @@ test_that("a hub with many compartments is fanned out without crossings", {
   # the tissues are not all in one column
   expect_gt(length(unique(n2$x[n2$name != "central"])), 2L)
   e <- g$edges[!is.na(g$edges$from) & !is.na(g$edges$to), ]
-  crossing <- vapply(seq_len(nrow(e)), function(.i) {
-    .o <- setdiff(n2$name, c(e$from[.i], e$to[.i]))
-    .mdSegmentCrosses(n2[e$from[.i], "x"], n2[e$from[.i], "y"],
-                      n2[e$to[.i], "x"], n2[e$to[.i], "y"],
-                      n2[.o, "x"], n2[.o, "y"])
-  }, logical(1))
+  crossing <- vapply(
+    seq_len(nrow(e)),
+    function(.i) {
+      .o <- setdiff(n2$name, c(e$from[.i], e$to[.i]))
+      .mdSegmentCrosses(
+        n2[e$from[.i], "x"],
+        n2[e$from[.i], "y"],
+        n2[e$to[.i], "x"],
+        n2[e$to[.i], "y"],
+        n2[.o, "x"],
+        n2[.o, "y"]
+      )
+    },
+    logical(1)
+  )
   expect_equal(sum(crossing), 0L)
   expect_equal(nrow(unique(n2[, c("x", "y")])), nrow(n2))
 })

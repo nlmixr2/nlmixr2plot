@@ -28,7 +28,9 @@ test_that("BSV plots: multi-eta fit gives QQ, correlation, and covariate plots",
 
   fit <-
     suppressMessages(nlmixr2est::nlmixr(
-      one.cmt, nlmixr2data::theo_sd, est = "focei",
+      one.cmt,
+      nlmixr2data::theo_sd,
+      est = "focei",
       control = nlmixr2est::foceiControl(print = 0, eval.max = 10)
     ))
 
@@ -102,7 +104,9 @@ test_that("BSV plots: categorical / low-cardinality covariate uses box-and-whisk
 
   fit <-
     suppressMessages(nlmixr2est::nlmixr(
-      One.comp.KA.solved, PKdata, est = "saem",
+      One.comp.KA.solved,
+      PKdata,
+      est = "saem",
       nlmixr2est::saemControl(nBurn = 2, nEm = 3, print = 0)
     ))
 
@@ -112,9 +116,7 @@ test_that("BSV plots: categorical / low-cardinality covariate uses box-and-whisk
   # eta-outer, covariate-inner ordering
   expect_named(
     bsvc,
-    c("eta.ka vs sex", "eta.ka vs wt",
-      "eta.cl vs sex", "eta.cl vs wt",
-      "eta.v vs sex", "eta.v vs wt")
+    c("eta.ka vs sex", "eta.ka vs wt", "eta.cl vs sex", "eta.cl vs wt", "eta.v vs sex", "eta.v vs wt")
   )
   # sex has 2 unique values -> categorical -> boxplot; wt continuous -> smoother
   expect_true("GeomBoxplot" %in% .bsvGeoms(bsvc[["eta.ka vs sex"]]))
@@ -142,7 +144,9 @@ test_that("BSV plots: single-eta fit has QQ but no correlation plots", {
   fit <-
     suppressMessages(try(
       nlmixr2est::nlmixr(
-        poisModel, d, est = "focei",
+        poisModel,
+        d,
+        est = "focei",
         control = nlmixr2est::foceiControl(print = 0, eval.max = 1, maxOuterIterations = 0)
       ),
       silent = TRUE
@@ -175,7 +179,9 @@ test_that("BSV plots: a fit without between-subject variability has no bsv eleme
 
   fit <-
     suppressMessages(nlmixr2est::nlmixr(
-      oneCmtNoIiv, nlmixr2data::theo_sd, est = "focei",
+      oneCmtNoIiv,
+      nlmixr2data::theo_sd,
+      est = "focei",
       control = nlmixr2est::foceiControl(print = 0, eval.max = 10)
     ))
 
