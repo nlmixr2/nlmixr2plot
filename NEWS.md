@@ -17,6 +17,12 @@
   diagram, and the new "Automatic model diagrams" vignette describes the
   feature.
 
+* Fixed `vpcPlot()` with `method = "tidyvpc"` when the observed data has
+  observation records with a missing `DV`.  Those records were dropped from
+  the observed data but kept in the simulation, so a stratified (e.g.
+  multiple-endpoint) VPC errored and a single-endpoint VPC paired simulated
+  values with the wrong observations.  The matching simulated records are now
+  dropped too (#74).
 * `plot()` of a multiple-endpoint fit no longer creates empty
   "Endpoint: " groups for state compartments without observations (like
   `depot` or `central`); only observed endpoints are plotted.  `plot()` of an
@@ -54,6 +60,20 @@
   prediction correction for a supplied simulation is computed from that
   simulation's own fit rather than from whichever `vpcSim(pred = TRUE)` ran
   last.
+* Fixed the VPC simulation ignoring the `data` argument of `vpcPlot()`,
+  `vpcPlotTad()`, `vpcCens()` and `vpcCensTad()`; the simulation always used
+  the fit's dataset, so it did not match the observed data built from `data`
+  (and `tidyvpc` warned that `xsim` did not match the observed x-values).  The
+  simulation now uses `data` when supplied.  A supplied
+  `nlmixr2est::vpcSim()` simulation was made from its own dataset, so passing
+  `data` alongside one now warns that it only replaces the observed data
+  (#68).  Because the simulation now follows `data`, an endpoint without
+  observations in `data` is no longer simulated either, so it drops out of a
+  multiple-endpoint VPC instead of being shown as a simulated-only panel.
+  For a model with a non-normal endpoint, `data` now needs a numeric `CMT`
+  column (the model's compartment numbers), since the compartments would
+  otherwise be taken from the fitted data by row number, or read from a
+  factor's level order, and would not match `data`.
 * Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the `data`
   argument; the observed data was rebuilt from the fit's dataset instead of the
   supplied `data` (#62).

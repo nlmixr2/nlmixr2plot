@@ -206,6 +206,15 @@ test_that("plot censoring", {
                as.character(.wt$WT[match(as.character(.db$obs$id),
                                          as.character(.wt$ID))]))
 
+  # #68: the censored VPC simulation must come from the supplied `data` too,
+  # not from every fitted subject
+  .od <- fit1$origData
+  .half <- .od[.od$ID %in% unique(.od$ID)[1:4], ]
+  .db <- vpcCens(fit1, data = .half, cens = TRUE, n = 5, vpcdb = TRUE)
+  expect_equal(length(unique(.db$sim$id)), 4L)
+  expect_equal(length(unique(.db$obs$id)), 4L)
+  expect_equal(nrow(.db$obs), .nObs(.half))
+
   # nlmixr2#390: prediction-corrected VPC on censored data must not crash
   # with a quantile() NA error
   expect_error(vpcPlot(fit = fit1, pred_corr = TRUE, n = 10), NA)
@@ -220,5 +229,23 @@ test_that("plot censoring", {
     expect_error(vpcPlot(sim57, pred_corr = TRUE, method = "tidyvpc"), NA)
     expect_error(
       vpcCens(sim57, pred_corr = TRUE, method = "tidyvpc"), NA)
+    # #74: missing DV observations are dropped from the simulation too, so
+    # tidyvpc still gets a replicate of the observed records
+    .na <- theo_cens
+    .w <- which(.na$AMT == 0)
+    .na$DV[.w[c(5, 50, 100)]] <- NA
+    for (.pc in c(FALSE, TRUE)) {
+      .warn <- character(0)
+      withCallingHandlers(
+        .p <- vpcCens(fit1, data = .na, n = 5, pred_corr = .pc,
+                      method = "tidyvpc"),
+        warning = function(w) {
+          .warn <<- c(.warn, conditionMessage(w))
+          invokeRestart("muffleWarning")
+        })
+      expect_s3_class(.p, "ggplot")
+      expect_false(any(grepl("not a replicate|recycled", .warn)),
+                   info = paste("pred_corr =", .pc))
+    }
   }
 })
