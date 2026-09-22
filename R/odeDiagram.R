@@ -20,14 +20,16 @@
 #'
 #' @param lst list of model expressions (`ui$lstExpr`)
 #' @param states state names
-#' @return list with `ddt` (named list per state of alternative definitions,
+#' @param outputs residual error endpoint names (not suppressed assignments)
+#' @return list with `ddt` (named list per state of definitions,
 #'   each `list(rhs=, cond=)` where `cond` holds the variables of the enclosing
-#'   `if` conditions), `prop` (named list of per-state property expressions:
+#'   `if` conditions and `rhs` preserves branches using `ifelse`),
+#'   `prop` (named list of per-state property expressions:
 #'   `f`, `alag`, `rate`, `dur`, `ini`), `lhs` (named list of lists of rhs
 #'   expressions for every other variable) and `cond` (named list of the `if`
 #'   condition variables each lhs variable was assigned under)
 #' @noRd
-.odeCollect <- function(lst, states) {
+.odeCollect <- function(lst, states, outputs = character(0)) {
   .env <- new.env(parent = emptyenv())
   .env$ddt <- list()
   .env$prop <- list()
@@ -43,25 +45,46 @@
       return(invisible())
     }
     if (identical(.op, quote(`if`))) {
-      lapply(as.list(e)[-(1:2)], .add, cond = unique(c(cond, all.vars(e[[2]]))))
+      .vars <- unique(c(cond, all.vars(e[[2]])))
+      .before <- .env$ddt
+      .add(e[[3]], .vars)
+      .yes <- .env$ddt
+      .env$ddt <- .before
+      if (length(e) == 4L) .add(e[[4]], .vars)
+      .no <- .env$ddt
+      for (.s in union(names(.yes), names(.no))) {
+        .a <- .yes[[.s]]
+        .b <- .no[[.s]]
+        # skip states neither branch touched; identical branches are still
+        # rewritten so the test's variables don't stay attached
+        if (identical(.a, .before[[.s]]) && identical(.b, .before[[.s]])) next
+        .rhs <- function(x) if (is.null(x)) 0 else x[[1]]$rhs
+        # the ifelse() call carries the test's variables itself, so only the
+        # enclosing conditions stay attached to the derivative
+        .env$ddt[[.s]] <- list(list(
+          rhs = .odeIfelse(e[[2]], .rhs(.a), .rhs(.b)),
+          cond = cond))
+      }
       return(invisible())
     }
-    if (!(identical(.op, quote(`<-`)) || identical(.op, quote(`=`)))) {
+    if (!(identical(.op, quote(`<-`)) || identical(.op, quote(`=`)) ||
+          identical(.op, quote(`~`)))) {
       return(invisible())
     }
     .l <- e[[2]]
     .r <- e[[3]]
+    if (identical(.op, quote(`~`)) && is.name(.l) &&
+          as.character(.l) %in% outputs) return(invisible())
     .s <- .odeDdtState(.l)
     if (!is.null(.s)) {
       .alt <- .env$ddt[[.s]]
       .n <- length(.alt)
-      if (.n > 0L && .odeHasDdt(.r, .s)) {
+      if (.odeHasDdt(.r, .s)) {
         # d/dt(x) <- d/dt(x) + ... accumulates onto the prior definition
-        .alt[[.n]] <- list(rhs = .odeSubDdt(.r, .s, .alt[[.n]]$rhs),
-                           cond = unique(c(.alt[[.n]]$cond, cond)))
-      } else if (length(cond) > 0L) {
-        # conditional definitions are alternatives; keep them all
-        .alt[[.n + 1L]] <- list(rhs = .r, cond = cond)
+        # (0 when there is none)
+        .prior <- if (.n > 0L) .alt[[.n]] else list(rhs = 0, cond = character(0))
+        .alt <- list(list(rhs = .odeSubDdt(.r, .s, .prior$rhs),
+                          cond = unique(c(.prior$cond, cond))))
       } else {
         .alt <- list(list(rhs = .r, cond = cond))
       }
@@ -90,6 +113,51 @@
   }
   lapply(lst, .add)
   list(ddt = .env$ddt, prop = .env$prop, lhs = .env$lhs, cond = .env$cond)
+}
+
+#' Rebuild a sum from signed terms
+#'
+#' @param terms list of `list(sign=, term=)`
+#' @return expression (`0` when there are no terms)
+#' @noRd
+.odeSum <- function(terms) {
+  if (length(terms) == 0L) return(0)
+  Reduce(function(acc, t) call(if (t$sign < 0) "-" else "+", acc, t$term),
+         terms[-1],
+         if (terms[[1]]$sign < 0) call("-", terms[[1]]$term) else terms[[1]]$term)
+}
+
+#' Combine the two branches of an `if` into one derivative
+#'
+#' Terms shared by both branches stay outside, so they are still drawn as
+#' gains or inputs; only the terms that differ go into `ifelse()`.
+#'
+#' @param test the `if` condition
+#' @param yes derivative when `test` is true
+#' @param no derivative when `test` is false
+#' @return expression
+#' @noRd
+.odeIfelse <- function(test, yes, no) {
+  .key <- function(t) paste(t$sign, .odeDeparse(t$term))
+  .yes <- .odeTerms(yes)
+  .no <- .odeTerms(no)
+  .noKeys <- vapply(.no, .key, character(1))
+  .common <- list()
+  .yesRest <- list()
+  for (.t in .yes) {
+    .w <- match(.key(.t), .noKeys)
+    if (is.na(.w)) {
+      .yesRest <- c(.yesRest, list(.t))
+    } else {
+      .common <- c(.common, list(.t))
+      .no <- .no[-.w]
+      .noKeys <- .noKeys[-.w]
+    }
+  }
+  if (length(.yesRest) == 0L && length(.no) == 0L) return(.odeSum(.common))
+  if (length(.common) == 0L) return(call("ifelse", test, yes, no))
+  .odeSum(c(.common, list(list(
+    sign = 1, term = call("ifelse", test, .odeSum(.yesRest), .odeSum(.no))))))
 }
 
 #' Does an expression reference `d/dt(state)`?
@@ -361,7 +429,7 @@ odeDiagram <- function(x, doses = NULL, showZeroIni = FALSE, ...) {
   .ui <- rxode2::assertRxUi(x)
   if (isTRUE(.ui$props$linCmt)) .ui <- rxode2::linToOde(.ui)
   .states <- .ui$mv0$state
-  .c <- .odeCollect(.ui$lstExpr, .states)
+  .c <- .odeCollect(.ui$lstExpr, .states, as.character(.ui$predDf$var))
   .states <- .states[.states %in% names(.c$ddt)]
   if (length(.states) == 0L) {
     stop("the model has no ODEs to draw as a block diagram", call. = FALSE)
@@ -408,9 +476,6 @@ odeDiagram <- function(x, doses = NULL, showZeroIni = FALSE, ...) {
     .terms <- unlist(lapply(.c$ddt[[.s]], function(a) {
       lapply(.odeTerms(a$rhs), function(t) c(t, list(cond = a$cond)))
     }), recursive = FALSE)
-    .terms <- .terms[!duplicated(vapply(.terms, function(t) {
-      paste(t$sign, .odeDeparse(t$term))
-    }, character(1)))]
     for (.t in .terms) {
       .cl <- .odeClassify(.t$term, .states, .c$lhs, .c$cond, .t$cond)
       .sg <- .sign(.t$sign * .cl$sign)

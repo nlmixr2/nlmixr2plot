@@ -178,7 +178,9 @@ test_that("odeDiagram keeps conditional derivatives and condition dependencies",
     })
   }
   d <- odeDiagram(alt)
-  expect_equal(d$nodes$label[d$nodes$type == "gain"], c("k1", "k2"))
+  expect_equal(d$nodes$label[d$nodes$type == "block"],
+               "ifelse(t > 5, -k1 * p, -k2 * p)")
+  expect_equal(sum(d$nodes$type == "gain"), 0L)
 
   stateCond <- function() {
     ini({
@@ -200,6 +202,141 @@ test_that("odeDiagram keeps conditional derivatives and condition dependencies",
   n <- d$nodes
   expect_equal(n$label[n$type == "gain"], c("ka", "ka"))
   expect_equal(n$label[n$type == "block"], "k * center")
+})
+
+test_that("terms shared by both branches of an if stay outside ifelse()", {
+  added <- function() {
+    ini({
+      k <- 1
+      kin <- 1
+      add.sd <- 1
+    })
+    model({
+      d/dt(x) <- -k * x
+      if (t > 5) {
+        d/dt(x) <- d/dt(x) + kin
+      }
+      x ~ add(add.sd)
+    })
+  }
+  d <- odeDiagram(added, doses = character(0))
+  n <- d$nodes
+  expect_equal(n$label[n$type == "gain"], "k")
+  expect_equal(n$label[n$type == "input"], "ifelse(t > 5, kin, 0)")
+  expect_equal(sum(n$type == "block"), 0L)
+
+  stateTest <- function() {
+    ini({
+      k <- 1
+      add.sd <- 1
+    })
+    model({
+      d/dt(x) <- -k * x
+      if (x > 2) {
+        d/dt(x) <- d/dt(x) - 1
+      } else {
+        d/dt(x) <- d/dt(x) + 1
+      }
+      x ~ add(add.sd)
+    })
+  }
+  d <- odeDiagram(stateTest, doses = character(0))
+  n <- d$nodes
+  # the shared -k*x stays a gain; the state-dependent test makes a block
+  expect_equal(n$label[n$type == "gain"], "k")
+  bid <- n$id[n$type == "block"]
+  expect_equal(n$label[n$id == bid], "ifelse(x > 2, -1, 1)")
+  expect_equal(.odeEdgeFrom(d, bid), "state_1")
+
+  # shared terms are matched as a multiset
+  rhs <- .odeIfelse(quote(t > 5), quote(-k * x - k * x + a), quote(-k * x + b))
+  expect_equal(.odeDeparse(rhs), "-(k * x) + ifelse(t > 5, -(k * x) + a, b)")
+  vals <- list(k = 2, x = 3, a = 5, b = 7)
+  expect_equal(eval(rhs, c(vals, t = 6)), -2 * 2 * 3 + 5)
+  expect_equal(eval(rhs, c(vals, t = 0)), -2 * 3 + 7)
+})
+
+test_that("identical branches and accumulation without a prior", {
+  same <- function() {
+    ini({
+      k <- 1
+      add.sd <- 1
+    })
+    model({
+      d/dt(x) <- -x
+      if (x > 2) {
+        d/dt(y) <- -k * y
+      } else {
+        d/dt(y) <- -k * y
+      }
+      y ~ add(add.sd)
+    })
+  }
+  d <- odeDiagram(same, doses = character(0))
+  n <- d$nodes
+  expect_equal(n$label[n$type == "gain" & n$state == "y"], "k")
+  expect_equal(sum(n$type == "block"), 0L)
+
+  rhs <- .odeCollect(list(quote(d/dt(x) <- d/dt(x) + p)), "x")$ddt$x[[1]]$rhs
+  expect_false(.odeHasDdt(rhs, "x"))
+  expect_equal(eval(rhs, list(p = 3)), 3)
+})
+
+test_that("repeated derivative terms retain their multiplicity", {
+  mod <- function() {
+    ini({ k <- 1; add.sd <- 1 })
+    model({
+      d/dt(x) <- -k * x - k * x + 1 + 1
+      x ~ add(add.sd)
+    })
+  }
+  d <- odeDiagram(mod, doses = character(0))
+  expect_equal(d$nodes$label[d$nodes$type == "gain"], c("k", "k"))
+  expect_equal(d$nodes$label[d$nodes$type == "input"], c("1", "1"))
+  expect_equal(d$edges$label[d$edges$to == "sum_1"], c("-", "-", "+", "+"))
+})
+
+test_that("suppressed assignments retain state dependencies", {
+  mod <- function() {
+    ini({ k <- 1; add.sd <- 1 })
+    model({
+      cp ~ x / 2
+      d/dt(x) <- -k * cp
+      y <- cp
+      y ~ add(add.sd)
+    })
+  }
+  d <- odeDiagram(mod, doses = character(0))
+  block <- d$nodes[d$nodes$type == "block", ]
+  expect_equal(block$label, "k * cp")
+  expect_equal(block$extra, "cp = x/2")
+  expect_equal(.odeEdgeFrom(d, block$id), "state_1")
+  expect_equal(sum(d$nodes$type == "input"), 0L)
+  expect_equal(.odeEdgeFrom(d, d$nodes$id[d$nodes$type == "output"]), "state_1")
+})
+
+test_that("conditional derivative updates preserve branch and fallback values", {
+  collect <- function(expr) .odeCollect(as.list(expr)[-1], "x")$ddt$x[[1]]$rhs
+  rhs <- collect(quote({
+    d/dt(x) <- -k * x
+    if (t > 5) {
+      d/dt(x) <- d/dt(x) + 2
+    } else {
+      d/dt(x) <- d/dt(x) + 3
+    }
+    d/dt(x) <- d/dt(x) + 4
+  }))
+  expect_equal(eval(rhs, list(k = 2, x = 3, t = 6)), 0)
+  expect_equal(eval(rhs, list(k = 2, x = 3, t = 0)), 1)
+  rhs <- collect(quote({
+    d/dt(x) <- -x
+    if (t > 5) {
+      if (x > 2) d/dt(x) <- 10
+    }
+  }))
+  expect_equal(eval(rhs, list(x = 3, t = 6)), 10)
+  expect_equal(eval(rhs, list(x = 1, t = 6)), -1)
+  expect_equal(eval(rhs, list(x = 3, t = 0)), -3)
 })
 
 test_that("a leading unary minus becomes the summing-junction sign", {

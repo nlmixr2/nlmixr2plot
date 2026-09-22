@@ -45,6 +45,11 @@ Terms that don't depend on any state become external inputs (dashed
 boxes). All other terms become nonlinear function blocks (purple),
 wired from every state they depend on. This includes dependencies through
 intermediate variables and `if()` conditions.
+The parts of a derivative that differ between the branches of an `if()` are
+combined into a single `ifelse(condition, yes, no)` term, so mutually
+exclusive branches are not added together. Terms shared by both branches
+stay outside the `ifelse()` and are drawn as usual. Repeated terms in a
+derivative remain separate inputs to its summing junction.
 
 The diagram also shows rxode2's dosing and state features:
 
