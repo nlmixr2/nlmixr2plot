@@ -832,3 +832,35 @@ test_that("DOT column spacing grows with long compartment names", {
   # the peripheral is one column left of central (at 0)
   expect_lt(x, -0.11 * nchar("very_long_peripheral_compartment_name") / 2 - 0.5)
 })
+
+test_that("branch merging pairs repeated terms one-to-one", {
+  m <- rxode2::rxode2({
+    d/dt(A) = ifelse(time < 12, -k*A, -k*A - k*A)
+    d/dt(B) = k*A
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "A", "B", "transfer")), 1L)
+  e <- .edge(g, "A", NA, "elimination")
+  expect_equal(nrow(e), 1L)
+  expect_match(e$label, "^ifelse\\((t|time) < 12, 0, k \\* A\\)$")
+  m <- rxode2::rxode2({
+    if (time < 12) {
+      d/dt(A) = -k*A
+    } else {
+      d/dt(A) = -k*A - k*A
+    }
+    d/dt(B) = k*A
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "A", "B", "transfer")), 1L)
+  expect_equal(nrow(.edge(g, "A", NA, "elimination")), 1L)
+})
+
+test_that("a saturating quotient needs a positive constant", {
+  m <- rxode2::rxode2({
+    d/dt(C) = -k*C
+    d/dt(resp) = C/((-1) + C) - kout*resp
+  })
+  g <- modelGraph(m, dosing = "C")
+  expect_equal(.edge(g, "C", "resp", "interaction")$sign, 0)
+})

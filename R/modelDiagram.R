@@ -462,21 +462,8 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       if (length(x) == 4L) .walk(x[[4]], .cond)
       .no <- .env$ode
       .env$ode <- .base
-      .id <- function(t) paste(t$sign, .mdTermKey(t$expr))
-      .wrap <- function(t, yes) {
-        list(sign = t$sign,
-             expr = as.call(list(quote(ifelse), x[[2]],
-                                 if (yes) t$expr else 0,
-                                 if (yes) 0 else t$expr)))
-      }
       for (.s in union(names(.yes), names(.no))) {
-        .a <- .yes[[.s]]
-        .b <- .no[[.s]]
-        .aId <- vapply(.a, .id, character(1))
-        .bId <- vapply(.b, .id, character(1))
-        .addTerms(.s, c(.a[.aId %in% .bId],
-                        lapply(.a[!(.aId %in% .bId)], .wrap, yes = TRUE),
-                        lapply(.b[!(.bId %in% .aId)], .wrap, yes = FALSE)))
+        .addTerms(.s, .mdMergeBranches(x[[2]], .yes[[.s]], .no[[.s]]))
       }
     } else if (.isAssign(x)) {
       .lhs <- x[[2]]
@@ -618,27 +605,47 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     # `ifelse(cond, a1, 0) + ... + ifelse(cond, 0, b1) + ...`; a term in both
     # branches applies either way
     .isZero <- function(t) is.numeric(t$expr) && all(t$expr == 0)
-    .id <- function(t) paste(t$sign, .mdTermKey(t$expr))
-    .a <- Filter(Negate(.isZero), .mdTerms(x[[3]]))
-    .b <- Filter(Negate(.isZero), .mdTerms(x[[4]]))
-    .aId <- vapply(.a, .id, character(1))
-    .bId <- vapply(.b, .id, character(1))
-    .wrap <- function(t, yes) {
-      list(sign = t$sign,
-           expr = as.call(list(quote(ifelse), x[[2]],
-                               if (yes) t$expr else 0,
-                               if (yes) 0 else t$expr)))
-    }
-    return(c(
-      .a[.aId %in% .bId],
-      lapply(.a[!(.aId %in% .bId)], .wrap, yes = TRUE),
-      lapply(.b[!(.bId %in% .aId)], .wrap, yes = FALSE)
-    ))
+    return(.mdMergeBranches(x[[2]],
+                            Filter(Negate(.isZero), .mdTerms(x[[3]])),
+                            Filter(Negate(.isZero), .mdTerms(x[[4]]))))
   }
   if (is.numeric(x) && length(x) == 1L && !is.na(x) && x < 0) {
     return(list(list(sign = -1, expr = -x)))
   }
   list(list(sign = 1, expr = x))
+}
+
+#' Merge the terms of the two branches of a condition
+#'
+#' A term in both branches applies either way; the others become
+#' `ifelse(cond, term, 0)` or `ifelse(cond, 0, term)`.  Repeated terms are
+#' paired one-to-one, so `-k*A` against `-k*A - k*A` leaves one conditional
+#' `-k*A`.
+#' @param cond condition expression
+#' @param yes,no lists of terms of each branch
+#' @return list of terms
+#' @noRd
+.mdMergeBranches <- function(cond, yes, no) {
+  .id <- function(t) paste(t$sign, .mdTermKey(t$expr))
+  .wrap <- function(t, isYes) {
+    list(sign = t$sign,
+         expr = as.call(list(quote(ifelse), cond,
+                             if (isYes) t$expr else 0,
+                             if (isYes) 0 else t$expr)))
+  }
+  .noId <- vapply(no, .id, character(1))
+  .noUsed <- rep(FALSE, length(no))
+  .ret <- list()
+  for (.t in yes) {
+    .w <- which(!.noUsed & .noId == .id(.t))
+    if (length(.w) > 0L) {
+      .noUsed[.w[1]] <- TRUE
+      .ret[[length(.ret) + 1L]] <- .t
+    } else {
+      .ret[[length(.ret) + 1L]] <- .wrap(.t, TRUE)
+    }
+  }
+  c(.ret, lapply(no[!.noUsed], .wrap, isYes = FALSE))
 }
 
 #' Canonical form of an expression: operands of sums and products sorted
@@ -753,7 +760,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     }
     .flat(.den)
     .ds <- Filter(.dep, .s)
-    length(.ds) == 1L && length(.ds) < length(.s) &&
+    .ind <- Filter(Negate(.dep), .s)
+    # K must be positive (`C/(C - 1)` decreases)
+    length(.ds) == 1L && length(.ind) > 0L &&
+      all(vapply(.ind, .sgn, numeric(1)) > 0) &&
       identical(.mdDeparse(.mdCanon(.ds[[1]])), .mdDeparse(.mdCanon(.n)))
   }
   # sign of an expression that does not depend on `o`
