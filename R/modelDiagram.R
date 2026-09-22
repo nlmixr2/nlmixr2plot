@@ -542,6 +542,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   }
   .n <- nrow(terms)
   .used <- rep(FALSE, .n)
+  .matchedFrom <- vector("list", .n)
   .rows <- list()
   .add <- function(from, to, type, sign, label) {
     .rows[[length(.rows) + 1L]] <<-
@@ -549,17 +550,24 @@ print.nlmixr2ModelGraph <- function(x, ...) {
                  label = label, stringsAsFactors = FALSE)
   }
   # mass transfer: -term in the source (containing the source amount) and
-  # +term in another compartment
+  # +term in another compartment.  One +term may receive mass from several
+  # sources (e.g. binding `kon*C*R` into a complex from both C and R) ...
   for (.i in seq_len(.n)) {
     if (.used[.i] || terms$sign[.i] > 0) next
     .src <- terms$state[.i]
     if (!(.src %in% terms$states[[.i]])) next
-    .j <- which(!.used & terms$sign > 0 & terms$state != .src &
-                  terms$key == terms$key[.i])
+    .j <- which(terms$sign > 0 & terms$state != .src &
+                  terms$key == terms$key[.i] &
+                  !vapply(.matchedFrom, function(m) .src %in% m, logical(1)))
     if (length(.j) == 0L) next
-    .j <- .j[1]
+    # ... and one -term may go to several destinations (e.g. dissociation
+    # `koff*RC` back to both C and R); keep one destination per compartment
+    .j <- .j[!duplicated(terms$state[.j])]
     .used[c(.i, .j)] <- TRUE
-    .add(.src, terms$state[.j], "transfer", 1, terms$label[.j])
+    for (.k in .j) {
+      .matchedFrom[[.k]] <- c(.matchedFrom[[.k]], .src)
+      .add(.src, terms$state[.k], "transfer", 1, terms$label[.k])
+    }
   }
   for (.i in which(!.used)) {
     .s <- terms$state[.i]

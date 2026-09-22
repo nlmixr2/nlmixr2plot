@@ -37,8 +37,8 @@
 
 .edge <- function(g, from, to, type) {
   .e <- g$edges
-  .f <- if (is.na(from)) is.na(.e$from) else .e$from %in% from
-  .t <- if (is.na(to)) is.na(.e$to) else .e$to %in% to
+  .f <- if (all(is.na(from))) is.na(.e$from) else .e$from %in% from
+  .t <- if (all(is.na(to))) is.na(.e$to) else .e$to %in% to
   .e[.f & .t & .e$type == type, , drop = FALSE]
 }
 
@@ -235,4 +235,20 @@ test_that("dosing compartments are detected from a fit's data", {
   g <- modelGraph(fit, data = nlmixr2data::theo_sd)
   expect_equal(g$nodes$name[g$nodes$dosing], "depot")
   expect_s3_class(modelDiagram(fit, engine = "ggplot2"), "ggplot")
+})
+
+test_that("binding transfers mass from both binding partners (TMDD)", {
+  m <- rxode2::rxode2({
+    d/dt(central) = -kel*central - kon*central*target + koff*complex
+    d/dt(target) = ksyn - kdeg*target - kon*central*target + koff*complex
+    d/dt(complex) = kon*target*central - koff*complex - kint*complex
+  })
+  g <- modelGraph(m, dosing = "central")
+  expect_equal(nrow(.edge(g, "central", "complex", "transfer")), 1L)
+  expect_equal(nrow(.edge(g, "target", "complex", "transfer")), 1L)
+  expect_equal(nrow(.edge(g, "complex", c("central", "target"), "transfer")), 2L)
+  expect_equal(nrow(.edge(g, NA, "target", "input")), 1L)
+  expect_equal(sum(g$edges$type == "interaction"), 0L)
+  expect_equal(nrow(unique(g$nodes[, c("x", "y")])), nrow(g$nodes))
+  expect_s3_class(modelDiagram(g, engine = "ggplot2"), "ggplot")
 })
