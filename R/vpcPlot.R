@@ -60,16 +60,39 @@
 #' vpcPlot(fit, n = 100)
 #' }
 #' @export
-vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
-                    n_bins = "auto", bin_mid = "mean",
-                    show = NULL, stratify = NULL, pred_corr = FALSE,
-                    pred_corr_lower_bnd = 0, pi = c(0.05, 0.95), ci = c(0.05, 0.95),
-                    uloq = fit$dataUloq, lloq = fit$dataLloq, log_y = FALSE, log_y_min = 0.001,
-                    xlab = NULL, ylab = NULL, title = NULL, smooth = TRUE, vpc_theme = NULL,
-                    facet = "wrap", scales = "fixed", labeller = NULL, vpcdb = FALSE,
-                    verbose = FALSE, ..., seed=1009,
-                    idv="time", cens=FALSE,
-                    method=c("vpc", "tidyvpc")) {
+vpcPlot <- function(
+  fit,
+  data = NULL,
+  n = 300,
+  bins = "jenks",
+  n_bins = "auto",
+  bin_mid = "mean",
+  show = NULL,
+  stratify = NULL,
+  pred_corr = FALSE,
+  pred_corr_lower_bnd = 0,
+  pi = c(0.05, 0.95),
+  ci = c(0.05, 0.95),
+  uloq = fit$dataUloq,
+  lloq = fit$dataLloq,
+  log_y = FALSE,
+  log_y_min = 0.001,
+  xlab = NULL,
+  ylab = NULL,
+  title = NULL,
+  smooth = TRUE,
+  vpc_theme = NULL,
+  facet = "wrap",
+  scales = "fixed",
+  labeller = NULL,
+  vpcdb = FALSE,
+  verbose = FALSE,
+  ...,
+  seed = 1009,
+  idv = "time",
+  cens = FALSE,
+  method = c("vpc", "tidyvpc")
+) {
   force(idv)
   if (missing(method)) {
     method <- ifelse(requireNamespace("vpc", quietly = TRUE), "vpc", "tidyvpc")
@@ -95,16 +118,20 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     fit <- .fit
     .simN <- length(unique(.sim$sim.id))
     if (!missing(n) && !identical(as.integer(n), as.integer(.simN))) {
-      warning("'n' is ignored when a 'vpcSim()' simulation is supplied; ",
-              "using its ", .simN, " simulations", call.=FALSE)
+      warning(
+        "'n' is ignored when a 'vpcSim()' simulation is supplied; ",
+        "using its ",
+        .simN,
+        " simulations",
+        call. = FALSE
+      )
     }
     if (pred_corr && !any(names(.sim) == "pred")) {
-      stop("'pred_corr = TRUE' needs a simulation created with ",
-           "'vpcSim(..., pred = TRUE)'", call.=FALSE)
+      stop("'pred_corr = TRUE' needs a simulation created with ", "'vpcSim(..., pred = TRUE)'", call. = FALSE)
     }
   }
   .ui <- rxode2::rxUiDecompress(fit$ui)
-  .obsLst <- .vpcUiSetupObservationData(fit, data=data, idv=idv, cens=cens)
+  .obsLst <- .vpcUiSetupObservationData(fit, data = data, idv = idv, cens = cens)
   .obs <- .obsLst$obs
   .no <- .obsLst$namesObs
   .nol <- .obsLst$namesObsLower
@@ -124,14 +151,16 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   }
   # Simulate with VPC
   if (!.hasSim) {
-    .sim <- .vpcSimData(fit, data, ..., keep=stratify, n=n, pred=pred_corr,
-                        seed=seed)
+    .sim <- .vpcSimData(fit, data, ..., keep = stratify, n = n, pred = pred_corr, seed = seed)
   } else {
     if (!is.null(data)) {
       # a supplied simulation was simulated from its own dataset, so `data`
       # only replaces the observed side (#68)
-      warning("'data' does not change a supplied 'vpcSim()' simulation; ",
-              "it only replaces the observed data", call.=FALSE)
+      warning(
+        "'data' does not change a supplied 'vpcSim()' simulation; ",
+        "it only replaces the observed data",
+        call. = FALSE
+      )
     }
     if (pred_corr && (tidyvpc || !cens)) {
       # The observed-data pred-correction below re-solves the setup that
@@ -140,7 +169,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       # small simulation (n=1 hits an nlmixr2est vpcSim() bug when the solve has
       # no sim.id); the supplied simulation itself is still what is plotted.
       # vpc's censored VPC does not pred-correct, so it needs no refresh.
-      .vpcSimData(fit, data, ..., n=2, pred=TRUE, seed=seed)
+      .vpcSimData(fit, data, ..., n = 2, pred = TRUE, seed = seed)
     }
   }
   if (tidyvpc) {
@@ -150,18 +179,18 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
   }
   .sim <- nlmixr2est::vpcSimExpand(fit, .sim, stratify, .obs)
   if (any(names(.sim) == "evid")) {
-    .sim <- .sim[.sim$evid == 0,]
+    .sim <- .sim[.sim$evid == 0, ]
   }
   .evid <- which(tolower(names(.obs)) == "evid")
   if (length(.evid) == 1L) {
-    .obs <- .obs[.obs[[.evid]] == 0,,drop=FALSE]
+    .obs <- .obs[.obs[[.evid]] == 0, , drop = FALSE]
   }
   # an EVID=0 record flagged MDV=1 is still not an observation
   .mdv <- which(tolower(names(.obs)) == "mdv")
   if (length(.mdv) == 1L) {
-    .obs <- .obs[.obs[[.mdv]] == 0,,drop=FALSE]
+    .obs <- .obs[.obs[[.mdv]] == 0, , drop = FALSE]
   }
-  if (cens & !tidyvpc) {
+  if (cens && !tidyvpc) {
     if (is.null(lloq) && is.null(uloq)) {
       stop("this data is not censored")
     }
@@ -177,33 +206,52 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     # makes vpc:::add_sim_index_number() use the simulated values themselves as
     # the replicate index (giving one "replicate" per row).
     .simCens <- list(
-      id=.vpcCensCol(.sim, "id", "simulated"),
-      dv=.vpcCensCol(.sim, "sim", "simulated"),
-      idv=.vpcCensCol(.sim, idv, "simulated"))
+      id = .vpcCensCol(.sim, "id", "simulated"),
+      dv = .vpcCensCol(.sim, "sim", "simulated"),
+      idv = .vpcCensCol(.sim, idv, "simulated")
+    )
     .obsCens <- list(
-      id=.vpcCensCol(.obs, "id", "observed"),
-      dv=.vpcCensCol(.obs, "dv", "observed"),
-      idv=.vpcCensCol(.obs, idv, "observed"))
+      id = .vpcCensCol(.obs, "id", "observed"),
+      dv = .vpcCensCol(.obs, "dv", "observed"),
+      idv = .vpcCensCol(.obs, idv, "observed")
+    )
     .strat <- .vpcMatchStrata(.obs, .sim, stratify)
     .obs <- .strat$obs
     .sim <- .strat$sim
     .sim <- .vpcCensDropStray(.sim, .simCens, stratify)
     .obs <- .vpcCensDropStray(.obs, .obsCens, stratify)
     rxode2::rxReq("vpc")
-    return(vpc::vpc_cens(sim=.sim, sim_cols=.simCens,
-                         obs=.obs, obs_cols=.obsCens,
-                         bins=bins, n_bins=n_bins, bin_mid=bin_mid,
-                         show = show, stratify = stratify, ci = ci,
-                         uloq = uloq, lloq = lloq,
-                         xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
-                         facet = facet, labeller = labeller, vpcdb = vpcdb, verbose = verbose))
+    return(vpc::vpc_cens(
+      sim = .sim,
+      sim_cols = .simCens,
+      obs = .obs,
+      obs_cols = .obsCens,
+      bins = bins,
+      n_bins = n_bins,
+      bin_mid = bin_mid,
+      show = show,
+      stratify = stratify,
+      ci = ci,
+      uloq = uloq,
+      lloq = lloq,
+      xlab = xlab,
+      ylab = ylab,
+      title = title,
+      smooth = smooth,
+      vpc_theme = vpc_theme,
+      facet = facet,
+      labeller = labeller,
+      vpcdb = vpcdb,
+      verbose = verbose
+    ))
   }
   .simCols <- list(
-    id="id",
-    dv="sim",
-    idv=idv)
+    id = "id",
+    dv = "sim",
+    idv = idv
+  )
   if (pred_corr) {
-    .simCols <- c(.simCols, list(pred="pred"))
+    .simCols <- c(.simCols, list(pred = "pred"))
     .si <- nlmixr2est::.nlmixr2estLastPredSimulationInfo()
     .keep <- c(stratify, .obsCols$dv)
     if (cens && tidyvpc) {
@@ -231,7 +279,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     if (any(names(.obs) == "dv")) {
       .obsCols$dv <- "dv"
     }
-   }
+  }
   .strat <- .vpcMatchStrata(.obs, .sim, stratify)
   .obs <- .strat$obs
   .sim <- .strat$sim
@@ -240,7 +288,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     .obs <- .obs[.obs[, .w] == 0 | .obs[, .w] == 2, ]
   }
   .w <- which(tolower(names(.obs)) == "dv")
-  .obsCols$dv <-"dv"
+  .obsCols$dv <- "dv"
   names(.obs)[.w] <- "dv"
   .obs <- .obs[!is.na(.obs[[.w]]), ]
   .w <- which(tolower(names(.obs)) == "ipred")
@@ -263,9 +311,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     rxode2::rxReq("tidyvpc")
     # Add arguments as needed
     .tidyObs <- c(".obs", paste0("x=", .obsCols$idv), paste0("y=", .obsCols$dv))
-    .tidySim <- c(".tidyObs", ".sim",
-                  paste0("x=", .simCols$idv),
-                  paste0("y=", .simCols$dv))
+    .tidySim <- c(".tidyObs", ".sim", paste0("x=", .simCols$idv), paste0("y=", .simCols$dv))
     if (pred_corr) {
       .tidyObs <- c(.tidyObs, paste0("pred=", .obsCols$pred))
       .tidySim <- c(.tidySim, paste0("pred=", .simCols$pred))
@@ -287,42 +333,39 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       .obs$lloq <- ifelse(.obs[[.w]] == 1, .obs[[.obsCols$dv]], NA_real_)
       .obs$uloq <- ifelse(.obs[[.w]] == -1, .obs[[.obsCols$dv]], NA_real_)
       .obs <- .obs |>
-        tidyr::fill(lloq, uloq, .direction="down")
+        tidyr::fill(lloq, uloq, .direction = "down")
       # if there are only 0 and 1, then the data is blq
       if (length(.censVals) == 2 && all(sort(.censVals) == c(0, 1))) {
         .tidyObs <- c(.tidyObs, "blq=blq", "lloq=lloq")
       } else if (length(.censVals) == 2 && all(sort(.censVals) == c(-1, 0))) {
         .tidyObs <- c(.tidyObs, "alq=alq", "uloq = uloq")
       } else if (length(.censVals) == 3 && all(sort(.censVals) == c(-1, 0, 1))) {
-        .tidyObs <- c(.tidyObs, "blq=blq", "alq=alq",
-                      "lloq=lloq", "uloq=uloq")
+        .tidyObs <- c(.tidyObs, "blq=blq", "alq=alq", "lloq=lloq", "uloq=uloq")
       } else {
-        stop("it is unclear the censoring type of the data, please make sure the 'cens' column is coded as 0 for non-censored, 1 for blq, and -1 for alq",
-             call.=FALSE)
+        stop(
+          paste0(
+            "it is unclear the censoring type of the data, please make sure the 'cens' column ",
+            "is coded as 0 for non-censored, 1 for blq, and -1 for alq"
+          ),
+          call. = FALSE
+        )
       }
     }
-    .tidyObs <- str2lang(paste0("tidyvpc::observed(",
-                                paste(.tidyObs, collapse=", "),
-                                ")"))
-    .tidySim <- str2lang(paste0("tidyvpc::simulated(",
-                                paste(.tidySim, collapse=", "),
-                                ")"))
+    .tidyObs <- str2lang(paste0("tidyvpc::observed(", paste(.tidyObs, collapse = ", "), ")"))
+    .tidySim <- str2lang(paste0("tidyvpc::simulated(", paste(.tidySim, collapse = ", "), ")"))
 
     .tidyObs <- eval(.tidyObs)
     .tidySim <- eval(.tidySim)
 
     if (!is.null(stratify)) {
-      .strat <- str2lang(paste0("tidyvpc::stratify(.tidySim, ~",
-                                paste(stratify, collapse="+"),
-                                ")"))
+      .strat <- str2lang(paste0("tidyvpc::stratify(.tidySim, ~", paste(stratify, collapse = "+"), ")"))
       .tidySim <- eval(.strat)
     }
     .tidyBin <- ".tidySim"
     .binless <- FALSE
     if (inherits(bins, "character")) {
-      if (is.character(n_bins) && length(n_bins) == 1L &&
-            n_bins == "auto") {
-        n_bins <- min(max(3, ceiling(nrow(.obs)/40)), 15)
+      if (is.character(n_bins) && length(n_bins) == 1L && n_bins == "auto") {
+        n_bins <- min(max(3, ceiling(nrow(.obs) / 40)), 15)
       }
       if (is.numeric(n_bins) && length(n_bins) == 1L) {
         if (n_bins < 1) {
@@ -338,28 +381,40 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
     if (!.binless) {
       .tidyBin <- c(.tidyBin, "bin_mid=paste0(\"x\", bin_mid)")
     }
-    .tidyBin <- str2lang(paste0(ifelse(.binless, "tidyvpc::binless(",
-                                       "tidyvpc::binning("),
-                                paste(.tidyBin, collapse=", "),
-                                ")"))
+    .tidyBin <- str2lang(paste0(
+      ifelse(.binless, "tidyvpc::binless(", "tidyvpc::binning("),
+      paste(.tidyBin, collapse = ", "),
+      ")"
+    ))
     .tidyBin <- eval(.tidyBin)
-    if (ci[2] != 1-ci[1]) {
-      warning("tidyvpc does not support asymmetric confidence intervals, changing to symmetric",
-              immediate.=TRUE, call.=FALSE)
-      ci <- c(ci[1], 1-ci[1])
+    if (ci[2] != 1 - ci[1]) {
+      warning(
+        "tidyvpc does not support asymmetric confidence intervals, changing to symmetric",
+        immediate. = TRUE,
+        call. = FALSE
+      )
+      ci <- c(ci[1], 1 - ci[1])
     }
     if (pred_corr) {
       .tidyBin <- eval(str2lang(paste0("tidyvpc::predcorrect(.tidyBin)")))
     }
-    .vpcStats <- nlmixr2est::.collectWarn(eval(str2lang(paste0("tidyvpc::vpcstats(.tidyBin, qpred = c(", pi[1],
-                                                              ", 0.5, ", pi[2],
-                                                              "), conf.level=", ci[2] - ci[1], ")"))),
-                                         lst=TRUE)
+    .vpcStats <- nlmixr2est::.collectWarn(
+      eval(str2lang(paste0(
+        "tidyvpc::vpcstats(.tidyBin, qpred = c(",
+        pi[1],
+        ", 0.5, ",
+        pi[2],
+        "), conf.level=",
+        ci[2] - ci[1],
+        ")"
+      ))),
+      lst = TRUE
+    )
     .warn <- .vpcStats[[2]]
-    .warn <- .warn[.warn != "", drop=FALSE]
+    .warn <- .warn[.warn != "", drop = FALSE]
     if (length(.warn) > 0L) {
       lapply(.warn, function(w) {
-        warning(sub("\n+$", "", w), call.=FALSE)
+        warning(sub("\n+$", "", w), call. = FALSE)
       })
     }
     .vpcGg <- plot(.vpcStats[[1]])
@@ -373,8 +428,7 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       .vpcGg <- .vpcGg + ggplot2::ggtitle(title)
     }
     if (!missing(show)) {
-      warning("tidyvpc does not support showing specific percentiles, showing all", immediate.=TRUE,
-              call.=FALSE)
+      warning("tidyvpc does not support showing specific percentiles, showing all", immediate. = TRUE, call. = FALSE)
     }
     if (log_y) {
       .vpcGg <- .vpcGg + xgxr::xgx_scale_y_log10()
@@ -394,44 +448,65 @@ vpcPlot <- function(fit, data = NULL, n = 300, bins = "jenks",
       # the censoring limit (DV == lloq/uloq), so use strict comparisons to drop
       # those boundary rows as well.
       if (!is.null(lloq)) {
-        .obs <- .obs[!is.na(.obs[[.obsCols$dv]]) & .obs[[.obsCols$dv]] > lloq, , drop=FALSE]
-        .sim <- .sim[!is.na(.sim[[.simCols$dv]]) & .sim[[.simCols$dv]] > lloq, , drop=FALSE]
+        .obs <- .obs[!is.na(.obs[[.obsCols$dv]]) & .obs[[.obsCols$dv]] > lloq, , drop = FALSE]
+        .sim <- .sim[!is.na(.sim[[.simCols$dv]]) & .sim[[.simCols$dv]] > lloq, , drop = FALSE]
       }
       if (!is.null(uloq)) {
-        .obs <- .obs[!is.na(.obs[[.obsCols$dv]]) & .obs[[.obsCols$dv]] < uloq, , drop=FALSE]
-        .sim <- .sim[!is.na(.sim[[.simCols$dv]]) & .sim[[.simCols$dv]] < uloq, , drop=FALSE]
+        .obs <- .obs[!is.na(.obs[[.obsCols$dv]]) & .obs[[.obsCols$dv]] < uloq, , drop = FALSE]
+        .sim <- .sim[!is.na(.sim[[.simCols$dv]]) & .sim[[.simCols$dv]] < uloq, , drop = FALSE]
       }
       .lloq <- NULL
       .uloq <- NULL
     }
-    vpc::vpc_vpc(sim=.sim, sim_cols=.simCols,
-                 obs=.obs, obs_cols=.obsCols,
-                 bins=bins, n_bins=n_bins, bin_mid=bin_mid,
-                 show = show, stratify = stratify, pred_corr = pred_corr,
-                 pred_corr_lower_bnd = pred_corr_lower_bnd, pi = pi, ci = ci,
-                 uloq = .uloq, lloq = .lloq, log_y = log_y, log_y_min = log_y_min,
-                 xlab = xlab, ylab = ylab, title = title, smooth = smooth, vpc_theme = vpc_theme,
-                 facet = facet, scales=scales, labeller = labeller, vpcdb = vpcdb, verbose = verbose)
+    vpc::vpc_vpc(
+      sim = .sim,
+      sim_cols = .simCols,
+      obs = .obs,
+      obs_cols = .obsCols,
+      bins = bins,
+      n_bins = n_bins,
+      bin_mid = bin_mid,
+      show = show,
+      stratify = stratify,
+      pred_corr = pred_corr,
+      pred_corr_lower_bnd = pred_corr_lower_bnd,
+      pi = pi,
+      ci = ci,
+      uloq = .uloq,
+      lloq = .lloq,
+      log_y = log_y,
+      log_y_min = log_y_min,
+      xlab = xlab,
+      ylab = ylab,
+      title = title,
+      smooth = smooth,
+      vpc_theme = vpc_theme,
+      facet = facet,
+      scales = scales,
+      labeller = labeller,
+      vpcdb = vpcdb,
+      verbose = verbose
+    )
   }
 }
 
 #' @rdname vpcPlot
 #' @export
-vpcPlotTad <- function(..., idv="tad") {
-  vpcPlot(..., idv=idv)
+vpcPlotTad <- function(..., idv = "tad") {
+  vpcPlot(..., idv = idv)
 }
 
 
 #' @rdname vpcPlot
 #' @export
-vpcCensTad <- function(..., cens=TRUE, idv="tad") {
-  vpcPlot(..., cens=cens, idv=idv)
+vpcCensTad <- function(..., cens = TRUE, idv = "tad") {
+  vpcPlot(..., cens = cens, idv = idv)
 }
 
 #' @rdname vpcPlot
 #' @export
-vpcCens <- function(..., cens=TRUE, idv="time") {
-  vpcPlot(..., cens=cens, idv=idv)
+vpcCens <- function(..., cens = TRUE, idv = "time") {
+  vpcPlot(..., cens = cens, idv = idv)
 }
 
 #' Run the VPC simulation from the supplied data
@@ -462,24 +537,29 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
     if (.normRelated && !all(.dist %in% c("norm", "dnorm", "t", "cauchy"))) {
       .wc <- which(names(data) == "CMT")
       if (length(.wc) != 1L) {
-        stop("'data' needs a 'CMT' column to simulate this model, which has ",
-             "a non-normal endpoint; without it the compartments are taken ",
-             "from the fitted data by row number, which does not match 'data'",
-             call.=FALSE)
+        stop(
+          "'data' needs a 'CMT' column to simulate this model, which has ",
+          "a non-normal endpoint; without it the compartments are taken ",
+          "from the fitted data by row number, which does not match 'data'",
+          call. = FALSE
+        )
       }
       # the filter reads this column as-is, so a factor would be read by its
       # level order and a label would not be read at all
       if (!is.numeric(data[[.wc]])) {
-        stop("the 'CMT' column of 'data' must be the model's compartment ",
-             "number (", paste(fit$ui$predDf$cmt, collapse=", "),
-             " for the endpoints), not a factor or a label",
-             call.=FALSE)
+        stop(
+          "the 'CMT' column of 'data' must be the model's compartment ",
+          "number (",
+          paste(fit$ui$predDf$cmt, collapse = ", "),
+          " for the endpoints), not a factor or a label",
+          call. = FALSE
+        )
       }
     }
     .env <- fit$env
     .origData <- .env$origData
-    on.exit(assign("origData", .origData, envir=.env))
-    assign("origData", data, envir=.env)
+    on.exit(assign("origData", .origData, envir = .env))
+    assign("origData", data, envir = .env)
   }
   nlmixr2est::vpcSim(fit, ...)
 }
@@ -503,11 +583,19 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
     .wo <- which(tolower(names(data)) == tolower(col))
   }
   if (length(.wo) != 1) {
-    stop("cannot find a unique '", col, "' column in the ", what,
-         " data for the censored VPC",
-         if (length(.wo) == 0) "" else
-           paste0(" (matched: ", paste(names(data)[.wo], collapse=", "), ")"),
-         call.=FALSE)
+    stop(
+      "cannot find a unique '",
+      col,
+      "' column in the ",
+      what,
+      " data for the censored VPC",
+      if (length(.wo) == 0) {
+        ""
+      } else {
+        paste0(" (matched: ", paste(names(data)[.wo], collapse = ", "), ")")
+      },
+      call. = FALSE
+    )
   }
   names(data)[.wo]
 }
@@ -524,11 +612,12 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' @param stratify stratification columns to keep (may be `NULL`)
 #' @return `data` without the colliding columns
 #' @noRd
-.vpcCensDropStray <- function(data, cols, stratify=NULL) {
-  .stray <- setdiff(intersect(names(cols), names(data)),
-                    c(unlist(cols), stratify))
-  if (length(.stray) == 0L) return(data)
-  data[, setdiff(names(data), .stray), drop=FALSE]
+.vpcCensDropStray <- function(data, cols, stratify = NULL) {
+  .stray <- setdiff(intersect(names(cols), names(data)), c(unlist(cols), stratify))
+  if (length(.stray) == 0L) {
+    return(data)
+  }
+  data[, setdiff(names(data), .stray), drop = FALSE]
 }
 
 #' Get a fit-derived column (like `tad`) for the observation data
@@ -551,7 +640,7 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' @return vector with one value of `col` per row of `obs` (`NA` for rows
 #'   without a fitted value)
 #' @noRd
-.vpcFitColForData <- function(fit, obs, col, supplied=FALSE) {
+.vpcFitColForData <- function(fit, obs, col, supplied = FALSE) {
   .orig <- fit$origData
   .val <- fit[[col]]
   .full <- rep(.val[NA_integer_], nrow(.orig))
@@ -564,32 +653,44 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   # names that are ambiguous in either dataset are not used
   .lo <- tolower(names(obs))
   .lorig <- tolower(names(.orig))
-  .by <- intersect(.lo[!(.lo %in% .lo[duplicated(.lo)])],
-                   .lorig[!(.lorig %in% .lorig[duplicated(.lorig)])])
+  .by <- intersect(.lo[!(.lo %in% .lo[duplicated(.lo)])], .lorig[!(.lorig %in% .lorig[duplicated(.lorig)])])
   # columns that are numbers in the fitted data are compared as numbers at full
   # precision (as.character() keeps only 15 digits); numbers supplied as text
   # are read as numbers so they still match
-  .num <- vapply(.by, function(n) {
-    is.numeric(.orig[[which(.lorig == n)]])
-  }, logical(1))
+  .num <- vapply(
+    .by,
+    function(n) {
+      is.numeric(.orig[[which(.lorig == n)]])
+    },
+    logical(1)
+  )
   .key <- function(d, lower) {
-    do.call(paste, c(lapply(.by, function(n) {
-      .x <- d[[which(lower == n)]]
-      # enc2utf8() so the same text in another encoding still matches
-      .v <- enc2utf8(as.character(.x))
-      if (.num[[n]]) {
-        .y <- if (is.numeric(.x)) as.double(.x) else
-          suppressWarnings(as.numeric(.v))
-        # text that is not a number is kept as text, so it cannot match
-        .ok <- !is.na(.y)
-        .y[.ok & .y == 0] <- 0 # -0 prints as "-0"
-        .v[.ok] <- sprintf("%.17g", .y[.ok])
-      }
-      # prefix each value with its length (and code NA separately) so no two
-      # different rows share a key, even with a literal "NA" or the separator
-      # in a value
-      ifelse(is.na(.v), "NA", paste0(nchar(.v, type="bytes"), ":", .v))
-    }), sep="\r"))
+    do.call(
+      paste,
+      c(
+        lapply(.by, function(n) {
+          .x <- d[[which(lower == n)]]
+          # enc2utf8() so the same text in another encoding still matches
+          .v <- enc2utf8(as.character(.x))
+          if (.num[[n]]) {
+            .y <- if (is.numeric(.x)) {
+              as.double(.x)
+            } else {
+              suppressWarnings(as.numeric(.v))
+            }
+            # text that is not a number is kept as text, so it cannot match
+            .ok <- !is.na(.y)
+            .y[.ok & .y == 0] <- 0 # -0 prints as "-0"
+            .v[.ok] <- sprintf("%.17g", .y[.ok])
+          }
+          # prefix each value with its length (and code NA separately) so no two
+          # different rows share a key, even with a literal "NA" or the separator
+          # in a value
+          ifelse(is.na(.v), "NA", paste0(nchar(.v, type = "bytes"), ":", .v))
+        }),
+        sep = "\r"
+      )
+    )
   }
   .amb <- rep(FALSE, nrow(obs))
   if (all(c("id", "time") %in% .by)) {
@@ -629,16 +730,32 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   }
   .n <- sum(.isObs & .amb)
   if (.n > 0) {
-    warning(.n, " observation(s) in 'data' match several fitted rows with ",
-            "different '", col, "' values so '", col, "' is NA for them; keep ",
-            "the columns that tell them apart (like 'cmt') or add a '", col,
-            "' column to 'data' to supply it", call.=FALSE)
+    warning(
+      .n,
+      " observation(s) in 'data' match several fitted rows with ",
+      "different '",
+      col,
+      "' values so '",
+      col,
+      "' is NA for them; keep ",
+      "the columns that tell them apart (like 'cmt') or add a '",
+      col,
+      "' column to 'data' to supply it",
+      call. = FALSE
+    )
   }
   .n <- sum(.isObs & is.na(.m) & !.amb)
   if (.n > 0) {
-    warning(.n, " observation(s) in 'data' do not match the fitted data so '",
-            col, "' is NA for them; add a '", col, "' column to 'data' to ",
-            "supply it", call.=FALSE)
+    warning(
+      .n,
+      " observation(s) in 'data' do not match the fitted data so '",
+      col,
+      "' is NA for them; add a '",
+      col,
+      "' column to 'data' to ",
+      "supply it",
+      call. = FALSE
+    )
   }
   .full[.m]
 }
@@ -664,15 +781,20 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' @noRd
 .vpcCensObs <- function(obs) {
   .wd <- .vpcCensCol(obs, "dv", "observed")
-  obs <- obs[!is.na(obs[[.wd]]), , drop=FALSE]
+  obs <- obs[!is.na(obs[[.wd]]), , drop = FALSE]
   if (!any(tolower(names(obs)) == "cens")) {
-    warning("the observed data has no 'cens' column; censoring for the VPC is ",
-            "judged by comparing 'dv' to the limit, so records at the limit ",
-            "count as uncensored", call.=FALSE)
+    warning(
+      "the observed data has no 'cens' column; censoring for the VPC is ",
+      "judged by comparing 'dv' to the limit, so records at the limit ",
+      "count as uncensored",
+      call. = FALSE
+    )
     return(obs)
   }
   .cens <- obs[[.vpcCensCol(obs, "cens", "observed")]]
-  if (is.factor(.cens)) .cens <- as.numeric(as.character(.cens))
+  if (is.factor(.cens)) {
+    .cens <- as.numeric(as.character(.cens))
+  }
   .dv <- obs[[.wd]]
   .dv[!is.na(.cens) & .cens == 1] <- -Inf
   .dv[!is.na(.cens) & .cens == -1] <- Inf
@@ -694,14 +816,19 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #' @return `sim` without the records whose observation is missing
 #' @noRd
 .vpcSimDropMissingDv <- function(sim, rows) {
-  if (length(rows) == 0L) return(sim)
-  if (!any(names(sim) == "nlmixrRowNums")) {
-    warning("the simulation has no 'nlmixrRowNums' column, so records with a ",
-            "missing observation cannot be dropped from it; the VPC may pair ",
-            "simulated and observed values incorrectly", call.=FALSE)
+  if (length(rows) == 0L) {
     return(sim)
   }
-  sim[!(sim$nlmixrRowNums %in% rows), , drop=FALSE]
+  if (!any(names(sim) == "nlmixrRowNums")) {
+    warning(
+      "the simulation has no 'nlmixrRowNums' column, so records with a ",
+      "missing observation cannot be dropped from it; the VPC may pair ",
+      "simulated and observed values incorrectly",
+      call. = FALSE
+    )
+    return(sim)
+  }
+  sim[!(sim$nlmixrRowNums %in% rows), , drop = FALSE]
 }
 
 #' Match simulated stratification columns to the observed ones
@@ -723,13 +850,13 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   for (.n in .both) {
     # simulated labels missing from the observed levels (e.g. `data` without
     # an endpoint, with its levels dropped) are added rather than made NA
-    if (inherits(obs[[.n]], "factor") &&
-          (is.character(sim[[.n]]) || inherits(sim[[.n]], "factor"))) {
-      .extra <- setdiff(unique(as.character(sim[[.n]])),
-                        c(levels(obs[[.n]]), NA))
+    if (
+      inherits(obs[[.n]], "factor") &&
+        (is.character(sim[[.n]]) || inherits(sim[[.n]], "factor"))
+    ) {
+      .extra <- setdiff(unique(as.character(sim[[.n]])), c(levels(obs[[.n]]), NA))
       if (length(.extra) > 0L) {
-        obs[[.n]] <- factor(as.character(obs[[.n]]),
-                            levels=c(levels(obs[[.n]]), .extra))
+        obs[[.n]] <- factor(as.character(obs[[.n]]), levels = c(levels(obs[[.n]]), .extra))
       }
     }
     sim[[.n]] <- .vpcMatchFactor(sim[[.n]], obs[[.n]])
@@ -738,11 +865,11 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
     if (inherits(obs[[.n]], "factor")) {
       .lvl <- levels(obs[[.n]])
       .lvl <- .lvl[.lvl %in% c(as.character(obs[[.n]]), as.character(sim[[.n]]))]
-      obs[[.n]] <- factor(as.character(obs[[.n]]), levels=.lvl)
-      sim[[.n]] <- factor(as.character(sim[[.n]]), levels=.lvl)
+      obs[[.n]] <- factor(as.character(obs[[.n]]), levels = .lvl)
+      sim[[.n]] <- factor(as.character(sim[[.n]]), levels = .lvl)
     }
   }
-  list(obs=obs, sim=sim)
+  list(obs = obs, sim = sim)
 }
 
 #' Recode a column to match a reference factor
@@ -758,9 +885,13 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #'   `ref` is not a factor or `x` already is one
 #' @noRd
 .vpcMatchFactor <- function(x, ref) {
-  if (!inherits(ref, "factor") || inherits(x, "factor")) return(x)
+  if (!inherits(ref, "factor") || inherits(x, "factor")) {
+    return(x)
+  }
   .lvl <- levels(ref)
-  if (is.character(x)) return(factor(x, levels=.lvl))
+  if (is.character(x)) {
+    return(factor(x, levels = .lvl))
+  }
   .tmp <- as.integer(x)
   attr(.tmp, "levels") <- .lvl
   class(.tmp) <- "factor"
@@ -776,7 +907,7 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
 #'   before any reordering, as the simulation's `nlmixrRowNums` are)
 #' @author Matthew L. Fidler
 #' @noRd
-.vpcUiSetupObservationData <- function(fit, data=NULL, idv="time", cens=FALSE) {
+.vpcUiSetupObservationData <- function(fit, data = NULL, idv = "time", cens = FALSE) {
   if (!is.null(data)) {
     .obs <- data
   } else {
@@ -787,42 +918,33 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   .nol <- tolower(.no)
   .wo <- which(.nol == "id")
   if (length(.wo) != 1) {
-    stop("cannot find 'id' in original dataset",
-         call.=FALSE)
+    stop("cannot find 'id' in original dataset", call. = FALSE)
   }
-  .obsCols <- list(id=.no[.wo])
+  .obsCols <- list(id = .no[.wo])
   .wo <- which(.nol == "dv")
   if (length(.wo) != 1) {
-    stop("cannot find 'dv' in original dataset",
-         call.=FALSE)
+    stop("cannot find 'dv' in original dataset", call. = FALSE)
   }
-  .obsCols <- c(.obsCols,
-                list(dv=.no[.wo]))
+  .obsCols <- c(.obsCols, list(dv = .no[.wo]))
   .missingDvRows <- which(is.na(.obs[[.wo]]))
   .wo <- which(.nol == idv)
   if (length(.wo) != 1) {
     if (any(names(fit) == idv)) {
-      .obs[[idv]] <- .vpcFitColForData(fit, .obs, idv, supplied=!is.null(data))
+      .obs[[idv]] <- .vpcFitColForData(fit, .obs, idv, supplied = !is.null(data))
       .no <- names(.obs)
       .nol <- tolower(.no)
       .wo <- which(.no == idv)
     } else {
-      stop("cannot find '", idv, "' in original dataset",
-           call.=FALSE)
+      stop("cannot find '", idv, "' in original dataset", call. = FALSE)
     }
   } else {
     names(.obs)[.wo] <- idv
   }
-  .obsCols <- c(.obsCols,
-                list(idv=.no[.wo]))
+  .obsCols <- c(.obsCols, list(idv = .no[.wo]))
   if (!cens) {
     .no <- .no[which(tolower(.no) != "cens")]
     .nol <- .no[which(tolower(.no) != "cens")]
     .obs <- .obs[which(tolower(names(.obs)) != "cens")]
   }
-  list(namesObs=.no,
-       namesObsLower=tolower(.nol),
-              obs=.obs,
-              obsCols=.obsCols,
-              missingDvRows=.missingDvRows)
+  list(namesObs = .no, namesObsLower = tolower(.nol), obs = .obs, obsCols = .obsCols, missingDvRows = .missingDvRows)
 }

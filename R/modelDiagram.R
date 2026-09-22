@@ -88,7 +88,9 @@
 #' }
 modelGraph <- function(object, dosing = NULL, data = NULL) {
   .info <- .mdModelInfo(object)
-  if (is.null(data)) data <- .info$data
+  if (is.null(data)) {
+    data <- .info$data
+  }
   .states <- .info$states
   if (length(.states) == 0L) {
     stop("the model has no differential equations to diagram", call. = FALSE)
@@ -100,20 +102,17 @@ modelGraph <- function(object, dosing = NULL, data = NULL) {
     if (is.null(dosing)) dosing <- .states[1]
   } else {
     if (!is.character(dosing)) {
-      stop("'dosing' must be a character vector of compartment names",
-           call. = FALSE)
+      stop("'dosing' must be a character vector of compartment names", call. = FALSE)
     }
     .bad <- setdiff(dosing, .states)
     if (length(.bad) > 0L) {
-      stop("'dosing' compartment(s) not in the model: ",
-           paste(.bad, collapse = ", "), call. = FALSE)
+      stop("'dosing' compartment(s) not in the model: ", paste(.bad, collapse = ", "), call. = FALSE)
     }
   }
   .edges <- .mdClassifyTerms(.info$terms, .states)
   .nodes <- .mdLayout(.states, .edges, dosing)
   .nodes$annotation <- .info$annotation
-  structure(list(nodes = .nodes, edges = .edges),
-            class = "nlmixr2ModelGraph")
+  structure(list(nodes = .nodes, edges = .edges), class = "nlmixr2ModelGraph")
 }
 
 #' Automatic model diagram
@@ -193,9 +192,14 @@ modelGraph <- function(object, dosing = NULL, data = NULL) {
 #'   modelDiagram(pk.turnover.emax, engine = "DiagrammeR")
 #' }
 #' }
-modelDiagram <- function(object, dosing = NULL, data = NULL,
-                         engine = getOption("nlmixr2plot.diagram.engine"),
-                         labels = FALSE, ...) {
+modelDiagram <- function(
+  object,
+  dosing = NULL,
+  data = NULL,
+  engine = getOption("nlmixr2plot.diagram.engine"),
+  labels = FALSE,
+  ...
+) {
   if (inherits(object, "nlmixr2ModelGraph")) {
     .graph <- object
   } else {
@@ -212,10 +216,12 @@ modelDiagram <- function(object, dosing = NULL, data = NULL,
   if (!(is.logical(labels) && length(labels) == 1L && !is.na(labels))) {
     stop("'labels' must be TRUE or FALSE", call. = FALSE)
   }
-  switch(engine,
-         DiagrammeR = .mdDiagrammeR(.graph, labels),
-         ggplot2 = .mdGgplot(.graph, labels),
-         dot = .mdDot(.graph, labels))
+  switch(
+    engine,
+    DiagrammeR = .mdDiagrammeR(.graph, labels),
+    ggplot2 = .mdGgplot(.graph, labels),
+    dot = .mdDot(.graph, labels)
+  )
 }
 
 #' @rdname modelDiagram
@@ -227,19 +233,21 @@ modelDiagram <- function(object, dosing = NULL, data = NULL,
 #'   `modelDiagram(model)`.  (A fitted `nlmixr2` model keeps its
 #'   goodness-of-fit `plot()`; use `modelDiagram(fit)` for its diagram.)
 #' @export
-plot.nlmixr2ModelGraph <- function(x, ...,
-                                   engine = getOption("nlmixr2plot.diagram.engine"),
-                                   labels = FALSE) {
+plot.nlmixr2ModelGraph <- function(x, ..., engine = getOption("nlmixr2plot.diagram.engine"), labels = FALSE) {
   modelDiagram(x, engine = engine, labels = labels)
 }
 
 #' @rdname modelDiagram
 #' @export
-plot.rxUi <- function(x, ..., dosing = NULL, data = NULL,
-                      engine = getOption("nlmixr2plot.diagram.engine"),
-                      labels = FALSE) {
-  modelDiagram(x, dosing = dosing, data = data, engine = engine,
-               labels = labels)
+plot.rxUi <- function(
+  x,
+  ...,
+  dosing = NULL,
+  data = NULL,
+  engine = getOption("nlmixr2plot.diagram.engine"),
+  labels = FALSE
+) {
+  modelDiagram(x, dosing = dosing, data = data, engine = engine, labels = labels)
 }
 
 #' @rdname modelDiagram
@@ -289,16 +297,26 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .lines <- as.list(str2lang(paste0("{\n", .mv$model["normModel"], "\n}")))[-1]
     .order <- .mv$state
   } else {
-    if (is.function(object)) object <- rxode2::rxode2(object)
-    if (!inherits(object, "rxUi")) {
-      stop("cannot create a model diagram from an object of class '",
-           paste(class(object), collapse = "', '"), "'", call. = FALSE)
+    if (is.function(object)) {
+      object <- rxode2::rxode2(object)
     }
-    if (.mdIsLinCmt(object)) object <- .mdLinToOde(object)
+    if (!inherits(object, "rxUi")) {
+      stop(
+        "cannot create a model diagram from an object of class '",
+        paste(class(object), collapse = "', '"),
+        "'",
+        call. = FALSE
+      )
+    }
+    if (.mdIsLinCmt(object)) {
+      object <- .mdLinToOde(object)
+    }
     .lines <- object$lstExpr
     # residual error lines (`cp ~ add(sd)`) are not assignments
     .err <- object$predDf$line
-    if (length(.err) > 0L) .lines <- .lines[-.err]
+    if (length(.err) > 0L) {
+      .lines <- .lines[-.err]
+    }
     .order <- object$mv0$state
   }
   # substitute definitions into the equations; when that makes an equation
@@ -306,49 +324,69 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # substitutions so every equation is written the same way
   .parsed <- .mdParseLines(.lines)
   for (.level in c("small", "none")) {
-    if (!isTRUE(.parsed$overflow)) break
+    if (!isTRUE(.parsed$overflow)) {
+      break
+    }
     .parsed <- .mdParseLines(.lines, .level)
   }
   .states <- .parsed$states
   # keep rxode2's compartment order (used to map numeric `cmt` values)
   .states <- c(intersect(.order, .states), setdiff(.states, .order))
   .foldIndex <- .mdFoldIndex(.parsed$defs)
-  .terms <- do.call(rbind, lapply(.states, function(.s) {
-    .t <- .parsed$ode[[.s]]
-    if (length(.t) == 0L) return(NULL)
-    data.frame(
-      state = .s,
-      sign = vapply(.t, function(x) x$sign, numeric(1)),
-      key = vapply(.t, function(x) .mdTermKey(x$expr), character(1)),
-      label = vapply(.t, function(x) {
-        # `flux#2` (one name per assignment) is shown as `flux`
-        gsub("#[0-9]+", "", .mdDeparse(.mdFold(x$expr, .parsed$defs, .foldIndex)),
-             perl = TRUE)
-      }, character(1)),
-      stringsAsFactors = FALSE
-    )
-  }))
+  .terms <- do.call(
+    rbind,
+    lapply(.states, function(.s) {
+      .t <- .parsed$ode[[.s]]
+      if (length(.t) == 0L) {
+        return(NULL)
+      }
+      data.frame(
+        state = .s,
+        sign = vapply(.t, function(x) x$sign, numeric(1)),
+        key = vapply(.t, function(x) .mdTermKey(x$expr), character(1)),
+        label = vapply(
+          .t,
+          function(x) {
+            # `flux#2` (one name per assignment) is shown as `flux`
+            gsub("#[0-9]+", "", .mdDeparse(.mdFold(x$expr, .parsed$defs, .foldIndex)), perl = TRUE)
+          },
+          character(1)
+        ),
+        stringsAsFactors = FALSE
+      )
+    })
+  )
   if (!is.null(.terms)) {
-    .terms$states <- unlist(lapply(.states, function(.s) {
-      lapply(.parsed$ode[[.s]], function(x) {
-        .mdExprStates(x$expr, .states, x$snap)
-      })
-    }), recursive = FALSE)
+    .terms$states <- unlist(
+      lapply(.states, function(.s) {
+        lapply(.parsed$ode[[.s]], function(x) {
+          .mdExprStates(x$expr, .states, x$snap)
+        })
+      }),
+      recursive = FALSE
+    )
     # direction (1 increasing, -1 decreasing, NA unknown) of each term in
     # each compartment it depends on
-    .terms$dir <- unlist(lapply(.states, function(.s) {
-      lapply(.parsed$ode[[.s]], function(x) {
-        .st <- .mdExprStates(x$expr, .states, x$snap)
-        .dep <- lapply(.st, .mdDependents, states = .states, closure = x$snap)
-        stats::setNames(.mdDirections(x$expr, .st, .dep), .st)
-      })
-    }), recursive = FALSE)
+    .terms$dir <- unlist(
+      lapply(.states, function(.s) {
+        lapply(.parsed$ode[[.s]], function(x) {
+          .st <- .mdExprStates(x$expr, .states, x$snap)
+          .dep <- lapply(.st, .mdDependents, states = .states, closure = x$snap)
+          stats::setNames(.mdDirections(x$expr, .st, .dep), .st)
+        })
+      }),
+      recursive = FALSE
+    )
   }
   # rxode2's full compartment order, including compartments without ODEs
   # (e.g. from `cmt()`), maps numeric `cmt` values
-  list(states = .states, terms = .terms, data = .data,
-       annotation = .mdAnnotation(.parsed$props, .states),
-       order = c(.order, setdiff(.states, .order)))
+  list(
+    states = .states,
+    terms = .terms,
+    data = .data,
+    annotation = .mdAnnotation(.parsed$props, .states),
+    order = c(.order, setdiff(.states, .order))
+  )
 }
 
 #' Dosing compartments from the dosing records of a dataset
@@ -360,16 +398,22 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #'   no dose records) or `NULL` when the data has no dosing information
 #' @noRd
 .mdDosingFromData <- function(data, states, order = states) {
-  if (!is.data.frame(data) || nrow(data) == 0L) return(NULL)
+  if (!is.data.frame(data) || nrow(data) == 0L) {
+    return(NULL)
+  }
   .nm <- tolower(names(data))
   .col <- function(n) {
     .w <- which(.nm == n)
-    if (length(.w) == 0L) return(NULL)
+    if (length(.w) == 0L) {
+      return(NULL)
+    }
     data[[.w[1]]]
   }
   .evid <- .col("evid")
   .amt <- .col("amt")
-  if (is.null(.evid) && is.null(.amt)) return(NULL)
+  if (is.null(.evid) && is.null(.amt)) {
+    return(NULL)
+  }
   .dose <- rep(TRUE, nrow(data))
   # factors are converted through their labels, not their level codes
   .num <- function(v) suppressWarnings(as.numeric(as.character(v)))
@@ -382,11 +426,17 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .amt <- .num(.amt)
     .dose <- .dose & !is.na(.amt) & .amt != 0
   }
-  if (!any(.dose)) return(character(0))
+  if (!any(.dose)) {
+    return(character(0))
+  }
   .cmt <- .col("cmt")
-  if (is.null(.cmt)) return(intersect(states, order[1]))
+  if (is.null(.cmt)) {
+    return(intersect(states, order[1]))
+  }
   .cmt <- .cmt[.dose]
-  if (is.factor(.cmt)) .cmt <- as.character(.cmt)
+  if (is.factor(.cmt)) {
+    .cmt <- as.character(.cmt)
+  }
   # a missing compartment doses the default (first) compartment
   .ret <- if (anyNA(.cmt)) order[1] else character(0)
   .cmt <- .cmt[!is.na(.cmt)]
@@ -407,16 +457,19 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 
 #' @noRd
 .mdIsLinCmt <- function(ui) {
-  any(vapply(ui$lstExpr, function(x) {
-    "linCmt" %in% all.names(x)
-  }, logical(1)))
+  any(vapply(
+    ui$lstExpr,
+    function(x) {
+      "linCmt" %in% all.names(x)
+    },
+    logical(1)
+  ))
 }
 
 #' @noRd
 .mdLinToOde <- function(ui) {
   if (!("linToOde" %in% getNamespaceExports("rxode2"))) {
-    stop("diagramming 'linCmt()' models requires a version of 'rxode2' with 'linToOde()'",
-         call. = FALSE)
+    stop("diagramming 'linCmt()' models requires a version of 'rxode2' with 'linToOde()'", call. = FALSE)
   }
   .fun <- getExportedValue("rxode2", "linToOde")
   .fun(ui)
@@ -452,8 +505,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .env$versioned <- list()
   # the definition to substitute for variable `n` (NULL: keep the variable)
   .mdDefinition <- function(n, rhs, maxSize) {
-    if (n %in% .env$states || n %in% .env$inIf ||
-          length(all.names(rhs)) > maxSize) {
+    if (n %in% .env$states || n %in% .env$inIf || length(all.names(rhs)) > maxSize) {
       # values from `if` branches cannot be substituted, and very large
       # definitions (QSP/PBPK models) are kept as variables so the
       # equations do not grow combinatorially.  A reassigned variable that
@@ -464,27 +516,34 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     }
     # a constant (`x = -1`) is substituted so that its value and sign are
     # known where it is used
-    if (length(all.vars(rhs)) == 0L) return(rhs)
+    if (length(all.vars(rhs)) == 0L) {
+      return(rhs)
+    }
     if (!identical(.env$count[[n]], 1)) {
       # a reassigned variable is substituted with its current value so
       # that a reused name (like `flux`) is not mistaken for one flow
       return(rhs)
     }
-    if (any(all.vars(rhs) %in% .env$states)) return(rhs)
+    if (any(all.vars(rhs) %in% .env$states)) {
+      return(rhs)
+    }
     NULL
   }
   .isAssign <- function(x) {
     length(x) == 3L &&
-      (identical(x[[1]], quote(`<-`)) || identical(x[[1]], quote(`=`)) ||
-         identical(x[[1]], quote(`~`)))
+      (identical(x[[1]], quote(`<-`)) || identical(x[[1]], quote(`=`)) || identical(x[[1]], quote(`~`)))
   }
   # first pass: compartment names and how often (and where) variables are
   # assigned
   .count <- function(x, inIf) {
-    if (!is.call(x)) return(invisible())
+    if (!is.call(x)) {
+      return(invisible())
+    }
     .f <- x[[1]]
     if (identical(.f, quote(`{`))) {
-      for (.i in seq_along(x)[-1]) .count(x[[.i]], inIf)
+      for (.i in seq_along(x)[-1]) {
+        .count(x[[.i]], inIf)
+      }
     } else if (identical(.f, quote(`if`))) {
       .count(x[[3]], TRUE)
       if (length(x) == 4L) .count(x[[4]], TRUE)
@@ -500,29 +559,40 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     }
     invisible()
   }
-  for (.l in lines) .count(.l, FALSE)
+  for (.l in lines) {
+    .count(.l, FALSE)
+  }
   # add terms to a compartment's equation; a repeated term (`-k*A - k*A`)
   # is kept, since each copy moves mass (if/else branches are merged
   # before they get here)
   .addTerms <- function(state, terms) {
-    .keep <- Filter(function(t) {
-      # a literal zero (e.g. `d/dt(x) <- 0`) is no flow
-      !(is.numeric(t$expr) && all(t$expr == 0))
-    }, terms)
+    .keep <- Filter(
+      function(t) {
+        # a literal zero (e.g. `d/dt(x) <- 0`) is no flow
+        !(is.numeric(t$expr) && all(t$expr == 0))
+      },
+      terms
+    )
     # what the variables mean here, for the compartments of this term
     .snap <- .env$stateOf
     .keep <- lapply(.keep, function(t) {
-      if (is.null(t$snap)) t$snap <- .snap
+      if (is.null(t$snap)) {
+        t$snap <- .snap
+      }
       t
     })
     .env$ode[[state]] <- c(.env$ode[[state]], .keep)
   }
   # second pass; `cond` holds the variables of the enclosing `if` conditions
   .walk <- function(x, cond) {
-    if (!is.call(x)) return(invisible())
+    if (!is.call(x)) {
+      return(invisible())
+    }
     .f <- x[[1]]
     if (identical(.f, quote(`{`))) {
-      for (.i in seq_along(x)[-1]) .walk(x[[.i]], cond)
+      for (.i in seq_along(x)[-1]) {
+        .walk(x[[.i]], cond)
+      }
     } else if (identical(.f, quote(`if`))) {
       .cond <- union(cond, all.vars(x[[2]]))
       # walk each branch separately, then merge: terms in both branches
@@ -536,7 +606,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .yesState <- .env$stateOf
       .env$ode <- list()
       .env$stateOf <- .baseState
-      if (length(x) == 4L) .walk(x[[4]], .cond)
+      if (length(x) == 4L) {
+        .walk(x[[4]], .cond)
+      }
       .no <- .env$ode
       .noState <- .env$stateOf
       # a variable assigned in a branch may hold either branch's value
@@ -553,10 +625,12 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .lhs <- x[[2]]
       # full substitution, and substitution of small definitions only (used
       # when full substitution makes an equation too large)
-      .rhs <- switch(level,
-                     full = .mdSubstitute(x[[3]], .env$defs),
-                     small = .mdSubstitute(x[[3]], .env$defsSmall),
-                     none = .mdSubstitute(x[[3]], .env$versioned))
+      .rhs <- switch(
+        level,
+        full = .mdSubstitute(x[[3]], .env$defs),
+        small = .mdSubstitute(x[[3]], .env$defsSmall),
+        none = .mdSubstitute(x[[3]], .env$versioned)
+      )
       .rhsSmall <- .mdSubstitute(x[[3]], .env$defsSmall)
       .state <- .mdDdtState(.lhs)
       .prop <- .mdDoseProperty(.lhs)
@@ -565,14 +639,19 @@ print.nlmixr2ModelGraph <- function(x, ...) {
         .old <- .env$props[[.prop$state]]
         .val <- .mdDeparse(x[[3]])
         .cur <- .old[.prop$name]
-        .old[.prop$name] <- if (is.null(.old) || is.na(.cur)) .val else
+        .old[.prop$name] <- if (is.null(.old) || is.na(.cur)) {
+          .val
+        } else {
           paste(.cur, .val, sep = " / ")
+        }
         .env$props[[.prop$state]] <- .old
       } else if (!is.null(.state)) {
         # an equation that is too large after substitution makes the whole
         # model fall back to a lower substitution level, so that the same
         # flow is written the same way in every equation
-        if (length(all.names(.rhs)) > .mdMaxOdeSize) .env$overflow <- TRUE
+        if (length(all.names(.rhs)) > .mdMaxOdeSize) {
+          .env$overflow <- TRUE
+        }
         .addTerms(.state, .mdSplitTerms(.rhs, .env$states, .state))
       } else if (is.name(.lhs)) {
         .n <- as.character(.lhs)
@@ -583,7 +662,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
           intersect(.dep, .env$states),
           lapply(setdiff(.dep, .env$states), function(.v) .env$stateOf[[.v]])
         )))
-        if (is.null(.set)) .set <- character(0)
+        if (is.null(.set)) {
+          .set <- character(0)
+        }
         .env$stateOf[[.n]] <- .set
         if (!identical(.env$count[[.n]], 1) && !(.n %in% .env$inIf)) {
           # one name per assignment of a reassigned variable; a variable
@@ -602,21 +683,28 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     }
     invisible()
   }
-  for (.l in lines) .walk(.l, character(0))
+  for (.l in lines) {
+    .walk(.l, character(0))
+  }
   # only single-assignment definitions can be folded back into labels
   .defs <- c(.env$defs, .env$defsSmall)
   .defs <- .defs[!vapply(.defs, is.null, logical(1))]
-  .fold <- .defs[vapply(names(.defs), function(.n) {
-    identical(.env$count[[.n]], 1)
-  }, logical(1))]
-  list(ode = .env$ode, defs = .fold,
-       states = .env$states, props = .env$props, overflow = .env$overflow)
+  .fold <- .defs[vapply(
+    names(.defs),
+    function(.n) {
+      identical(.env$count[[.n]], 1)
+    },
+    logical(1)
+  )]
+  list(ode = .env$ode, defs = .fold, states = .env$states, props = .env$props, overflow = .env$overflow)
 }
 
 #' Replace substituted definitions by their variable names (for labels)
 #' @noRd
 .mdFold <- function(expr, defs, index = .mdFoldIndex(defs)) {
-  if (length(defs) == 0L) return(expr)
+  if (length(defs) == 0L) {
+    return(expr)
+  }
   .fold <- function(e) {
     if (is.call(e)) {
       # only deparse sub-expressions the size of some definition
@@ -637,14 +725,15 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' Deparsed keys and sizes of definitions, computed once per model
 #' @noRd
 .mdFoldIndex <- function(defs) {
-  list(key = vapply(defs, .mdDeparse, character(1)),
-       size = vapply(defs, function(d) length(all.names(d)), numeric(1)))
+  list(key = vapply(defs, .mdDeparse, character(1)), size = vapply(defs, function(d) length(all.names(d)), numeric(1)))
 }
 
 #' Substitute variable definitions into an expression
 #' @noRd
 .mdSubstitute <- function(expr, defs) {
-  if (length(defs) == 0L) return(expr)
+  if (length(defs) == 0L) {
+    return(expr)
+  }
   do.call(substitute, list(expr, defs))
 }
 
@@ -655,13 +744,13 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #'   `dur`), or NULL
 #' @noRd
 .mdDoseProperty <- function(lhs) {
-  if (!is.call(lhs) || length(lhs) != 2L || !is.name(lhs[[1]]) ||
-        !is.name(lhs[[2]])) {
+  if (!is.call(lhs) || length(lhs) != 2L || !is.name(lhs[[1]]) || !is.name(lhs[[2]])) {
     return(NULL)
   }
-  .n <- c(lag = "lag", alag = "lag", f = "F", F = "F", rate = "rate",
-          dur = "dur")[as.character(lhs[[1]])]
-  if (is.na(.n)) return(NULL)
+  .n <- c(lag = "lag", alag = "lag", f = "F", F = "F", rate = "rate", dur = "dur")[as.character(lhs[[1]])]
+  if (is.na(.n)) {
+    return(NULL)
+  }
   list(state = as.character(lhs[[2]]), name = unname(.n))
 }
 
@@ -671,20 +760,32 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @return character vector (`""` without properties)
 #' @noRd
 .mdAnnotation <- function(props, states) {
-  vapply(states, function(.s) {
-    .p <- props[[.s]]
-    if (is.null(.p) || length(.p) == 0L) return("")
-    .p <- .p[intersect(c("lag", "F", "rate", "dur"), names(.p))]
-    paste0(names(.p), " = ", .p, collapse = "\n")
-  }, character(1), USE.NAMES = FALSE)
+  vapply(
+    states,
+    function(.s) {
+      .p <- props[[.s]]
+      if (is.null(.p) || length(.p) == 0L) {
+        return("")
+      }
+      .p <- .p[intersect(c("lag", "F", "rate", "dur"), names(.p))]
+      paste0(names(.p), " = ", .p, collapse = "\n")
+    },
+    character(1),
+    USE.NAMES = FALSE
+  )
 }
 
 #' Return the state name for a `d/dt(state)` expression or NULL
 #' @noRd
 .mdDdtState <- function(lhs) {
-  if (is.call(lhs) && identical(lhs[[1]], quote(`/`)) &&
-        identical(lhs[[2]], quote(d)) && is.call(lhs[[3]]) &&
-        identical(lhs[[3]][[1]], quote(dt)) && length(lhs[[3]]) == 2L) {
+  if (
+    is.call(lhs) &&
+      identical(lhs[[1]], quote(`/`)) &&
+      identical(lhs[[2]], quote(d)) &&
+      is.call(lhs[[3]]) &&
+      identical(lhs[[3]][[1]], quote(dt)) &&
+      length(lhs[[3]]) == 2L
+  ) {
     return(as.character(lhs[[3]][[2]]))
   }
   NULL
@@ -736,20 +837,26 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .try <- function(expr, own, limit) {
     .budget <- new.env(parent = emptyenv())
     .budget$left <- limit
-    tryCatch(.mdTerms(expr, states, own, .budget),
-             mdBudget = function(e) NULL)
+    tryCatch(.mdTerms(expr, states, own, .budget), mdBudget = function(e) NULL)
   }
-  unlist(lapply(.top, function(.t) {
-    .limit <- .mdMaxTermGrowth * length(all.names(.t$expr)) + 200
-    .e <- .try(.t$expr, NULL, .limit)
-    if (is.null(.e) && !is.null(own)) {
-      # coarse expansion (own compartment / other compartments / constants)
-      .e <- .try(.t$expr, own, .limit)
-    }
-    if (is.null(.e)) return(list(.t))
-    if (.t$sign < 0) .e <- .mdNeg(.e)
-    .e
-  }), recursive = FALSE)
+  unlist(
+    lapply(.top, function(.t) {
+      .limit <- .mdMaxTermGrowth * length(all.names(.t$expr)) + 200
+      .e <- .try(.t$expr, NULL, .limit)
+      if (is.null(.e) && !is.null(own)) {
+        # coarse expansion (own compartment / other compartments / constants)
+        .e <- .try(.t$expr, own, .limit)
+      }
+      if (is.null(.e)) {
+        return(list(.t))
+      }
+      if (.t$sign < 0) {
+        .e <- .mdNeg(.e)
+      }
+      .e
+    }),
+    recursive = FALSE
+  )
 }
 
 #' Total size (number of names) of a list of terms
@@ -761,11 +868,15 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' Charge an expansion budget, signalling `mdBudget` when it runs out
 #' @noRd
 .mdCharge <- function(budget, size) {
-  if (is.null(budget)) return(invisible())
+  if (is.null(budget)) {
+    return(invisible())
+  }
   budget$left <- budget$left - size
   if (budget$left < 0) {
-    stop(structure(class = c("mdBudget", "error", "condition"),
-                   list(message = "expansion budget exceeded", call = NULL)))
+    stop(structure(
+      class = c("mdBudget", "error", "condition"),
+      list(message = "expansion budget exceeded", call = NULL)
+    ))
   }
   invisible()
 }
@@ -775,13 +886,19 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 .mdTopSum <- function(x, sign = 1) {
   if (is.call(x)) {
     .f <- x[[1]]
-    if (identical(.f, quote(`(`))) return(.mdTopSum(x[[2]], sign))
+    if (identical(.f, quote(`(`))) {
+      return(.mdTopSum(x[[2]], sign))
+    }
     if (identical(.f, quote(`+`))) {
-      if (length(x) == 2L) return(.mdTopSum(x[[2]], sign))
+      if (length(x) == 2L) {
+        return(.mdTopSum(x[[2]], sign))
+      }
       return(c(.mdTopSum(x[[2]], sign), .mdTopSum(x[[3]], sign)))
     }
     if (identical(.f, quote(`-`))) {
-      if (length(x) == 2L) return(.mdTopSum(x[[2]], -sign))
+      if (length(x) == 2L) {
+        return(.mdTopSum(x[[2]], -sign))
+      }
       return(c(.mdTopSum(x[[2]], sign), .mdTopSum(x[[3]], -sign)))
     }
   }
@@ -803,13 +920,19 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 .mdTerms <- function(x, states = character(0), own = NULL, budget = NULL) {
   if (is.call(x)) {
     .f <- x[[1]]
-    if (identical(.f, quote(`(`))) return(.mdTerms(x[[2]], states, own, budget))
+    if (identical(.f, quote(`(`))) {
+      return(.mdTerms(x[[2]], states, own, budget))
+    }
     if (identical(.f, quote(`+`))) {
-      if (length(x) == 2L) return(.mdTerms(x[[2]], states, own, budget))
+      if (length(x) == 2L) {
+        return(.mdTerms(x[[2]], states, own, budget))
+      }
       return(c(.mdTerms(x[[2]], states, own, budget), .mdTerms(x[[3]], states, own, budget)))
     }
     if (identical(.f, quote(`-`))) {
-      if (length(x) == 2L) return(.mdNeg(.mdTerms(x[[2]], states, own, budget)))
+      if (length(x) == 2L) {
+        return(.mdNeg(.mdTerms(x[[2]], states, own, budget)))
+      }
       return(c(.mdTerms(x[[2]], states, own, budget), .mdNeg(.mdTerms(x[[3]], states, own, budget))))
     }
     if (identical(.f, quote(`*`)) && length(x) == 3L) {
@@ -866,8 +989,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       }
       .mdCharge(budget, length(.num) * .denSize)
       return(lapply(.num, function(.t) {
-        list(sign = .t$sign * .denSign,
-             expr = as.call(list(quote(`/`), .t$expr, .denExpr)))
+        list(sign = .t$sign * .denSign, expr = as.call(list(quote(`/`), .t$expr, .denExpr)))
       }))
     }
   }
@@ -876,9 +998,11 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     # `ifelse(cond, a1, 0) + ... + ifelse(cond, 0, b1) + ...`; a term in both
     # branches applies either way
     .isZero <- function(t) is.numeric(t$expr) && all(t$expr == 0)
-    return(.mdMergeBranches(x[[2]],
-                            Filter(Negate(.isZero), .mdTerms(x[[3]], states, own, budget)),
-                            Filter(Negate(.isZero), .mdTerms(x[[4]], states, own, budget))))
+    return(.mdMergeBranches(
+      x[[2]],
+      Filter(Negate(.isZero), .mdTerms(x[[3]], states, own, budget)),
+      Filter(Negate(.isZero), .mdTerms(x[[4]], states, own, budget))
+    ))
   }
   if (is.numeric(x) && length(x) == 1L && !is.na(x) && x < 0) {
     return(list(list(sign = -1, expr = -x)))
@@ -899,10 +1023,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 .mdMergeBranches <- function(cond, yes, no) {
   .id <- function(t) paste(t$sign, .mdTermKey(t$expr))
   .wrap <- function(t, isYes) {
-    list(sign = t$sign,
-         expr = as.call(list(quote(ifelse), cond,
-                             if (isYes) t$expr else 0,
-                             if (isYes) 0 else t$expr)))
+    list(sign = t$sign, expr = as.call(list(quote(ifelse), cond, if (isYes) t$expr else 0, if (isYes) 0 else t$expr)))
   }
   .noId <- vapply(no, .id, character(1))
   .noUsed <- rep(FALSE, length(no))
@@ -922,16 +1043,24 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' Canonical form of an expression: operands of sums and products sorted
 #' @noRd
 .mdCanon <- function(x) {
-  if (!is.call(x)) return(x)
-  if (identical(x[[1]], quote(`(`))) return(.mdCanon(x[[2]]))
+  if (!is.call(x)) {
+    return(x)
+  }
+  if (identical(x[[1]], quote(`(`))) {
+    return(.mdCanon(x[[2]]))
+  }
   # `delay(x, tau)` moves the same mass as `x`, only later: a delayed
   # transfer `-ka*depot` / `+ka*delay(depot, tlag)` is still one flow
-  if (identical(x[[1]], quote(delay)) && length(x) >= 2L) return(.mdCanon(x[[2]]))
+  if (identical(x[[1]], quote(delay)) && length(x) >= 2L) {
+    return(.mdCanon(x[[2]]))
+  }
   for (.op in list(quote(`+`), quote(`*`))) {
     if (identical(x[[1]], .op) && length(x) == 3L) {
       .ops <- list()
       .flat <- function(e) {
-        if (is.call(e) && identical(e[[1]], quote(`(`))) return(.flat(e[[2]]))
+        if (is.call(e) && identical(e[[1]], quote(`(`))) {
+          return(.flat(e[[2]]))
+        }
         if (is.call(e) && identical(e[[1]], .op) && length(e) == 3L) {
           .flat(e[[2]])
           .flat(e[[3]])
@@ -963,24 +1092,30 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @param own group by sign, whether `own` appears and whether other
 #'   compartments appear
 #' @noRd
-.mdCollapse <- function(terms, states = character(0), coarse = FALSE,
-                        own = NULL) {
-  .key <- vapply(terms, function(t) {
-    .v <- all.vars(t$expr)
-    if (length(states) > 0L) .v <- intersect(.v, states)
-    .v <- if (!is.null(own)) {
-      paste(own %in% .v, length(setdiff(.v, own)) > 0L)
-    } else if (coarse) {
-      as.character(length(.v) > 0L)
-    } else {
-      paste(sort(.v), collapse = ",")
-    }
-    paste(t$sign, .v)
-  }, character(1))
+.mdCollapse <- function(terms, states = character(0), coarse = FALSE, own = NULL) {
+  .key <- vapply(
+    terms,
+    function(t) {
+      .v <- all.vars(t$expr)
+      if (length(states) > 0L) {
+        .v <- intersect(.v, states)
+      }
+      .v <- if (!is.null(own)) {
+        paste(own %in% .v, length(setdiff(.v, own)) > 0L)
+      } else if (coarse) {
+        as.character(length(.v) > 0L)
+      } else {
+        paste(sort(.v), collapse = ",")
+      }
+      paste(t$sign, .v)
+    },
+    character(1)
+  )
   lapply(split(terms, factor(.key, levels = unique(.key))), function(g) {
-    list(sign = g[[1]]$sign,
-         expr = Reduce(function(a, b) as.call(list(quote(`+`), a, b)),
-                       lapply(g, function(t) t$expr)))
+    list(
+      sign = g[[1]]$sign,
+      expr = Reduce(function(a, b) as.call(list(quote(`+`), a, b)), lapply(g, function(t) t$expr))
+    )
   })
 }
 
@@ -995,8 +1130,12 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' Multiply two expressions, dropping multiplications by one
 #' @noRd
 .mdMult <- function(a, b) {
-  if (is.numeric(a) && length(a) == 1L && a == 1) return(b)
-  if (is.numeric(b) && length(b) == 1L && b == 1) return(a)
+  if (is.numeric(a) && length(a) == 1L && a == 1) {
+    return(b)
+  }
+  if (is.numeric(b) && length(b) == 1L && b == 1) {
+    return(a)
+  }
   as.call(list(quote(`*`), a, b))
 }
 
@@ -1004,7 +1143,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @noRd
 .mdStripParen <- function(x) {
   if (is.call(x)) {
-    if (identical(x[[1]], quote(`(`))) return(.mdStripParen(x[[2]]))
+    if (identical(x[[1]], quote(`(`))) {
+      return(.mdStripParen(x[[2]]))
+    }
     for (.i in seq_along(x)[-1]) {
       .v <- .mdStripParen(x[[.i]])
       if (!is.null(.v)) x[[.i]] <- .v
@@ -1028,8 +1169,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @param o compartment name
 #' @return 1 (increasing), -1 (decreasing), 0 (independent) or NA (unknown)
 #' @noRd
-.mdDirection <- function(expr, o, states, deps,
-                         dependents = .mdDependents(o, states, deps)) {
+.mdDirection <- function(expr, o, states, deps, dependents = .mdDependents(o, states, deps)) {
   .mdDirections(expr, o, list(dependents))[[1]]
 }
 
@@ -1046,21 +1186,31 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @noRd
 .mdDirections <- function(expr, os, dependents) {
   .k <- length(os)
-  if (.k == 0L) return(numeric(0))
+  if (.k == 0L) {
+    return(numeric(0))
+  }
   .zero <- rep(0, .k)
   # does `e` depend on each compartment?
   .dep <- function(e) {
     .v <- all.vars(e)
-    if (length(.v) == 0L) return(rep(FALSE, .k))
+    if (length(.v) == 0L) {
+      return(rep(FALSE, .k))
+    }
     vapply(dependents, function(d) any(.v %in% d), logical(1))
   }
   # combine the directions of the parts of a sum/product, per compartment
   .comb <- function(m) {
-    if (!is.matrix(m)) m <- matrix(m, nrow = .k)
+    if (!is.matrix(m)) {
+      m <- matrix(m, nrow = .k)
+    }
     apply(m, 1L, function(d) {
       d <- d[is.na(d) | d != 0]
-      if (length(d) == 0L) return(0)
-      if (anyNA(d) || length(unique(d)) > 1L) return(NA_real_)
+      if (length(d) == 0L) {
+        return(0)
+      }
+      if (anyNA(d) || length(unique(d)) > 1L) {
+        return(NA_real_)
+      }
       d[1]
     })
   }
@@ -1070,8 +1220,12 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     if (is.call(e) && identical(e[[1]], quote(`*`)) && length(e) == 3L) {
       .a <- .depPart(e[[2]], i)
       .b <- .depPart(e[[3]], i)
-      if (is.null(.a)) return(.b)
-      if (is.null(.b)) return(.a)
+      if (is.null(.a)) {
+        return(.b)
+      }
+      if (is.null(.b)) {
+        return(.a)
+      }
       return(as.call(list(quote(`*`), .a, .b)))
     }
     if (.dep(e)[i]) e else NULL
@@ -1099,7 +1253,8 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .ds <- .s[.isDep]
     .ind <- .s[!.isDep]
     # K must be positive (`C/(C - 1)` decreases)
-    length(.ds) == 1L && length(.ind) > 0L &&
+    length(.ds) == 1L &&
+      length(.ind) > 0L &&
       isTRUE(all(vapply(.ind, .sgn, numeric(1)) > 0)) &&
       identical(.mdDeparse(.mdCanon(.ds[[1]])), .mdDeparse(.mdCanon(.n)))
   }
@@ -1107,35 +1262,58 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # `exp()`/`sqrt()` are positive, constant arithmetic is evaluated, and
   # anything else is unknown (NA)
   .sgn <- function(e) {
-    if (is.numeric(e) && length(e) == 1L && !is.na(e)) return(sign(e))
-    if (is.name(e)) return(1)
-    if (!is.call(e)) return(NA_real_)
+    if (is.numeric(e) && length(e) == 1L && !is.na(e)) {
+      return(sign(e))
+    }
+    if (is.name(e)) {
+      return(1)
+    }
+    if (!is.call(e)) {
+      return(NA_real_)
+    }
     if (length(all.vars(e)) == 0L) {
       .v <- tryCatch(eval(e, baseenv()), error = function(err) NA_real_)
-      if (is.numeric(.v) && length(.v) == 1L && !is.na(.v)) return(sign(.v))
+      if (is.numeric(.v) && length(.v) == 1L && !is.na(.v)) {
+        return(sign(.v))
+      }
       return(NA_real_)
     }
     .f <- e[[1]]
-    if (identical(.f, quote(`(`))) return(.sgn(e[[2]]))
-    if (identical(.f, quote(`-`)) && length(e) == 2L) return(-.sgn(e[[2]]))
-    if ((identical(.f, quote(`*`)) || identical(.f, quote(`/`))) &&
-          length(e) == 3L) {
+    if (identical(.f, quote(`(`))) {
+      return(.sgn(e[[2]]))
+    }
+    if (identical(.f, quote(`-`)) && length(e) == 2L) {
+      return(-.sgn(e[[2]]))
+    }
+    if (
+      (identical(.f, quote(`*`)) || identical(.f, quote(`/`))) &&
+        length(e) == 3L
+    ) {
       return(.sgn(e[[2]]) * .sgn(e[[3]]))
     }
     if (identical(.f, quote(`+`)) && length(e) == 3L) {
       .a <- .sgn(e[[2]])
       .b <- .sgn(e[[3]])
-      if (identical(.a, 1) && identical(.b, 1)) return(1)
-      if (identical(.a, -1) && identical(.b, -1)) return(-1)
+      if (identical(.a, 1) && identical(.b, 1)) {
+        return(1)
+      }
+      if (identical(.a, -1) && identical(.b, -1)) {
+        return(-1)
+      }
       return(NA_real_)
     }
-    if ((identical(.f, quote(exp)) || identical(.f, quote(sqrt))) &&
-          length(e) == 2L) {
+    if (
+      (identical(.f, quote(exp)) || identical(.f, quote(sqrt))) &&
+        length(e) == 2L
+    ) {
       return(1)
     }
     # a power of a positive base is positive
-    if ((identical(.f, quote(`^`)) || identical(.f, quote(`**`))) &&
-          length(e) == 3L && identical(.sgn(e[[2]]), 1)) {
+    if (
+      (identical(.f, quote(`^`)) || identical(.f, quote(`**`))) &&
+        length(e) == 3L &&
+        identical(.sgn(e[[2]]), 1)
+    ) {
       return(1)
     }
     NA_real_
@@ -1153,13 +1331,21 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .r[.r == 0 & .dep(e)] <- NA_real_
       return(.r)
     }
-    if (!is.call(e)) return(.zero)
+    if (!is.call(e)) {
+      return(.zero)
+    }
     .f <- e[[1]]
     .fn <- if (is.name(.f)) as.character(.f) else ""
-    if (.fn == "(") return(.d(e[[2]]))
-    if (.fn == "+") return(.comb(vapply(as.list(e)[-1], .d, numeric(.k))))
+    if (.fn == "(") {
+      return(.d(e[[2]]))
+    }
+    if (.fn == "+") {
+      return(.comb(vapply(as.list(e)[-1], .d, numeric(.k))))
+    }
     if (.fn == "-") {
-      if (length(e) == 2L) return(-.d(e[[2]]))
+      if (length(e) == 2L) {
+        return(-.d(e[[2]]))
+      }
       return(.comb(cbind(.d(e[[2]]), -.d(e[[3]]))))
     }
     if (.fn == "*") {
@@ -1191,15 +1377,16 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       }
       return(.r)
     }
-    if (.fn %in% c("exp", "log", "sqrt", "expit", "log1p", "log10", "log2") &&
-          length(e) == 2L) {
+    if (.fn %in% c("exp", "log", "sqrt", "expit", "log1p", "log10", "log2") && length(e) == 2L) {
       return(.d(e[[2]]))
     }
     # a delayed value moves with the value itself (the delay time is a
     # parameter)
     if (.fn == "delay" && length(e) >= 2L) {
       .r <- .d(e[[2]])
-      for (.a in as.list(e)[-(1:2)]) .r[.dep(.a)] <- NA_real_
+      for (.a in as.list(e)[-(1:2)]) {
+        .r[.dep(.a)] <- NA_real_
+      }
       return(.r)
     }
     if (.fn %in% c("^", "**") && length(e) == 3L) {
@@ -1240,20 +1427,29 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @noRd
 .mdNonNeg <- function(e) {
   e <- .mdStripParen(e)
-  if (is.numeric(e)) return(all(!is.na(e) & e >= 0))
-  if (is.name(e)) return(TRUE)
-  if (!is.call(e)) return(FALSE)
-  .f <- e[[1]]
-  if (identical(.f, quote(`+`)) || identical(.f, quote(`*`)) ||
-        identical(.f, quote(`/`))) {
-    return(all(vapply(as.list(e)[-1], .mdNonNeg, logical(1))))
+  if (is.numeric(e)) {
+    return(all(!is.na(e) & e >= 0))
   }
-  if ((identical(.f, quote(exp)) || identical(.f, quote(sqrt))) &&
-        length(e) == 2L) {
+  if (is.name(e)) {
     return(TRUE)
   }
-  if ((identical(.f, quote(`^`)) || identical(.f, quote(`**`))) &&
-        length(e) == 3L) {
+  if (!is.call(e)) {
+    return(FALSE)
+  }
+  .f <- e[[1]]
+  if (identical(.f, quote(`+`)) || identical(.f, quote(`*`)) || identical(.f, quote(`/`))) {
+    return(all(vapply(as.list(e)[-1], .mdNonNeg, logical(1))))
+  }
+  if (
+    (identical(.f, quote(exp)) || identical(.f, quote(sqrt))) &&
+      length(e) == 2L
+  ) {
+    return(TRUE)
+  }
+  if (
+    (identical(.f, quote(`^`)) || identical(.f, quote(`**`))) &&
+      length(e) == 3L
+  ) {
     return(.mdNonNeg(e[[2]]))
   }
   FALSE
@@ -1274,7 +1470,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .env$num <- list()
   .env$den <- list()
   .flat <- function(e, num) {
-    if (is.call(e) && identical(e[[1]], quote(`(`))) return(.flat(e[[2]], num))
+    if (is.call(e) && identical(e[[1]], quote(`(`))) {
+      return(.flat(e[[2]], num))
+    }
     if (is.call(e) && length(e) == 3L && identical(e[[1]], quote(`*`))) {
       .flat(e[[2]], num)
       .flat(e[[3]], num)
@@ -1297,8 +1495,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .f <- .mdTermFactors(x)
   .num <- vapply(.f$num, function(e) .mdDeparse(.mdCanon(e)), character(1))
   .den <- vapply(.f$den, function(e) .mdDeparse(.mdCanon(e)), character(1))
-  paste0(paste(sort(.num), collapse = "*"), "/",
-         paste(sort(.den), collapse = "*"))
+  paste0(paste(sort(.num), collapse = "*"), "/", paste(sort(.den), collapse = "*"))
 }
 
 # ---------------------------------------------------------------------------
@@ -1311,9 +1508,14 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @return edge data frame
 #' @noRd
 .mdClassifyTerms <- function(terms, states) {
-  .empty <- data.frame(from = character(0), to = character(0),
-                       type = character(0), sign = numeric(0),
-                       label = character(0), stringsAsFactors = FALSE)
+  .empty <- data.frame(
+    from = character(0),
+    to = character(0),
+    type = character(0),
+    sign = numeric(0),
+    label = character(0),
+    stringsAsFactors = FALSE
+  )
   if (is.null(terms) || nrow(terms) == 0L) {
     .empty$bidirectional <- logical(0)
     return(.empty)
@@ -1324,22 +1526,28 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .rows <- list()
   .add <- function(from, to, type, sign, label) {
     .rows[[length(.rows) + 1L]] <<-
-      data.frame(from = from, to = to, type = type, sign = sign,
-                 label = label, stringsAsFactors = FALSE)
+      data.frame(from = from, to = to, type = type, sign = sign, label = label, stringsAsFactors = FALSE)
   }
   # mass transfer: -term in the source (containing the source amount) and
   # +term in another compartment.  One +term may receive mass from several
   # sources (e.g. binding `kon*C*R` into a complex from both C and R) ...
   for (.i in seq_len(.n)) {
-    if (.used[.i] || terms$sign[.i] > 0) next
+    if (.used[.i] || terms$sign[.i] > 0) {
+      next
+    }
     .src <- terms$state[.i]
     # a term subtracted from one compartment and added to another is
     # conserved flow, whatever drives it (first-order `k*A`, zero-order
     # `rate`, or another compartment like an enzyme `Vmax*E`)
-    .j <- which(terms$sign > 0 & terms$state != .src &
-                  terms$key == terms$key[.i] &
-                  !vapply(.matchedFrom, function(m) .src %in% m, logical(1)))
-    if (length(.j) == 0L) next
+    .j <- which(
+      terms$sign > 0 &
+        terms$state != .src &
+        terms$key == terms$key[.i] &
+        !vapply(.matchedFrom, function(m) .src %in% m, logical(1))
+    )
+    if (length(.j) == 0L) {
+      next
+    }
     # ... and one -term may go to several destinations (e.g. dissociation
     # `koff*RC` back to both C and R); keep one destination per compartment
     .j <- .j[!duplicated(terms$state[.j])]
@@ -1358,11 +1566,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # compartments that drive a transfer without being its source (e.g. an
   # enzyme `E` in `Vmax*E*A`) stimulate/inhibit the destination
   for (.j in which(!vapply(.matchedFrom, is.null, logical(1)))) {
-    .drivers <- setdiff(terms$states[[.j]],
-                        c(.matchedFrom[[.j]], terms$state[.j]))
+    .drivers <- setdiff(terms$states[[.j]], c(.matchedFrom[[.j]], terms$state[.j]))
     for (.o in .drivers) {
-      .add(.o, terms$state[.j], "interaction",
-           .mdSign(terms$dir[[.j]][.o]), terms$label[.j])
+      .add(.o, terms$state[.j], "interaction", .mdSign(terms$dir[[.j]][.o]), terms$label[.j])
     }
   }
   for (.i in which(!.used)) {
@@ -1380,19 +1586,26 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     } else if (length(.others) == 0L) {
       .add(NA_character_, .s, "input", 1, terms$label[.i])
     }
-    for (.o in .others) .add(.o, .s, "interaction", .dir(.o), terms$label[.i])
+    for (.o in .others) {
+      .add(.o, .s, "interaction", .dir(.o), terms$label[.i])
+    }
   }
   .e <- do.call(rbind, .rows)
-  if (is.null(.e)) .e <- .empty
+  if (is.null(.e)) {
+    .e <- .empty
+  }
   # combine duplicated flows
   if (nrow(.e) > 0L) {
     .id <- paste(.e$from, .e$to, .e$type, .e$sign, sep = "\r")
-    .e <- do.call(rbind, lapply(unique(.id), function(.k) {
-      .w <- .e[.id == .k, , drop = FALSE]
-      # keep every contribution (`k*A + k*A` is twice `k*A`)
-      .w$label[1] <- paste(.w$label, collapse = " + ")
-      .w[1, , drop = FALSE]
-    }))
+    .e <- do.call(
+      rbind,
+      lapply(unique(.id), function(.k) {
+        .w <- .e[.id == .k, , drop = FALSE]
+        # keep every contribution (`k*A + k*A` is twice `k*A`)
+        .w$label[1] <- paste(.w$label, collapse = " + ")
+        .w[1, , drop = FALSE]
+      })
+    )
   }
   .tr <- .e$type == "transfer"
   .pairs <- paste(.e$from, .e$to, sep = "\r")
@@ -1410,13 +1623,16 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @noRd
 .mdCentral <- function(states, edges) {
   .cn <- states[tolower(states) %in% c("central", "center", "centr", "cent")]
-  if (length(.cn) > 0L) return(.cn[1])
+  if (length(.cn) > 0L) {
+    return(.cn[1])
+  }
   .tr <- edges[edges$type == "transfer", , drop = FALSE]
-  .deg <- vapply(states, function(.s) sum(.tr$from == .s | .tr$to == .s),
-                 numeric(1))
+  .deg <- vapply(states, function(.s) sum(.tr$from == .s | .tr$to == .s), numeric(1))
   .elim <- states %in% edges$from[edges$type == "elimination"]
   .score <- .deg + 0.5 * .elim
-  if (all(.deg == 0)) return(states[1])
+  if (all(.deg == 0)) {
+    return(states[1])
+  }
   states[which.max(.score)]
 }
 
@@ -1450,7 +1666,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   })
   names(.adj) <- states
   .ok <- function(s, x, y) {
-    if (!.free(x, y)) return(FALSE)
+    if (!.free(x, y)) {
+      return(FALSE)
+    }
     .isPlaced <- !is.na(.x)
     # arrows between `s` and placed partners must be clear of the other
     # placed compartments
@@ -1460,16 +1678,19 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .others <- which(.isPlaced)
       .g <- expand.grid(p = .p, o = .others)
       .g <- .g[.g$p != .g$o, , drop = FALSE]
-      if (nrow(.g) > 0L &&
-            any(.mdSegRect(.x[.g$p], .y[.g$p], x, y, .x[.g$o], .y[.g$o]))) {
+      if (
+        nrow(.g) > 0L &&
+          any(.mdSegRect(.x[.g$p], .y[.g$p], x, y, .x[.g$o], .y[.g$o]))
+      ) {
         return(FALSE)
       }
     }
     # no placed arrow may run through the new box
     .pe <- .isPlaced[.fromI] & .isPlaced[.toI]
-    if (any(.pe) &&
-          any(.mdSegRect(.x[.fromI[.pe]], .y[.fromI[.pe]],
-                         .x[.toI[.pe]], .y[.toI[.pe]], x, y))) {
+    if (
+      any(.pe) &&
+        any(.mdSegRect(.x[.fromI[.pe]], .y[.fromI[.pe]], .x[.toI[.pe]], .y[.toI[.pe]], x, y))
+    ) {
       return(FALSE)
     }
     TRUE
@@ -1492,7 +1713,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       }
     }
     # give up on arrow clearance rather than fail
-    while (!.free(x, y)) y <- y + step
+    while (!.free(x, y)) {
+      y <- y + step
+    }
     .x[s] <<- x
     .y[s] <<- y
   }
@@ -1512,16 +1735,18 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .p <- !is.na(.x)
     .e <- which(.p[.fromI] & .p[.toI])
     .o <- which(.p)
-    if (length(.e) == 0L || length(.o) == 0L) return(0)
+    if (length(.e) == 0L || length(.o) == 0L) {
+      return(0)
+    }
     .f <- .fromI[.e]
     .t <- .toI[.e]
     .g <- expand.grid(e = seq_along(.e), o = .o)
-    .keep <- .f[.g$e] != .g$o & .t[.g$e] != .g$o &
-      (.f[.g$e] %in% new | .t[.g$e] %in% new | .g$o %in% new)
+    .keep <- .f[.g$e] != .g$o & .t[.g$e] != .g$o & (.f[.g$e] %in% new | .t[.g$e] %in% new | .g$o %in% new)
     .g <- .g[.keep, , drop = FALSE]
-    if (nrow(.g) == 0L) return(0)
-    sum(.mdSegRect(.x[.f[.g$e]], .y[.f[.g$e]], .x[.t[.g$e]], .y[.t[.g$e]],
-                   .x[.g$o], .y[.g$o]))
+    if (nrow(.g) == 0L) {
+      return(0)
+    }
+    sum(.mdSegRect(.x[.f[.g$e]], .y[.f[.g$e]], .x[.t[.g$e]], .y[.t[.g$e]], .x[.g$o], .y[.g$o]))
   }
   # place a group of neighbors of `s` in direction `dir` (radians: up is
   # pi/2, down -pi/2, left pi, right 0), either in a line or -- for a hub
@@ -1530,7 +1755,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # with fewer crossings is kept.
   .placeGroup <- function(nodes, s, dir, step) {
     .m <- length(nodes)
-    if (.m == 0L) return(invisible())
+    if (.m == 0L) {
+      return(invisible())
+    }
     .line <- function() {
       .off <- (seq_len(.m) - 1) - if (abs(cos(dir)) > 0.5) 0 else (.m - 1) / 2
       for (.k in seq_len(.m)) {
@@ -1545,8 +1772,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .r <- max(1.5, 1.3 / .d)
       .a <- dir - .sector / 2 + (seq_len(.m) - 1) * .d
       for (.k in seq_len(.m)) {
-        .place(nodes[.k], round((.x[s] + .r * cos(.a[.k])) * 2) / 2,
-               round((.y[s] + .r * sin(.a[.k])) * 2) / 2, step)
+        .place(nodes[.k], round((.x[s] + .r * cos(.a[.k])) * 2) / 2, round((.y[s] + .r * sin(.a[.k])) * 2) / 2, step)
       }
     }
     if (.m <= 2L) {
@@ -1579,12 +1805,16 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       # upstream (unidirectional into .s): above
       .up <- setdiff(unique(.uni$from[.uni$to == .s]), names(.x)[!is.na(.x)])
       .placeGroup(.up, .s, pi / 2, 1)
-      for (.n in .up) if (.role[.n] == "other") .role[.n] <<- "transit"
+      for (.n in .up) {
+        if (.role[.n] == "other") .role[.n] <<- "transit"
+      }
       # bidirectional exchange: to the left (PD models: right), fanned
       .lr <- unique(c(.bi$to[.bi$from == .s], .bi$from[.bi$to == .s]))
       .lr <- setdiff(.lr, names(.x)[!is.na(.x)])
       .placeGroup(.lr, .s, if (side < 0) pi else 0, -1)
-      for (.n in .lr) if (.role[.n] == "other") .role[.n] <<- "peripheral"
+      for (.n in .lr) {
+        if (.role[.n] == "other") .role[.n] <<- "peripheral"
+      }
       # downstream (unidirectional out of .s): below
       .dn <- setdiff(unique(.uni$to[.uni$from == .s]), names(.x)[!is.na(.x)])
       .placeGroup(.dn, .s, -pi / 2, -1)
@@ -1614,8 +1844,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # compartments interacting without mass transfer: to the right
   repeat {
     .placed <- names(.x)[!is.na(.x)]
-    .cand <- .int[.int$from %in% .placed & !(.int$to %in% .placed), ,
-                  drop = FALSE]
+    .cand <- .int[.int$from %in% .placed & !(.int$to %in% .placed), , drop = FALSE]
     if (nrow(.cand) > 0L) {
       .s <- .cand$to[1]
       .nx <- max(.x, na.rm = TRUE) + 1
@@ -1625,7 +1854,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       next
     }
     .left <- states[is.na(.x)]
-    if (length(.left) == 0L) break
+    if (length(.left) == 0L) {
+      break
+    }
     # compartments acting on the placed ones first, then dosing compartments
     .acting <- intersect(.left, .int$from[.int$to %in% .placed])
     .s <- c(.acting, intersect(dosing, .left), .left)[1]
@@ -1634,10 +1865,14 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .spread(.s, side = if (length(.acting) > 0L) 1 else -1)
   }
   .role[states %in% dosing & .role != "central"] <- "dosing"
-  data.frame(name = states, role = unname(.role[states]),
-             dosing = states %in% dosing,
-             x = unname(.x[states]), y = unname(.y[states]),
-             stringsAsFactors = FALSE)
+  data.frame(
+    name = states,
+    role = unname(.role[states]),
+    dosing = states %in% dosing,
+    x = unname(.x[states]),
+    y = unname(.y[states]),
+    stringsAsFactors = FALSE
+  )
 }
 
 #' Does the segment (x0, y0)-(x1, y1) pass through any of the node boxes?
@@ -1646,7 +1881,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' height `hh`; the segment is sampled finely enough for unit-grid layouts.
 #' @noRd
 .mdSegmentCrosses <- function(x0, y0, x1, y1, x, y, hw = 0.35, hh = 0.25) {
-  if (length(x) == 0L) return(FALSE)
+  if (length(x) == 0L) {
+    return(FALSE)
+  }
   any(.mdSegRect(x0, y0, x1, y1, x, y, hw, hh))
 }
 
@@ -1721,10 +1958,15 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .e
 }
 
-.mdRoleColors <- c(dosing = "#F2C57C", central = "#7FB3D5",
-                   peripheral = "#A9CCE3", transit = "#FAD7A0",
-                   metabolite = "#D2B4DE", effect = "#A9DFBF",
-                   other = "#E5E7E9")
+.mdRoleColors <- c(
+  dosing = "#F2C57C",
+  central = "#7FB3D5",
+  peripheral = "#A9CCE3",
+  transit = "#FAD7A0",
+  metabolite = "#D2B4DE",
+  effect = "#A9DFBF",
+  other = "#E5E7E9"
+)
 
 # ---------------------------------------------------------------------------
 # Engines
@@ -1739,7 +1981,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .ys <- 1.1
   # dosing properties shown as an external label next to the compartment
   .ann <- graph$nodes$annotation
-  if (is.null(.ann)) .ann <- rep("", nrow(graph$nodes))
+  if (is.null(.ann)) {
+    .ann <- rep("", nrow(graph$nodes))
+  }
   .ann[is.na(.ann)] <- ""
   # quote a DOT string; "\r" (from combined labels) becomes a DOT line break
   .q <- function(x) {
@@ -1750,23 +1994,34 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # routing curved edges around the boxes is slow for large graphs, which
   # do not gain much from it (the positions are pinned)
   .splines <- if (nrow(graph$edges) > .mdMaxSplineEdges) "line" else "true"
-  .lines <- c("digraph model {",
-              sprintf(paste0("  graph [layout = neato, splines = %s, ",
-                             "outputorder = edgesfirst, forcelabels = true];"),
-                      .splines),
-              "  node [shape = box, style = \"rounded,filled\", fontname = Helvetica];",
-              "  edge [fontname = Helvetica, fontsize = 10];")
+  .lines <- c(
+    "digraph model {",
+    sprintf(
+      paste0("  graph [layout = neato, splines = %s, ", "outputorder = edgesfirst, forcelabels = true];"),
+      .splines
+    ),
+    "  node [shape = box, style = \"rounded,filled\", fontname = Helvetica];",
+    "  edge [fontname = Helvetica, fontsize = 10];"
+  )
   for (.i in seq_len(nrow(.n))) {
-    .lines <- c(.lines, sprintf(
-      "  %s [pos = \"%g,%g!\", fillcolor = %s%s%s];",
-      .q(.n$name[.i]), .n$x[.i] * .xs, .n$y[.i] * .ys,
-      .q(.mdRoleColors[[.n$role[.i]]]),
-      if (.n$dosing[.i]) ", penwidth = 2" else "",
-      if (nzchar(.ann[.i])) paste0(", xlabel = ", .q(gsub("\n", "\r", .ann[.i], fixed = TRUE))) else ""))
+    .lines <- c(
+      .lines,
+      sprintf(
+        "  %s [pos = \"%g,%g!\", fillcolor = %s%s%s];",
+        .q(.n$name[.i]),
+        .n$x[.i] * .xs,
+        .n$y[.i] * .ys,
+        .q(.mdRoleColors[[.n$role[.i]]]),
+        if (.n$dosing[.i]) ", penwidth = 2" else "",
+        if (nzchar(.ann[.i])) paste0(", xlabel = ", .q(gsub("\n", "\r", .ann[.i], fixed = TRUE))) else ""
+      )
+    )
   }
   .done <- rep(FALSE, nrow(.e))
   for (.i in seq_len(nrow(.e))) {
-    if (.done[.i]) next
+    if (.done[.i]) {
+      next
+    }
     .t <- .e$type[.i]
     .from <- .e$from[.i]
     .to <- .e$to[.i]
@@ -1774,11 +2029,15 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .lab <- .e$label[.i]
     if (.t %in% c("elimination", "input")) {
       .pt <- paste0(".", .t, .i)
-      .lines <- c(.lines, sprintf(
-        "  %s [shape = point, style = invis, width = 0.01, pos = \"%g,%g!\"];",
-        .q(.pt),
-        (if (.t == "elimination") .e$x1[.i] else .e$x0[.i]) * .xs,
-        (if (.t == "elimination") .e$y1[.i] else .e$y0[.i]) * .ys))
+      .lines <- c(
+        .lines,
+        sprintf(
+          "  %s [shape = point, style = invis, width = 0.01, pos = \"%g,%g!\"];",
+          .q(.pt),
+          (if (.t == "elimination") .e$x1[.i] else .e$x0[.i]) * .xs,
+          (if (.t == "elimination") .e$y1[.i] else .e$y0[.i]) * .ys
+        )
+      )
       if (.t == "elimination") .to <- .pt else .from <- .pt
     } else if (.t == "transfer" && .e$bidirectional[.i]) {
       .j <- which(.e$type == "transfer" & .e$from == .to & .e$to == .from)
@@ -1786,14 +2045,26 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .attr <- c(.attr, "dir = both")
       .lab <- paste(c(.lab, .e$label[.j]), collapse = "\r")
     } else if (.t == "interaction") {
-      .attr <- c(.attr, "style = dashed", "color = gray40",
-                 if (.e$sign[.i] < 0) "arrowhead = tee",
-                 if (.e$sign[.i] == 0) "arrowhead = dot")
+      .attr <- c(
+        .attr,
+        "style = dashed",
+        "color = gray40",
+        if (.e$sign[.i] < 0) "arrowhead = tee",
+        if (.e$sign[.i] == 0) "arrowhead = dot"
+      )
     }
-    if (labels) .attr <- c(.attr, paste0("label = ", .q(.lab)))
-    .lines <- c(.lines, sprintf(
-      "  %s -> %s%s;", .q(.from), .q(.to),
-      if (length(.attr) > 0L) paste0(" [", paste(.attr, collapse = ", "), "]") else ""))
+    if (labels) {
+      .attr <- c(.attr, paste0("label = ", .q(.lab)))
+    }
+    .lines <- c(
+      .lines,
+      sprintf(
+        "  %s -> %s%s;",
+        .q(.from),
+        .q(.to),
+        if (length(.attr) > 0L) paste0(" [", paste(.attr, collapse = ", "), "]") else ""
+      )
+    )
     .done[.i] <- TRUE
   }
   paste(c(.lines, "}"), collapse = "\n")
@@ -1802,8 +2073,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 #' @noRd
 .mdDiagrammeR <- function(graph, labels = FALSE) {
   if (!requireNamespace("DiagrammeR", quietly = TRUE)) {
-    stop("the 'DiagrammeR' engine requires the 'DiagrammeR' package; install it or use engine = \"ggplot2\"",
-         call. = FALSE)
+    stop(
+      "the 'DiagrammeR' engine requires the 'DiagrammeR' package; install it or use engine = \"ggplot2\"",
+      call. = FALSE
+    )
   }
   DiagrammeR::grViz(.mdDot(graph, labels))
 }
@@ -1836,45 +2109,59 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .px <- stats::setNames(.n$x, .n$name)
   .py <- stats::setNames(.n$y, .n$name)
   # arrows between the same two compartments (in either direction)
-  .pair <- ifelse(is.na(.e$from) | is.na(.e$to), paste0(".", seq_len(nrow(.e))),
-                  paste(pmin(.e$from, .e$to), pmax(.e$from, .e$to), sep = "\r"))
+  .pair <- ifelse(
+    is.na(.e$from) | is.na(.e$to),
+    paste0(".", seq_len(nrow(.e))),
+    paste(pmin(.e$from, .e$to), pmax(.e$from, .e$to), sep = "\r")
+  )
   .pairN <- as.integer(stats::ave(seq_along(.pair), .pair, FUN = length))
   .pairK <- as.integer(stats::ave(seq_along(.pair), .pair, FUN = seq_along))
-  .seg <- do.call(rbind, lapply(seq_len(nrow(.e)), function(.i) {
-    .x0 <- .e$x0[.i]
-    .y0 <- .e$y0[.i]
-    .x1 <- .e$x1[.i]
-    .y1 <- .e$y1[.i]
-    if (.e$type[.i] %in% c("transfer", "interaction") && .e$from[.i] == .e$to[.i]) {
-      return(NULL)
-    }
-    if (.pairN[.i] > 1L) {
-      # spread several arrows between the same two compartments (both
-      # directions of an exchange, or a stimulation and an inhibition) to
-      # either side of the center line
-      .a <- c(pmin(.e$from[.i], .e$to[.i]), pmax(.e$from[.i], .e$to[.i]))
-      .dx <- .px[.a[2]] - .px[.a[1]]
-      .dy <- .py[.a[2]] - .py[.a[1]]
-      .len <- sqrt(.dx^2 + .dy^2)
-      .off <- (.pairK[.i] - (.pairN[.i] + 1) / 2) * 0.12
-      .ox <- -.dy / .len * .off
-      .oy <- .dx / .len * .off
-      .x0 <- .x0 + .ox
-      .x1 <- .x1 + .ox
-      .y0 <- .y0 + .oy
-      .y1 <- .y1 + .oy
-    }
-    .c <- .mdClip(.x0, .y0, .x1, .y1, .hw, .hh,
-                  clip0 = .e$type[.i] != "input",
-                  clip1 = .e$type[.i] != "elimination")
-    data.frame(x = .c[1], y = .c[2], xend = .c[3], yend = .c[4],
-               flow = ifelse(.e$type[.i] == "interaction",
-                             c("inhibition", "modulation", "stimulation")[sign(.e$sign[.i]) + 2],
-                             "mass transfer"),
-               label = .e$label[.i], stringsAsFactors = FALSE)
-  }))
+  .seg <- do.call(
+    rbind,
+    lapply(seq_len(nrow(.e)), function(.i) {
+      .x0 <- .e$x0[.i]
+      .y0 <- .e$y0[.i]
+      .x1 <- .e$x1[.i]
+      .y1 <- .e$y1[.i]
+      if (.e$type[.i] %in% c("transfer", "interaction") && .e$from[.i] == .e$to[.i]) {
+        return(NULL)
+      }
+      if (.pairN[.i] > 1L) {
+        # spread several arrows between the same two compartments (both
+        # directions of an exchange, or a stimulation and an inhibition) to
+        # either side of the center line
+        .a <- c(pmin(.e$from[.i], .e$to[.i]), pmax(.e$from[.i], .e$to[.i]))
+        .dx <- .px[.a[2]] - .px[.a[1]]
+        .dy <- .py[.a[2]] - .py[.a[1]]
+        .len <- sqrt(.dx^2 + .dy^2)
+        .off <- (.pairK[.i] - (.pairN[.i] + 1) / 2) * 0.12
+        .ox <- -.dy / .len * .off
+        .oy <- .dx / .len * .off
+        .x0 <- .x0 + .ox
+        .x1 <- .x1 + .ox
+        .y0 <- .y0 + .oy
+        .y1 <- .y1 + .oy
+      }
+      .c <- .mdClip(.x0, .y0, .x1, .y1, .hw, .hh, clip0 = .e$type[.i] != "input", clip1 = .e$type[.i] != "elimination")
+      data.frame(
+        x = .c[1],
+        y = .c[2],
+        xend = .c[3],
+        yend = .c[4],
+        flow = ifelse(
+          .e$type[.i] == "interaction",
+          c("inhibition", "modulation", "stimulation")[sign(.e$sign[.i]) + 2],
+          "mass transfer"
+        ),
+        label = .e$label[.i],
+        stringsAsFactors = FALSE
+      )
+    })
+  )
   .n$role <- factor(.n$role, levels = names(.mdRoleColors))
-  if (is.null(.n$annotation)) .n$annotation <- ""
+  if (is.null(.n$annotation)) {
+    .n$annotation <- ""
+  }
   .n$annotation[is.na(.n$annotation)] <- ""
   .ann <- .n[nzchar(.n$annotation), , drop = FALSE]
   .ann$x <- .ann$x + .hw * 0.9
@@ -1888,24 +2175,26 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     ggplot2::geom_tile(
       data = .n,
       ggplot2::aes(x = .data$x, y = .data$y, fill = .data$role),
-      width = 2 * .hw, height = 2 * .hh, color = "gray30",
+      width = 2 * .hw,
+      height = 2 * .hh,
+      color = "gray30",
       linewidth = ifelse(.n$dosing, 1, 0.4)
     ) +
-    ggplot2::geom_text(data = .n,
-                       ggplot2::aes(x = .data$x, y = .data$y,
-                                    label = .data$name)) +
+    ggplot2::geom_text(data = .n, ggplot2::aes(x = .data$x, y = .data$y, label = .data$name)) +
     # dosing properties (lag, F, rate, dur) as an annotation at the upper
     # right corner of the compartment
-    ggplot2::geom_text(data = .ann,
-                       ggplot2::aes(x = .data$x, y = .data$y,
-                                    label = .data$annotation),
-                       hjust = 0, vjust = 0, size = 2.6,
-                       fontface = "italic", lineheight = 0.9) +
+    ggplot2::geom_text(
+      data = .ann,
+      ggplot2::aes(x = .data$x, y = .data$y, label = .data$annotation),
+      hjust = 0,
+      vjust = 0,
+      size = 2.6,
+      fontface = "italic",
+      lineheight = 0.9
+    ) +
     # keep the annotations inside the plot (away from the legend)
-    ggplot2::geom_blank(data = .annExtent,
-                        ggplot2::aes(x = .data$x, y = .data$y)) +
-    ggplot2::scale_fill_manual(values = .mdRoleColors, drop = TRUE,
-                               name = "compartment") +
+    ggplot2::geom_blank(data = .annExtent, ggplot2::aes(x = .data$x, y = .data$y)) +
+    ggplot2::scale_fill_manual(values = .mdRoleColors, drop = TRUE, name = "compartment") +
     ggplot2::coord_equal(clip = "off") +
     ggplot2::theme_void() +
     ggplot2::theme(plot.margin = ggplot2::margin(10, 10, 10, 10))
@@ -1913,22 +2202,18 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .p <- .p +
       ggplot2::geom_segment(
         data = .seg,
-        ggplot2::aes(x = .data$x, y = .data$y, xend = .data$xend,
-                     yend = .data$yend, linetype = .data$flow),
-        arrow = ggplot2::arrow(length = ggplot2::unit(0.08, "inches"),
-                               type = "closed")
+        ggplot2::aes(x = .data$x, y = .data$y, xend = .data$xend, yend = .data$yend, linetype = .data$flow),
+        arrow = ggplot2::arrow(length = ggplot2::unit(0.08, "inches"), type = "closed")
       ) +
       ggplot2::scale_linetype_manual(
-        values = c("mass transfer" = "solid", stimulation = "dashed",
-                   inhibition = "dotted", modulation = "dotdash"),
-        name = "flow")
+        values = c("mass transfer" = "solid", stimulation = "dashed", inhibition = "dotted", modulation = "dotdash"),
+        name = "flow"
+      )
     if (labels) {
       .p <- .p +
         ggplot2::geom_label(
           data = .seg,
-          ggplot2::aes(x = (.data$x + .data$xend) / 2,
-                       y = (.data$y + .data$yend) / 2,
-                       label = .data$label),
+          ggplot2::aes(x = (.data$x + .data$xend) / 2, y = (.data$y + .data$yend) / 2, label = .data$label),
           size = 2.5
         )
     }

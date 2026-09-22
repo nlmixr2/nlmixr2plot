@@ -136,8 +136,11 @@
   .present <- intersect(covariate, colnames(.gd))
   .missing <- setdiff(covariate, colnames(.gd))
   if (length(.missing) > 0L) {
-    warning("between-subject variability covariate(s) not found in the data and skipped: ",
-            paste(.missing, collapse = ", "), call. = FALSE)
+    warning(
+      "between-subject variability covariate(s) not found in the data and skipped: ",
+      paste(.missing, collapse = ", "),
+      call. = FALSE
+    )
   }
   if (length(.present) == 0L) {
     return(NULL)
@@ -182,8 +185,7 @@
       }
       .u <- unique(.col[!is.na(.col)])
       .isCategorical <-
-        is.factor(.col) || is.character(.col) || is.logical(.col) ||
-        length(.u) <= 5L
+        is.factor(.col) || is.character(.col) || is.logical(.col) || length(.u) <= 5L
       .nm <- paste(.eta, "vs", .cov)
       if (.isCategorical) {
         .lst[[.nm]] <-

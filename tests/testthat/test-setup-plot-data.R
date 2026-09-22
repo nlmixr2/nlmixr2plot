@@ -4,8 +4,7 @@ test_that(".setupPlotData drops compartments without observations (#44)", {
     TIME = c(1, 2, 1, 2),
     DV = c(1, 2, 3, 4),
     IRES = c(0.1, 0.2, 0.3, 0.4),
-    CMT = factor(c("Cc", "Cc", "csf", "csf"),
-                 levels = c("depot", "central", "peripheral1", "Cc", "csf"))
+    CMT = factor(c("Cc", "Cc", "csf", "csf"), levels = c("depot", "central", "peripheral1", "Cc", "csf"))
   )
   .ret <- .setupPlotData(.d)
   expect_equal(levels(.ret$CMT), c("Endpoint:  Cc", "Endpoint:  csf"))
@@ -28,12 +27,9 @@ test_that(".setupPlotData drops compartments without observations (#44)", {
 
 test_that(".vpcMatchFactor recodes integer and character columns (#44)", {
   .ref <- factor(c("cp", "pca"), levels = c("depot", "center", "cp", "pca"))
-  expect_equal(.vpcMatchFactor(c("pca", "cp"), .ref),
-               factor(c("pca", "cp"), levels = levels(.ref)))
-  expect_equal(.vpcMatchFactor(c(3L, 4L), .ref),
-               factor(c("cp", "pca"), levels = levels(.ref)))
-  expect_equal(.vpcMatchFactor(c(3, 4), .ref),
-               factor(c("cp", "pca"), levels = levels(.ref)))
+  expect_equal(.vpcMatchFactor(c("pca", "cp"), .ref), factor(c("pca", "cp"), levels = levels(.ref)))
+  expect_equal(.vpcMatchFactor(c(3L, 4L), .ref), factor(c("cp", "pca"), levels = levels(.ref)))
+  expect_equal(.vpcMatchFactor(c(3, 4), .ref), factor(c("cp", "pca"), levels = levels(.ref)))
   # unchanged when the reference is not a factor or x is already a factor
   expect_identical(.vpcMatchFactor(1:2, 1:2), 1:2)
   expect_identical(.vpcMatchFactor(.ref, factor("a")), .ref)
@@ -45,8 +41,7 @@ test_that("plot.nlmixr2AugPred skips endpoints without data (#44)", {
     time = c(1, 2, 1, 2),
     ind = factor(c("Observed", "Individual", "Observed", "Individual")),
     values = c(1, 1.1, 2, 2.1),
-    Endpoint = factor(c("Cc", "Cc", "csf", "csf"),
-                      levels = c("depot", "central", "Cc", "csf"))
+    Endpoint = factor(c("Cc", "Cc", "csf", "csf"), levels = c("depot", "central", "Cc", "csf"))
   )
   class(.x) <- c("nlmixr2AugPred", "data.frame")
   .p <- plot(.x)
@@ -62,11 +57,9 @@ test_that("plot.nlmixr2AugPred skips endpoints without data (#44)", {
 
 test_that(".vpcMatchStrata stratifies by observed endpoints only (#44)", {
   .lvl <- c("depot", "center", "cp", "pca")
-  .obs <- data.frame(cmt = factor(c("cp", "pca"), levels = .lvl),
-                     dvid = factor(c("cp", "pca")))
+  .obs <- data.frame(cmt = factor(c("cp", "pca"), levels = .lvl), dvid = factor(c("cp", "pca")))
   # labels, integer compartment codes and integer dvid codes all decode
-  for (.sim in list(data.frame(cmt = c("pca", "cp")),
-                    data.frame(cmt = c(4L, 3L)))) {
+  for (.sim in list(data.frame(cmt = c("pca", "cp")), data.frame(cmt = c(4L, 3L)))) {
     .r <- .vpcMatchStrata(.obs, .sim, "cmt")
     expect_equal(.r$obs$cmt, factor(c("cp", "pca")))
     expect_equal(.r$sim$cmt, factor(c("pca", "cp"), levels = c("cp", "pca")))
@@ -78,8 +71,7 @@ test_that(".vpcMatchStrata stratifies by observed endpoints only (#44)", {
   expect_equal(levels(.r$obs$cmt), c("cp", "pca"))
   expect_equal(.r$sim$cmt, factor(c("cp", "pca"), levels = c("cp", "pca")))
   # ... also when the observed factor does not have that level at all
-  for (.sim in list(data.frame(cmt = c("cp", "pca")),
-                    data.frame(cmt = factor(c("cp", "pca"))))) {
+  for (.sim in list(data.frame(cmt = c("cp", "pca")), data.frame(cmt = factor(c("cp", "pca"))))) {
     .r <- .vpcMatchStrata(data.frame(cmt = factor("cp")), .sim, "cmt")
     expect_equal(.r$sim$cmt, factor(c("cp", "pca"), levels = c("cp", "pca")))
   }

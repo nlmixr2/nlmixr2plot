@@ -28,15 +28,16 @@ test_that("test plots with vdiffr", {
   censData$CENS[censData$DV >= 3 & censData$AMT == 0] <- 0
 
   # Set DV to LOQ for all censored items
-  censData$DV[censData$CENS == 1] <-  3
+  censData$DV[censData$CENS == 1] <- 3
 
   suppressMessages(
     fit <-
       nlmixr2est::nlmixr(
-        one.cmt, censData,
-        est="focei",
+        one.cmt,
+        censData,
+        est = "focei",
         control = nlmixr2est::foceiControl(print = 0, eval.max = 10),
-        table=nlmixr2est::tableControl(npde=TRUE, nsim = 10)
+        table = nlmixr2est::tableControl(npde = TRUE, nsim = 10)
       )
   )
 
@@ -63,7 +64,7 @@ test_that("test plots with vdiffr", {
   expect_named(plotted, c("traceplot", "All Data"))
   expect_named(plotted[["All Data"]])
 
-  expect_error(traceplot(fit),NA)
+  expect_error(traceplot(fit), NA)
 
   #vdiffr::expect_doppelganger("vpc plot", vp)
   #vdiffr::expect_doppelganger("vpc pred_corr plot", vp2)
@@ -77,7 +78,7 @@ test_that("test plots with vdiffr", {
   #    vdiffr::expect_doppelganger(sprintf("gof %03d", i), gof[[i]])
   #}
 
-  withr::with_options(list(rxode2.xgxr=FALSE), {
+  withr::with_options(list(rxode2.xgxr = FALSE), {
     expect_error(plot(fit), NA)
 
     #for (i in seq_along(gof)) {
@@ -107,7 +108,7 @@ test_that("test plots with vdiffr", {
         data = nlmixr2data::theo_sd,
         est = "focei",
         control = nlmixr2est::foceiControl(print = 0, eval.max = 10),
-        table = nlmixr2est::tableControl(npde=TRUE, nsim = 10)
+        table = nlmixr2est::tableControl(npde = TRUE, nsim = 10)
       )
   )
 
@@ -138,7 +139,7 @@ test_that("test plots with vdiffr", {
   #    vdiffr::expect_doppelganger(sprintf("gof %03d np", i), gof[[i]])
   #}
 
-  withr::with_options(list(rxode2.xgxr=FALSE), {
+  withr::with_options(list(rxode2.xgxr = FALSE), {
     expect_error(plot(fitNoIiv), NA)
 
     #for (i in seq_along(gof)) {
@@ -168,7 +169,8 @@ test_that("plot works for models without compartments (issue #33)", {
   suppressMessages(
     fit <- try(
       nlmixr2est::nlmixr(
-        poisModel, d,
+        poisModel,
+        d,
         est = "focei",
         control = nlmixr2est::foceiControl(print = 0, eval.max = 1, maxOuterIterations = 0)
       ),

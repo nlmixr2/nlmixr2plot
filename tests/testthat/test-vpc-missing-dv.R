@@ -1,6 +1,5 @@
 test_that(".vpcSimDropMissingDv() drops simulated records of missing observations (#74)", {
-  sim <- data.frame(sim.id=rep(1:2, each=4), id=1,
-                    nlmixrRowNums=rep(2:5, 2), sim=1:8)
+  sim <- data.frame(sim.id = rep(1:2, each = 4), id = 1, nlmixrRowNums = rep(2:5, 2), sim = 1:8)
   ret <- .vpcSimDropMissingDv(sim, c(1L, 3L))
   expect_equal(ret$nlmixrRowNums, rep(c(2L, 4L, 5L), 2))
   # nothing missing: unchanged
@@ -12,7 +11,7 @@ test_that(".vpcSimDropMissingDv() drops simulated records of missing observation
 
 .vpcBadSimWarn <- function(expr) {
   .w <- character(0)
-  .ret <- withCallingHandlers(expr, warning=function(w) {
+  .ret <- withCallingHandlers(expr, warning = function(w) {
     .w <<- c(.w, conditionMessage(w))
     invokeRestart("muffleWarning")
   })
@@ -38,38 +37,45 @@ test_that("tidyvpc VPC handles missing DV observations (#74)", {
       cp ~ add(add.sd)
     })
   }
-  fit <- try(suppressMessages(
-    nlmixr2est::nlmixr(one, nlmixr2data::theo_sd, est="saem",
-                       control=nlmixr2est::saemControl(print=0, nBurn=10, nEm=20))
-  ), silent=TRUE)
+  fit <- try(
+    suppressMessages(
+      nlmixr2est::nlmixr(
+        one,
+        nlmixr2data::theo_sd,
+        est = "saem",
+        control = nlmixr2est::saemControl(print = 0, nBurn = 10, nEm = 20)
+      )
+    ),
+    silent = TRUE
+  )
   skip_if(inherits(fit, "try-error"))
 
   d <- nlmixr2data::theo_sd
   w <- which(d$EVID == 0)
   d$DV[w[c(5, 50, 100)]] <- NA
 
-  p <- .vpcBadSimWarn(vpcPlot(fit, data=d, n=5, method="tidyvpc"))
+  p <- .vpcBadSimWarn(vpcPlot(fit, data = d, n = 5, method = "tidyvpc"))
   expect_s3_class(p, "ggplot")
-  p <- .vpcBadSimWarn(vpcPlot(fit, data=d, n=5, method="tidyvpc", pred_corr=TRUE))
+  p <- .vpcBadSimWarn(vpcPlot(fit, data = d, n = 5, method = "tidyvpc", pred_corr = TRUE))
   expect_s3_class(p, "ggplot")
-  sim <- nlmixr2est::vpcSim(fit, n=5)
+  sim <- nlmixr2est::vpcSim(fit, n = 5)
   # exactly the records of the missing observations are dropped
-  rows <- .vpcUiSetupObservationData(fit, data=d)$missingDvRows
+  rows <- .vpcUiSetupObservationData(fit, data = d)$missingDvRows
   expect_equal(rows, w[c(5, 50, 100)])
   ret <- .vpcSimDropMissingDv(sim, rows)
   expect_equal(nrow(ret), 5 * sum(d$EVID == 0 & !is.na(d$DV)))
   expect_false(anyNA(d$DV[ret$nlmixrRowNums]))
   expect_true(all(d$EVID[ret$nlmixrRowNums] == 0))
-  p <- .vpcBadSimWarn(vpcPlot(sim, data=d, method="tidyvpc"))
+  p <- .vpcBadSimWarn(vpcPlot(sim, data = d, method = "tidyvpc"))
   expect_s3_class(p, "ggplot")
 
   # the row numbers are taken before any reordering or an existing
   # nlmixrRowNums column: tad comes from the fit, which merges and reorders
   d2 <- d
   d2$nlmixrRowNums <- rev(seq_len(nrow(d2)))
-  rows <- .vpcUiSetupObservationData(fit, data=d2, idv="tad")$missingDvRows
+  rows <- .vpcUiSetupObservationData(fit, data = d2, idv = "tad")$missingDvRows
   expect_equal(rows, w[c(5, 50, 100)])
-  p <- .vpcBadSimWarn(vpcPlotTad(fit, data=d2, n=5, method="tidyvpc"))
+  p <- .vpcBadSimWarn(vpcPlotTad(fit, data = d2, n = 5, method = "tidyvpc"))
   expect_s3_class(p, "ggplot")
 })
 
@@ -99,16 +105,23 @@ test_that("stratified tidyvpc VPC handles missing DV observations (#74)", {
       pca ~ add(pdadd.err)
     })
   }
-  fit <- try(suppressMessages(
-    nlmixr2est::nlmixr(pk.emax, nlmixr2data::warfarin, est="saem",
-                       control=nlmixr2est::saemControl(print=0, nBurn=10, nEm=20))
-  ), silent=TRUE)
+  fit <- try(
+    suppressMessages(
+      nlmixr2est::nlmixr(
+        pk.emax,
+        nlmixr2data::warfarin,
+        est = "saem",
+        control = nlmixr2est::saemControl(print = 0, nBurn = 10, nEm = 20)
+      )
+    ),
+    silent = TRUE
+  )
   skip_if(inherits(fit, "try-error"))
 
   d <- nlmixr2data::warfarin
   w <- which(d$evid == 0)
   d$dv[w[c(5, 50, 300)]] <- NA
 
-  p <- .vpcBadSimWarn(vpcPlot(fit, data=d, n=5, method="tidyvpc"))
+  p <- .vpcBadSimWarn(vpcPlot(fit, data = d, n = 5, method = "tidyvpc"))
   expect_s3_class(p, "ggplot")
 })

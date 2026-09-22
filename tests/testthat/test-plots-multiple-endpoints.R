@@ -63,8 +63,8 @@ test_that("multiple endpoint plots", {
         pk.turnover.emax3,
         nlmixr2data::warfarin,
         est = "saem",
-        control=nlmixr2est::saemControl(print=0, nBurn = 10, nEm = 20),
-        table=list(cwres=TRUE, npde=TRUE, nsim = 10)
+        control = nlmixr2est::saemControl(print = 0, nBurn = 10, nEm = 20),
+        table = list(cwres = TRUE, npde = TRUE, nsim = 10)
       )
   )
 
@@ -74,13 +74,12 @@ test_that("multiple endpoint plots", {
   # rest of the plotting surface below.
   apo <- tryCatch(nlmixr2est::augPred(fit), error = function(e) e)
   if (inherits(apo, "error")) {
-    message("skipping augPred plot (augPred unavailable): ",
-            conditionMessage(apo))
+    message("skipping augPred plot (augPred unavailable): ", conditionMessage(apo))
   } else {
     expect_error(plot(apo), NA)
   }
   expect_error(vpcPlot(fit, n = 10), NA)
-  expect_error(vpcPlot(fit, pred_corr=TRUE, n = 10), NA)
+  expect_error(vpcPlot(fit, pred_corr = TRUE, n = 10), NA)
 
   suppressWarnings(
     expect_error(plot(fit), NA)
@@ -93,14 +92,12 @@ test_that("multiple endpoint plots", {
   suppressWarnings(
     .names <- names(plot(fit))
   )
-  expect_equal(grep("^Endpoint:", .names, value = TRUE),
-               c("Endpoint:  cp", "Endpoint:  pca"))
+  expect_equal(grep("^Endpoint:", .names, value = TRUE), c("Endpoint:  cp", "Endpoint:  pca"))
   # the censored vpc stratifies by the observed dvid endpoints
   suppressWarnings(
     .p <- vpcPlot(fit, n = 10, cens = TRUE, lloq = 2, method = "vpc")
   )
-  expect_equal(as.character(ggplot2::ggplot_build(.p)$layout$layout$dvid),
-               c("cp", "pca"))
+  expect_equal(as.character(ggplot2::ggplot_build(.p)$layout$layout$dvid), c("cp", "pca"))
   expect_error(traceplot(fit), NA)
 
   #vdiffr::expect_doppelganger("vpc plot", vp)
@@ -114,7 +111,6 @@ test_that("multiple endpoint plots", {
   #for (i in seq_along(gof)) {
   #    vdiffr::expect_doppelganger(sprintf("gof %03d", i), gof[[i]])
   #}
-
 })
 
 test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
@@ -176,23 +172,23 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
 
     suppressMessages(suppressWarnings(
       fit <- nlmixr2est::nlmixr(
-        pk.emax, d, est = "saem",
+        pk.emax,
+        d,
+        est = "saem",
         control = nlmixr2est::saemControl(print = 0, nBurn = 10, nEm = 20)
       )
     ))
     expect_true(all(c("depot", "center") %in% levels(fit$CMT)))
 
     suppressWarnings(.names <- names(plot(fit)))
-    expect_equal(grep("^Endpoint:", .names, value = TRUE),
-                 c("Endpoint:  cp", "Endpoint:  pca"))
+    expect_equal(grep("^Endpoint:", .names, value = TRUE), c("Endpoint:  cp", "Endpoint:  pca"))
 
     for (.method in c("vpc", "tidyvpc")) {
       for (.pc in c(FALSE, TRUE)) {
         suppressWarnings(
           .p <- vpcPlot(fit, n = 10, pred_corr = .pc, method = .method)
         )
-        expect_equal(.panels(.p), c("cp", "pca"),
-                     info = paste(.c, .method, "pred_corr =", .pc))
+        expect_equal(.panels(.p), c("cp", "pca"), info = paste(.c, .method, "pred_corr =", .pc))
       }
     }
     # the censored vpc paths stratify by the observed endpoints too
@@ -200,8 +196,7 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
       suppressWarnings(
         .p <- vpcPlot(fit, n = 10, cens = TRUE, method = .method)
       )
-      expect_equal(.panels(.p), c("cp", "pca"),
-                   info = paste(.c, .method, "cens"))
+      expect_equal(.panels(.p), c("cp", "pca"), info = paste(.c, .method, "cens"))
     }
     # an endpoint without observations in `data` (all its DV missing) is not
     # simulated either, so it drops out instead of becoming an NA stratum
@@ -213,8 +208,7 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
         suppressWarnings(
           .p <- vpcPlot(fit, data = .d, n = 10, cens = .cens, method = "vpc")
         )
-        expect_equal(.panels(.p), "cp",
-                     info = paste("pca DV missing, cens =", .cens))
+        expect_equal(.panels(.p), "cp", info = paste("pca DV missing, cens =", .cens))
       }
       # likewise when `data` drops the endpoint's records and factor level
       .d <- d[!(d$evid == 0 & .cmtLabel == "pca"), ]
@@ -223,8 +217,7 @@ test_that("cmt-coded multiple endpoints only plot observed endpoints (#44)", {
         suppressWarnings(
           .p <- vpcPlot(fit, data = .d, n = 10, cens = .cens, method = "vpc")
         )
-        expect_equal(.panels(.p), "cp",
-                     info = paste("pca level dropped, cens =", .cens))
+        expect_equal(.panels(.p), "cp", info = paste("pca level dropped, cens =", .cens))
       }
       # an endpoint still observed in `data` keeps its panel
       .d <- d

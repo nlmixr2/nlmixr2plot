@@ -3,8 +3,7 @@ test_that("plot(augPred) supports log axes (#32)", {
     id = factor(rep(1:2, each = 6)),
     time = rep(c(0, 1, 2), 4),
     values = c(0, 1, 2, 0.5, 1.5, 2.5, 0, 2, 3, 1, 2, 3),
-    ind = factor(rep(rep(c("Pred", "Observed"), each = 3), 2),
-                 c("Pred", "Observed"))
+    ind = factor(rep(rep(c("Pred", "Observed"), each = 3), 2), c("Pred", "Observed"))
   )
   class(d) <- c("nlmixr2AugPred", "data.frame")
 
@@ -55,8 +54,7 @@ test_that("plot(augPred) supports log axes (#32)", {
     id = factor(rep(1L, 6)),
     time = c(1, 2, 3, 4, 1, 3),
     values = c(1, 2, -1, 1, 1.5, 0.5),
-    ind = factor(c(rep("Pred", 4), rep("Observed", 2)),
-                 c("Pred", "Observed"))
+    ind = factor(c(rep("Pred", 4), rep("Observed", 2)), c("Pred", "Observed"))
   )
   class(d3) <- class(d)
   withr::with_options(list(rxode2.xgxr = FALSE), {

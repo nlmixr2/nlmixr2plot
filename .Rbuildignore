@@ -15,3 +15,5 @@
 ^\.vexp$
 ^cran-comments\.md$
 ^CRAN-SUBMISSION$
+^\.lintr$
+^air\.toml$
