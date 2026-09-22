@@ -1,4 +1,4 @@
-# nlmixr2plot 5.1.1
+# nlmixr2plot 5.2.0
 
 * Added automatic model diagrams (#10).  `modelGraph()` parses a model's
   differential equations (from a model function, `rxode2` model/UI or an
