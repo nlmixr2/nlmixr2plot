@@ -8,6 +8,13 @@
   prediction correction for a supplied simulation is computed from that
   simulation's own fit rather than from whichever `vpcSim(pred = TRUE)` ran
   last.
+# nlmixr2plot 5.1.0.9000
+
+* Fixed the confidence-band width (and its legend label) for `vpcPlot()`/
+  `vpcPlotTad()` with the `tidyvpc` backend; `ci = c(lower, upper)` was passed
+  to `tidyvpc::vpcstats()` as `conf.level = ci[2]` instead of the actual
+  interval width `ci[2] - ci[1]`, so the default `ci = c(0.05, 0.95)` (a 90% CI)
+  was drawn and labeled as a 95% CI.
 
 # nlmixr2plot 5.1.0
 
