@@ -2,6 +2,35 @@
 
 ## nlmixr2plot 5.1.1
 
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of a
+  multiple-endpoint fit no longer creates empty “Endpoint:” groups for
+  state compartments without observations (like `depot` or `central`);
+  only observed endpoints are plotted.
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of an
+  [`augPred()`](https://rdrr.io/pkg/nlme/man/augPred.html) object
+  likewise skips endpoints without data
+  ([\#44](https://github.com/nlmixr2/nlmixr2plot/issues/44)).
+- [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/[`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
+  of a multiple-endpoint fit whose data codes the endpoints with `cmt`
+  no longer shows an extra `NA` panel (or a single `NA` panel with
+  `pred_corr = TRUE`); the simulated compartment labels are now matched
+  to the observed ones by name
+  ([\#44](https://github.com/nlmixr2/nlmixr2plot/issues/44)).
+- The censored VPC
+  ([`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
+  or
+  [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
+  with `cens = TRUE` and the `vpc` backend) of a multiple-endpoint fit
+  now stratifies by its endpoints only, matching the simulated endpoints
+  to the observed ones; an endpoint whose observations are all missing
+  no longer becomes an `NA` panel
+  ([\#44](https://github.com/nlmixr2/nlmixr2plot/issues/44)).
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of a censored
+  multiple-endpoint fit no longer errors in
+  [`geom_cens()`](https://nlmixr2.github.io/rxode2/reference/stat_cens.html)
+  (“argument must be coercible to non-negative integer”) for an endpoint
+  without censored observations
+  ([\#44](https://github.com/nlmixr2/nlmixr2plot/issues/44)).
 - The censored VPC
   ([`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
   [`vpcCensTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
