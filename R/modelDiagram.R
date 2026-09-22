@@ -86,7 +86,7 @@ modelGraph <- function(object, dosing = NULL, data = NULL) {
     stop("the model has no differential equations to diagram", call. = FALSE)
   }
   if (is.null(dosing)) {
-    dosing <- .mdDosingFromData(data, .states)
+    dosing <- .mdDosingFromData(data, .states, .info$order)
     if (length(dosing) == 0L) dosing <- .states[1]
   } else {
     if (!is.character(dosing)) {
@@ -262,7 +262,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     .order <- object$mv0$state
   }
   .parsed <- .mdParseLines(.lines)
-  .states <- names(.parsed$ode)
+  .states <- .parsed$states
   # keep rxode2's compartment order (used to map numeric `cmt` values)
   .states <- c(intersect(.order, .states), setdiff(.states, .order))
   .deps <- .parsed$deps
@@ -297,16 +297,20 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       })
     }), recursive = FALSE)
   }
-  list(states = .states, terms = .terms, data = .data)
+  # rxode2's full compartment order, including compartments without ODEs
+  # (e.g. from `cmt()`), maps numeric `cmt` values
+  list(states = .states, terms = .terms, data = .data,
+       order = c(.order, setdiff(.states, .order)))
 }
 
 #' Dosing compartments from the dosing records of a dataset
 #'
 #' @param data dataset (or NULL)
-#' @param states compartment names in rxode2 order
+#' @param states compartment names that are diagrammed
+#' @param order rxode2's compartment order (numeric `cmt` values index it)
 #' @return character vector of dosed compartments (possibly empty)
 #' @noRd
-.mdDosingFromData <- function(data, states) {
+.mdDosingFromData <- function(data, states, order = states) {
   if (!is.data.frame(data) || nrow(data) == 0L) return(character(0))
   .nm <- tolower(names(data))
   .col <- function(n) {
@@ -329,21 +333,21 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   }
   if (!any(.dose)) return(character(0))
   .cmt <- .col("cmt")
-  if (is.null(.cmt)) return(states[1])
+  if (is.null(.cmt)) return(intersect(states, order[1]))
   .cmt <- .cmt[.dose]
   if (is.factor(.cmt)) .cmt <- as.character(.cmt)
   if (is.character(.cmt)) {
     .num <- suppressWarnings(as.numeric(.cmt))
     .ret <- .cmt[is.na(.num)]
-    .ret[.ret == "(default)"] <- states[1]
+    .ret[.ret == "(default)"] <- order[1]
     .cmt <- .num[!is.na(.num)]
   } else {
     .ret <- character(0)
     .cmt <- as.numeric(.cmt)
   }
   # negative compartment numbers turn compartments off; they are not doses
-  .cmt <- .cmt[!is.na(.cmt) & .cmt > 0 & .cmt <= length(states)]
-  .ret <- c(.ret, states[.cmt])
+  .cmt <- .cmt[!is.na(.cmt) & .cmt > 0 & .cmt <= length(order)]
+  .ret <- c(.ret, order[.cmt])
   intersect(states, .ret)
 }
 
@@ -425,7 +429,19 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .rhs <- .mdSubstitute(x[[3]], .env$defs)
       .state <- .mdDdtState(.lhs)
       if (!is.null(.state)) {
-        .env$ode[[.state]] <- c(.env$ode[[.state]], .mdTerms(.rhs))
+        # the same term in several `if`/`else` branches is one flow
+        .old <- .env$ode[[.state]]
+        .id <- function(t) paste(t$sign, .mdTermKey(t$expr))
+        .oldId <- vapply(.old, .id, character(1))
+        for (.t in .mdTerms(.rhs)) {
+          # a literal zero (e.g. `d/dt(x) <- 0`) is no flow
+          if (is.numeric(.t$expr) && all(.t$expr == 0)) next
+          if (!(.id(.t) %in% .oldId)) {
+            .old <- c(.old, list(.t))
+            .oldId <- c(.oldId, .id(.t))
+          }
+        }
+        .env$ode[[.state]] <- .old
       } else if (is.name(.lhs)) {
         .n <- as.character(.lhs)
         .env$deps[[.n]] <- union(.env$deps[[.n]], all.vars(x[[3]]))
@@ -438,7 +454,8 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     invisible()
   }
   for (.l in lines) .walk(.l)
-  list(ode = .env$ode, deps = .env$deps, defs = .env$defs)
+  list(ode = .env$ode, deps = .env$deps, defs = .env$defs,
+       states = .env$states)
 }
 
 #' Replace substituted definitions by their variable names (for labels)

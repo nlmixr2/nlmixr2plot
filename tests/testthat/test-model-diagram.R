@@ -368,3 +368,57 @@ test_that("no interaction arrow crosses a compartment in the final layout", {
   }
   expect_equal(nrow(unique(n[, c("x", "y")])), nrow(n))
 })
+
+test_that("numeric cmt follows rxode2's compartment order", {
+  m <- rxode2::rxode2({
+    cmt(center)
+    d/dt(depot) = -ka*depot
+    d/dt(center) = ka*depot - cl*center
+    d/dt(blood) = 0
+  })
+  expect_equal(rxode2::rxModelVars(m)$state[1:2], c("center", "depot"))
+  d <- data.frame(ID = 1, TIME = 0:1, AMT = c(100, 0), EVID = c(1, 0),
+                  CMT = c(2, 2), DV = 0)
+  g <- modelGraph(m, data = d)
+  expect_equal(g$nodes$name[g$nodes$dosing], "depot")
+  d$CMT <- 1
+  g <- modelGraph(m, data = d)
+  expect_equal(g$nodes$name[g$nodes$dosing], "center")
+  # `d/dt(blood) = 0` is a compartment without flows
+  expect_false(any(g$edges$to %in% "blood" | g$edges$from %in% "blood"))
+  expect_true("blood" %in% g$nodes$name)
+})
+
+test_that("identical terms in if/else branches are one flow", {
+  m <- rxode2::rxode2({
+    d/dt(depot) = -ka*depot
+    if (sex == 1) {
+      d/dt(center) = ka*depot - cl1*center
+    } else {
+      d/dt(center) = ka*depot - cl2*center
+    }
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "depot", "center", "transfer")), 1L)
+  expect_equal(sum(g$edges$type == "interaction"), 0L)
+  e <- .edge(g, "center", NA, "elimination")
+  expect_equal(nrow(e), 1L)
+  expect_equal(e$label, "cl1 * center + cl2 * center")
+})
+
+test_that("transit chains stack above central; Michaelis-Menten is elimination", {
+  m <- rxode2::rxode2({
+    d/dt(depot) = -ktr*depot
+    d/dt(transit1) = ktr*depot - ktr*transit1
+    d/dt(transit2) = ktr*transit1 - ktr*transit2
+    d/dt(center) = ktr*transit2 - vmax*center/(km + center)
+  })
+  g <- modelGraph(m)
+  n <- g$nodes
+  rownames(n) <- n$name
+  expect_equal(n[c("transit1", "transit2"), "role"], c("transit", "transit"))
+  expect_equal(n[c("depot", "transit1", "transit2", "center"), "y"], c(3, 2, 1, 0))
+  expect_equal(n[c("depot", "transit1", "transit2"), "x"], c(0, 0, 0))
+  expect_equal(nrow(.edge(g, "center", NA, "elimination")), 1L)
+  expect_equal(sum(g$edges$type == "interaction"), 0L)
+})
