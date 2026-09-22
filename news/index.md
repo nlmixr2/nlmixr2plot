@@ -2,6 +2,29 @@
 
 ## nlmixr2plot 5.1.1
 
+- Added automatic model diagrams
+  ([\#10](https://github.com/nlmixr2/nlmixr2plot/issues/10)).
+  [`modelGraph()`](https://nlmixr2.github.io/nlmixr2plot/reference/modelGraph.md)
+  parses a model’s differential equations (from a model function,
+  `rxode2` model/UI or an `nlmixr2` fit) into a graph of compartments
+  and flows (mass transfer, eliminations, inputs and non-mass-transfer
+  interactions like effect compartments or PD stimulation/inhibition),
+  detecting dosing compartments from the dosing records.
+  [`modelDiagram()`](https://nlmixr2.github.io/nlmixr2plot/reference/modelDiagram.md)
+  lays it out with dosing and absorption compartments above the central
+  compartment, peripheral compartments to the left,
+  eliminations/metabolites below and PD models to the right, and draws
+  it with the `"DiagrammeR"` (Graphviz), `"ggplot2"` or `"dot"` (DOT
+  source) engine. Dosing properties
+  ([`lag()`](https://rdrr.io/r/stats/lag.html), `f()`, `rate()`,
+  `dur()`) are shown as annotations on their compartment, and `delay()`
+  terms are understood. The diagrams were checked against all 3043
+  models of ‘nlmixr2lib’, including large QSP/PBPK models.
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of an
+  `rxode2` user interface (`rxUi`) object or compiled `rxode2` model
+  draws its diagram, and the new “Automatic model diagrams” vignette
+  describes the feature.
+
 - Fixed
   [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
   with `method = "tidyvpc"` when the observed data has observation
@@ -11,6 +34,7 @@
   simulated values with the wrong observations. The matching simulated
   records are now dropped too
   ([\#74](https://github.com/nlmixr2/nlmixr2plot/issues/74)).
+
 - [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of a
   multiple-endpoint fit no longer creates empty “Endpoint:” groups for
   state compartments without observations (like `depot` or `central`);
@@ -19,12 +43,14 @@
   [`augPred()`](https://rdrr.io/pkg/nlme/man/augPred.html) object
   likewise skips endpoints without data
   ([\#44](https://github.com/nlmixr2/nlmixr2plot/issues/44)).
+
 - [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/[`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
   of a multiple-endpoint fit whose data codes the endpoints with `cmt`
   no longer shows an extra `NA` panel (or a single `NA` panel with
   `pred_corr = TRUE`); the simulated compartment labels are now matched
   to the observed ones by name
   ([\#44](https://github.com/nlmixr2/nlmixr2plot/issues/44)).
+
 - The censored VPC
   ([`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
   or
@@ -34,12 +60,14 @@
   to the observed ones; an endpoint whose observations are all missing
   no longer becomes an `NA` panel
   ([\#44](https://github.com/nlmixr2/nlmixr2plot/issues/44)).
+
 - [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of a censored
   multiple-endpoint fit no longer errors in
   [`geom_cens()`](https://nlmixr2.github.io/rxode2/reference/stat_cens.html)
   (“argument must be coercible to non-negative integer”) for an endpoint
   without censored observations
   ([\#44](https://github.com/nlmixr2/nlmixr2plot/issues/44)).
+
 - The censored VPC
   ([`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
   [`vpcCensTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
@@ -55,15 +83,18 @@
   `censMethod = "cdf"`, could land above the limit and be counted as
   uncensored). Records without an observation are dropped, as in the
   fit.
+
 - The VPC observed data now drops records with `MDV = 1` even when an
   `EVID` column is also present (previously only `EVID` was checked when
   both existed).
+
 - [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of an
   [`augPred()`](https://rdrr.io/pkg/nlme/man/augPred.html) object now
   accepts a base-R style `log` argument (`log = "y"`, `"x"` or `"xy"`)
   to draw the individual plots on log-scaled axes; non-positive values,
   which cannot be shown on a log axis, are dropped
   ([\#32](https://github.com/nlmixr2/nlmixr2plot/issues/32)).
+
 - [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
   [`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
   [`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
@@ -79,10 +110,35 @@
   observed-data prediction correction for a supplied simulation is
   computed from that simulation’s own fit rather than from whichever
   `vpcSim(pred = TRUE)` ran last.
+
+- Fixed the VPC simulation ignoring the `data` argument of
+  [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
+  [`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
+  [`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
+  and
+  [`vpcCensTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md);
+  the simulation always used the fit’s dataset, so it did not match the
+  observed data built from `data` (and `tidyvpc` warned that `xsim` did
+  not match the observed x-values). The simulation now uses `data` when
+  supplied. A supplied
+  [`nlmixr2est::vpcSim()`](https://nlmixr2.github.io/nlmixr2est/reference/vpcSim.html)
+  simulation was made from its own dataset, so passing `data` alongside
+  one now warns that it only replaces the observed data
+  ([\#68](https://github.com/nlmixr2/nlmixr2plot/issues/68)). Because
+  the simulation now follows `data`, an endpoint without observations in
+  `data` is no longer simulated either, so it drops out of a
+  multiple-endpoint VPC instead of being shown as a simulated-only
+  panel. For a model with a non-normal endpoint, `data` now needs a
+  numeric `CMT` column (the model’s compartment numbers), since the
+  compartments would otherwise be taken from the fitted data by row
+  number, or read from a factor’s level order, and would not match
+  `data`.
+
 - Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the
   `data` argument; the observed data was rebuilt from the fit’s dataset
   instead of the supplied `data`
   ([\#62](https://github.com/nlmixr2/nlmixr2plot/issues/62)).
+
 - Fixed stratified censored VPCs
   ([`vpcCens()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/[`vpcCensTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md),
   or
@@ -93,6 +149,7 @@
   keeps the stratification columns that the fit table drops
   ([\#56](https://github.com/nlmixr2/nlmixr2plot/issues/56),
   [\#55](https://github.com/nlmixr2/nlmixr2plot/issues/55)).
+
 - Fixed the confidence-band width (and its legend label) for
   [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/
   [`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
@@ -101,6 +158,7 @@
   as `conf.level = ci[2]` instead of the actual interval width
   `ci[2] - ci[1]`, so the default `ci = c(0.05, 0.95)` (a 90% CI) was
   drawn and labeled as a 95% CI.
+
 - Fixed
   [`vpcPlotTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)/[`vpcCensTad()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
   (and any `idv` taken from the fit) with a user-supplied `data` that is
