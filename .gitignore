@@ -5,3 +5,8 @@ docs
 *.tar.gz
 *.Rcheck
 .vexp
+inst/doc
+/doc/
+/Meta/
+vignettes/*.html
+vignettes/*.R

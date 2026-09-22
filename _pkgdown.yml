@@ -8,6 +8,10 @@ reference:
   contents:
   - '`traceplot`'
   - '`vpcPlot`'
+- title: Model diagrams
+  contents:
+  - '`modelDiagram`'
+  - '`modelGraph`'
 - title: Internal functions
   contents:
   - '`plot.nlmixr2FitData`'

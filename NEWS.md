@@ -1,5 +1,22 @@
 # nlmixr2plot 5.1.1
 
+* Added automatic model diagrams (#10).  `modelGraph()` parses a model's
+  differential equations (from a model function, `rxode2` model/UI or an
+  `nlmixr2` fit) into a graph of compartments and flows (mass transfer,
+  eliminations, inputs and non-mass-transfer interactions like effect
+  compartments or PD stimulation/inhibition), detecting dosing compartments
+  from the dosing records.  `modelDiagram()` lays it out with dosing and
+  absorption compartments above the central compartment, peripheral
+  compartments to the left, eliminations/metabolites below and PD models to
+  the right, and draws it with the `"DiagrammeR"` (Graphviz), `"ggplot2"` or
+  `"dot"` (DOT source) engine.  Dosing properties (`lag()`, `f()`, `rate()`,
+  `dur()`) are shown as annotations on their compartment, and `delay()` terms
+  are understood.  The diagrams were checked against all 3043 models of
+  'nlmixr2lib', including large QSP/PBPK models.  `plot()` of an `rxode2`
+  user interface (`rxUi`) object or compiled `rxode2` model draws its
+  diagram, and the new "Automatic model diagrams" vignette describes the
+  feature.
+
 * Fixed `vpcPlot()` with `method = "tidyvpc"` when the observed data has
   observation records with a missing `DV`.  Those records were dropped from
   the observed data but kept in the simulation, so a stratified (e.g.
