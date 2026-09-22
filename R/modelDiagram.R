@@ -1436,28 +1436,71 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   # usual line; many (a PBPK hub with its tissues) are fanned out on an arc
   # whose radius grows with their number, so the arrows radiate out instead
   # of grazing the boxes in between
+  # crossings involving the compartments in `new` (the rest of the diagram
+  # is the same whichever arrangement is chosen, so they need not be
+  # counted)
+  .nCrossings <- function(new) {
+    .p <- !is.na(.x)
+    .e <- which(.p[.fromI] & .p[.toI])
+    .o <- which(.p)
+    if (length(.e) == 0L || length(.o) == 0L) return(0)
+    .f <- .fromI[.e]
+    .t <- .toI[.e]
+    .g <- expand.grid(e = seq_along(.e), o = .o)
+    .keep <- .f[.g$e] != .g$o & .t[.g$e] != .g$o &
+      (.f[.g$e] %in% new | .t[.g$e] %in% new | .g$o %in% new)
+    .g <- .g[.keep, , drop = FALSE]
+    if (nrow(.g) == 0L) return(0)
+    sum(.mdSegRect(.x[.f[.g$e]], .y[.f[.g$e]], .x[.t[.g$e]], .y[.t[.g$e]],
+                   .x[.g$o], .y[.g$o]))
+  }
+  # place a group of neighbors of `s` in direction `dir` (radians: up is
+  # pi/2, down -pi/2, left pi, right 0), either in a line or -- for a hub
+  # with many neighbors, like a PBPK central compartment -- fanned out on an
+  # arc whose radius grows with their number.  Both are tried and the one
+  # with fewer crossings is kept.
   .placeGroup <- function(nodes, s, dir, step) {
     .m <- length(nodes)
     if (.m == 0L) return(invisible())
-    if (.m <= .mdMaxLine) {
+    .line <- function() {
       .off <- (seq_len(.m) - 1) - if (abs(cos(dir)) > 0.5) 0 else (.m - 1) / 2
       for (.k in seq_len(.m)) {
         .dx <- if (abs(cos(dir)) > 0.5) round(cos(dir)) else .off[.k]
         .dy <- if (abs(cos(dir)) > 0.5) .off[.k] else round(sin(dir))
         .place(nodes[.k], .x[s] + .dx, .y[s] + .dy, step)
       }
+    }
+    .fan <- function() {
+      .sector <- pi * 2 / 3
+      .d <- .sector / (.m - 1)
+      .r <- max(1.5, 1.3 / .d)
+      .a <- dir - .sector / 2 + (seq_len(.m) - 1) * .d
+      for (.k in seq_len(.m)) {
+        .place(nodes[.k], round((.x[s] + .r * cos(.a[.k])) * 2) / 2,
+               round((.y[s] + .r * sin(.a[.k])) * 2) / 2, step)
+      }
+    }
+    if (.m <= 2L) {
+      .line()
       return(invisible())
     }
-    .sector <- pi * 2 / 3
-    .d <- .sector / (.m - 1)
-    .r <- max(1.5, 1.3 / .d)
-    .a <- dir - .sector / 2 + (seq_len(.m) - 1) * .d
-    for (.k in seq_len(.m)) {
-      .place(nodes[.k], round((.x[s] + .r * cos(.a[.k])) * 2) / 2,
-             round((.y[s] + .r * sin(.a[.k])) * 2) / 2, step)
+    .new <- match(nodes, states)
+    .x0 <- .x
+    .y0 <- .y
+    .line()
+    .nLine <- .nCrossings(.new)
+    .xLine <- .x
+    .yLine <- .y
+    .x <<- .x0
+    .y <<- .y0
+    .fan()
+    if (.nCrossings(.new) > .nLine) {
+      .x <<- .xLine
+      .y <<- .yLine
     }
     invisible()
   }
+
   .spread <- function(start, side = -1) {
     .queue <- start
     while (length(.queue) > 0L) {
