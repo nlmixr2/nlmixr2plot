@@ -329,13 +329,15 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .amt <- .col("amt")
   if (is.null(.evid) && is.null(.amt)) return(character(0))
   .dose <- rep(TRUE, nrow(data))
+  # factors are converted through their labels, not their level codes
+  .num <- function(v) suppressWarnings(as.numeric(as.character(v)))
   if (!is.null(.evid)) {
-    .evid <- suppressWarnings(as.numeric(.evid))
+    .evid <- .num(.evid)
     # 0 = observation, 2 = other event, 3 = reset
     .dose <- .dose & !is.na(.evid) & !(.evid %in% c(0, 2, 3))
   }
   if (!is.null(.amt)) {
-    .amt <- suppressWarnings(as.numeric(.amt))
+    .amt <- .num(.amt)
     .dose <- .dose & !is.na(.amt) & .amt != 0
   }
   if (!any(.dose)) return(character(0))
@@ -393,6 +395,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
   .env$deps <- list()
   .env$defs <- list()
   .env$count <- list()
+  .env$inIf <- character(0)
   .env$states <- character(0)
   .isAssign <- function(x) {
     length(x) == 3L &&
@@ -415,22 +418,23 @@ print.nlmixr2ModelGraph <- function(x, ...) {
         .env$states <- union(.env$states, .state)
       } else if (is.name(x[[2]])) {
         .n <- as.character(x[[2]])
-        # an assignment inside `if` can never be substituted
-        .env$count[[.n]] <- (if (is.null(.env$count[[.n]])) 0 else .env$count[[.n]]) +
-          (if (inIf) 2 else 1)
+        .env$count[[.n]] <- (if (is.null(.env$count[[.n]])) 0 else .env$count[[.n]]) + 1
+        if (inIf) .env$inIf <- union(.env$inIf, .n)
       }
     }
     invisible()
   }
   for (.l in lines) .count(.l, FALSE)
-  .walk <- function(x) {
+  # second pass; `cond` holds the variables of the enclosing `if` conditions
+  .walk <- function(x, cond) {
     if (!is.call(x)) return(invisible())
     .f <- x[[1]]
     if (identical(.f, quote(`{`))) {
-      for (.i in seq_along(x)[-1]) .walk(x[[.i]])
+      for (.i in seq_along(x)[-1]) .walk(x[[.i]], cond)
     } else if (identical(.f, quote(`if`))) {
-      .walk(x[[3]])
-      if (length(x) == 4L) .walk(x[[4]])
+      .cond <- union(cond, all.vars(x[[2]]))
+      .walk(x[[3]], .cond)
+      if (length(x) == 4L) .walk(x[[4]], .cond)
     } else if (.isAssign(x)) {
       .lhs <- x[[2]]
       .rhs <- .mdSubstitute(x[[3]], .env$defs)
@@ -451,17 +455,28 @@ print.nlmixr2ModelGraph <- function(x, ...) {
         .env$ode[[.state]] <- .old
       } else if (is.name(.lhs)) {
         .n <- as.character(.lhs)
-        .env$deps[[.n]] <- union(.env$deps[[.n]], all.vars(x[[3]]))
-        if (identical(.env$count[[.n]], 1) && !(.n %in% .env$states) &&
-              any(all.vars(.rhs) %in% .env$states)) {
+        # a conditional assignment also depends on its condition
+        .env$deps[[.n]] <- union(.env$deps[[.n]], union(all.vars(x[[3]]), cond))
+        if (.n %in% .env$states || .n %in% .env$inIf) {
+          # values from `if` branches cannot be substituted
+          .env$defs[[.n]] <- NULL
+        } else if (!identical(.env$count[[.n]], 1)) {
+          # a reassigned variable is substituted with its current value so
+          # that a reused name (like `flux`) is not mistaken for one flow
+          .env$defs[[.n]] <- .rhs
+        } else if (any(all.vars(.rhs) %in% .env$states)) {
           .env$defs[[.n]] <- .rhs
         }
       }
     }
     invisible()
   }
-  for (.l in lines) .walk(.l)
-  list(ode = .env$ode, deps = .env$deps, defs = .env$defs,
+  for (.l in lines) .walk(.l, character(0))
+  # only single-assignment definitions can be folded back into labels
+  .fold <- .env$defs[vapply(names(.env$defs), function(.n) {
+    identical(.env$count[[.n]], 1)
+  }, logical(1))]
+  list(ode = .env$ode, deps = .env$deps, defs = .fold,
        states = .env$states)
 }
 

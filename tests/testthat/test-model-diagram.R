@@ -476,3 +476,37 @@ test_that("negative numeric constants keep their sign", {
   t <- nlmixr2plot:::.mdTerms(as.call(list(quote(`*`), -0.5, quote(center))))
   expect_equal(t[[1]]$sign, -1)
 })
+
+test_that("conditions on compartment amounts are dependencies", {
+  m <- rxode2::rxode2({
+    d/dt(center) = -cl*center
+    if (center > 100) {
+      tox_rate = k1
+    } else {
+      tox_rate = 0
+    }
+    d/dt(tox) = tox_rate - kout*tox
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "center", "tox", "interaction")), 1L)
+})
+
+test_that("a reused variable name is not mistaken for a transfer", {
+  m <- rxode2::rxode2({
+    flux = cl/v*central
+    d/dt(central) = -flux
+    flux = q/v2*periph
+    d/dt(periph) = flux - k21*periph
+  })
+  g <- modelGraph(m)
+  expect_equal(sum(g$edges$type == "transfer"), 0L)
+  expect_equal(nrow(.edge(g, "central", NA, "elimination")), 1L)
+})
+
+test_that("factor evid/amt columns use their labels", {
+  d <- data.frame(ID = 1, TIME = 0:2, AMT = factor(c("100", "0", "0")),
+                  EVID = factor(c("1", "0", "0")),
+                  CMT = factor(c("gut", "center", "center")), DV = 0)
+  g <- suppressMessages(modelGraph(.pkTurnover, data = d))
+  expect_equal(g$nodes$name[g$nodes$dosing], "gut")
+})
