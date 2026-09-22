@@ -86,6 +86,16 @@ test_that("pred_corr VPC uses the supplied data (#62)", {
   expect_equal(length(unique(db$obs$id)), 4L)
   expect_equal(length(unique(db$sim$id)), length(unique(od$ID)))
 
+  # ...including the pred-corrected path, whose observations are re-solved on
+  # `data` while the supplied simulation is still what is plotted
+  expect_warning(
+    db <- vpcPlot(.sim, data=half, pred_corr=TRUE, vpcdb=TRUE, method="vpc"),
+    "does not change a supplied")
+  expect_equal(length(unique(db$obs$id)), 4L)
+  expect_equal(nrow(db$obs), .nobs)
+  expect_equal(length(unique(db$sim$id)), length(unique(od$ID)))
+  expect_equal(fit$origData, od)
+
   skip_if_not_installed("tidyvpc")
   for (.pc in c(FALSE, TRUE)) {
     .warn <- character(0)
