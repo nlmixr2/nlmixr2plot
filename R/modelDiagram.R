@@ -263,6 +263,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     }
     if (.mdIsLinCmt(object)) object <- .mdLinToOde(object)
     .lines <- object$lstExpr
+    # residual error lines (`cp ~ add(sd)`) are not assignments
+    .err <- object$predDf$line
+    if (length(.err) > 0L) .lines <- .lines[-.err]
     .order <- object$mv0$state
   }
   .parsed <- .mdParseLines(.lines)
@@ -563,6 +566,9 @@ print.nlmixr2ModelGraph <- function(x, ...) {
              expr = as.call(list(quote(`/`), .t$expr, .denExpr)))
       }))
     }
+  }
+  if (is.numeric(x) && length(x) == 1L && !is.na(x) && x < 0) {
+    return(list(list(sign = -1, expr = -x)))
   }
   list(list(sign = 1, expr = x))
 }
@@ -915,7 +921,10 @@ print.nlmixr2ModelGraph <- function(x, ...) {
 .mdDot <- function(graph, labels = FALSE) {
   .xs <- 1.6
   .ys <- 1.1
-  .q <- function(x) paste0("\"", gsub("\"", "\\\\\"", x), "\"")
+  # quote a DOT string; "\r" (from combined labels) becomes a DOT line break
+  .q <- function(x) {
+    paste0("\"", gsub("\r", "\\n", gsub("\"", "\\\\\"", x), fixed = TRUE), "\"")
+  }
   .n <- graph$nodes
   .e <- .mdEdgeCoords(graph)
   .lines <- c("digraph model {",
@@ -949,7 +958,7 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       .j <- which(.e$type == "transfer" & .e$from == .to & .e$to == .from)
       .done[.j] <- TRUE
       .attr <- c(.attr, "dir = both")
-      .lab <- paste(c(.lab, .e$label[.j]), collapse = "\n")
+      .lab <- paste(c(.lab, .e$label[.j]), collapse = "\r")
     } else if (.t == "interaction") {
       .attr <- c(.attr, "style = dashed", "color = gray40",
                  if (.e$sign[.i] < 0) "arrowhead = tee")

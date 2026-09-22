@@ -436,3 +436,43 @@ test_that("transit chains stack above central; Michaelis-Menten is elimination",
   expect_equal(nrow(.edge(g, "center", NA, "elimination")), 1L)
   expect_equal(sum(g$edges$type == "interaction"), 0L)
 })
+
+test_that("DOT labels of bidirectional transfers use escaped line breaks", {
+  m <- rxode2::rxode2({
+    d/dt(c1) = -k1*c1 + k2*p1
+    d/dt(p1) = k1*c1 - k2*p1
+  })
+  dot <- modelDiagram(m, engine = "dot", labels = TRUE)
+  expect_match(dot, "k1 * c1\\nk2 * p1", fixed = TRUE)
+  expect_false(grepl("\r", dot, fixed = TRUE))
+  expect_false(any(grepl("^[^\"]*\"[^\"]*$", strsplit(dot, "\n")[[1]])))
+})
+
+test_that("variables used in residual error lines are still substituted", {
+  f <- function() {
+    ini({
+      emax <- 0.5
+      ec50 <- 1
+      kin <- 1
+      kout <- 0.1
+      k <- 0.1
+      sd <- 0.1
+    })
+    model({
+      EFF <- 1 - emax * center / (ec50 + center)
+      d/dt(center) <- -k * center
+      d/dt(resp) <- kin * EFF - kout * resp
+      EFF ~ add(sd)
+    })
+  }
+  g <- suppressMessages(modelGraph(f, dosing = "center"))
+  e <- .edge(g, "center", "resp", "interaction")
+  expect_equal(nrow(e), 1L)
+  expect_equal(e$sign, -1)
+})
+
+test_that("negative numeric constants keep their sign", {
+  expect_equal(nlmixr2plot:::.mdTerms(-0.5)[[1]]$sign, -1)
+  t <- nlmixr2plot:::.mdTerms(as.call(list(quote(`*`), -0.5, quote(center))))
+  expect_equal(t[[1]]$sign, -1)
+})
