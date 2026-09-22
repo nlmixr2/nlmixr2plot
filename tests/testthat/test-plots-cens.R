@@ -151,6 +151,17 @@ test_that("plot censoring", {
     .fitDf[, names(.fitDf) != "TIME"], fit1, "TIME")
   expect_equal(.strat$TIME, .fitDf$TIME)
 
+  # #68: censored VPCs with method = "vpc" take their observations from the fit
+  # table, so a supplied `data` is ignored (with a warning) and the simulation
+  # still covers every fitted subject
+  .od <- fit1$origData
+  .half <- .od[.od$ID %in% unique(.od$ID)[1:4], ]
+  expect_warning(
+    .db <- vpcCens(fit1, data = .half, cens = TRUE, n = 5, vpcdb = TRUE),
+    "'data' is ignored")
+  expect_equal(length(unique(.db$sim$id)), length(unique(.od$ID)))
+  expect_equal(length(unique(.db$obs$id)), length(unique(.od$ID)))
+
   # nlmixr2#390: prediction-corrected VPC on censored data must not crash
   # with a quantile() NA error
   expect_error(vpcPlot(fit = fit1, pred_corr = TRUE, n = 10), NA)
