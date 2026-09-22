@@ -343,6 +343,20 @@ test_that("parallel and externally driven transfers are mass transfer", {
   })
   g <- modelGraph(m)
   expect_equal(nrow(.edge(g, "A", "B", "transfer")), 1L)
+  # the driving compartment is connected to the transfer's destination
+  e <- .edge(g, "E", "B", "interaction")
+  expect_equal(nrow(e), 1L)
+  expect_equal(e$sign, 1)
+  expect_equal(nrow(.edge(g, "E", "A", "interaction")), 0L)
+  m <- rxode2::rxode2({
+    d/dt(A) = -Vmax*E*A/(Km + A)
+    d/dt(B) = Vmax*E*A/(Km + A) - kel*B
+    d/dt(E) = kin - kout*E
+  })
+  g <- modelGraph(m)
+  expect_equal(nrow(.edge(g, "A", "B", "transfer")), 1L)
+  expect_equal(nrow(.edge(g, "E", "B", "interaction")), 1L)
+  expect_equal(nrow(.edge(g, "A", "B", "interaction")), 0L)
 })
 
 test_that("no interaction arrow crosses a compartment in the final layout", {

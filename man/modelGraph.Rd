@@ -29,7 +29,9 @@ a \code{nlmixr2ModelGraph} object; a list with:
 coordinates \code{x} and \code{y}.
 \item \code{edges}: data frame with \code{from}, \code{to} (\code{NA} for inputs/eliminations),
 \code{type} (\code{"transfer"}, \code{"elimination"}, \code{"input"} or \code{"interaction"}),
-\code{sign} (\code{1} when the term is added, \code{-1} when it is subtracted),
+\code{sign} (\code{1} when the term is added, \code{-1} when it is subtracted; for
+interactions \code{1} is stimulation and \code{-1} inhibition, taking into account
+compartments that only appear in a denominator),
 \code{bidirectional} (for transfers) and \code{label} (the model term(s)).
 }
 }
@@ -43,7 +45,11 @@ does not transport mass (for example an effect compartment or a
 pharmacodynamic stimulation/inhibition); a remaining added term that does
 not depend on any other compartment is a (zero-order) input.
 Dependencies through intermediate variables (like \code{cp <- central/v}) are
-followed.
+followed.  A compartment that drives a transfer between two other
+compartments (like an enzyme) is drawn as an interaction with the
+destination.  Production or loss driven only by another compartment
+(like \code{ke0*cp} in an effect compartment) is represented by the interaction
+arrow alone, without a separate input/output arrow.
 }
 \details{
 Some limitations on how equations must be written:

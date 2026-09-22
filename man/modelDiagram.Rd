@@ -56,8 +56,8 @@ central compartment is in the middle with the compartments it exchanges
 mass with (peripheral compartments) to its left; unidirectional transfer
 (e.g. to a metabolite) and eliminations go below; compartments that
 interact with the model without mass transfer (e.g. effect compartments or
-pharmacodynamic models) go to the right, with their own inputs above and
-outputs below.
+pharmacodynamic models) go to the right, with their own inputs above,
+outputs below and exchange compartments further right.
 
 Mass transfer is drawn with solid arrows; interactions without mass
 transfer are dashed (with a "tee" arrow head for inhibition when using

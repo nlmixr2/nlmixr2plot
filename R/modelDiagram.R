@@ -15,7 +15,11 @@
 #' pharmacodynamic stimulation/inhibition); a remaining added term that does
 #' not depend on any other compartment is a (zero-order) input.
 #' Dependencies through intermediate variables (like `cp <- central/v`) are
-#' followed.
+#' followed.  A compartment that drives a transfer between two other
+#' compartments (like an enzyme) is drawn as an interaction with the
+#' destination.  Production or loss driven only by another compartment
+#' (like `ke0*cp` in an effect compartment) is represented by the interaction
+#' arrow alone, without a separate input/output arrow.
 #'
 #' @details
 #'
@@ -678,6 +682,16 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     for (.k in .j) {
       .matchedFrom[[.k]] <- c(.matchedFrom[[.k]], .src)
       .add(.src, terms$state[.k], "transfer", 1, terms$label[.k])
+    }
+  }
+  # compartments that drive a transfer without being its source (e.g. an
+  # enzyme `E` in `Vmax*E*A`) stimulate/inhibit the destination
+  for (.j in which(!vapply(.matchedFrom, is.null, logical(1)))) {
+    .drivers <- setdiff(terms$states[[.j]],
+                        c(.matchedFrom[[.j]], terms$state[.j]))
+    for (.o in .drivers) {
+      .add(.o, terms$state[.j], "interaction",
+           if (.o %in% terms$denOnly[[.j]]) -1 else 1, terms$label[.j])
     }
   }
   for (.i in which(!.used)) {
