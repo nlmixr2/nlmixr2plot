@@ -21,7 +21,7 @@ test_that("plot censoring", {
           dplyr::filter(DOSE == x) |>
           dplyr::reframe(ids=unique(ID)) |>
           dplyr::pull()
-        ids <- ids[seq(1, nid)]
+        ids <- ids[seq_len(nid)]
         dat |>
           dplyr::filter(ID %in% ids)
       })
@@ -134,6 +134,22 @@ test_that("plot censoring", {
     # values that used to be left in that column
     expect_equal(sort(unique(.db$sim$sim)), 1:10)
   }
+
+  # #56: a stratified censored VPC must find the covariate in the observed data
+  # (as.data.frame(fit) drops it) and assign it to the right rows
+  .db <- vpcCens(fit1, cens = TRUE, n = 5, stratify = "WT", vpcdb = TRUE)
+  .wt <- unique(fit1$origData[, c("ID", "WT")])
+  # WT is constant within ID here, so each observed row's stratum must be its
+  # subject's WT
+  expect_equal(as.character(.db$obs$strat),
+               as.character(.wt$WT[match(as.character(.db$obs$id),
+                                         as.character(.wt$ID))]))
+  # check the row alignment on a column that varies within ID: drop TIME from
+  # the fit table, carry it back from the original data and compare
+  .fitDf <- as.data.frame(fit1)
+  .strat <- .vpcCensAddStratify(
+    .fitDf[, names(.fitDf) != "TIME"], fit1, "TIME")
+  expect_equal(.strat$TIME, .fitDf$TIME)
 
   # nlmixr2#390: prediction-corrected VPC on censored data must not crash
   # with a quantile() NA error
