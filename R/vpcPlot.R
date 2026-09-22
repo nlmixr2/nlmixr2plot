@@ -470,6 +470,118 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   data[, setdiff(names(data), .stray), drop=FALSE]
 }
 
+#' Get a fit-derived column (like `tad`) for the observation data
+#'
+#' The fit only carries its derived columns for the observations it used, with
+#' `fit$env$.rownum` giving the row of `fit$origData` each came from.  When the
+#' observation data is `fit$origData` its rows are used directly.  Supplied data
+#' may be a subset or reordering of the fitted data, so each of its rows is
+#' matched by content (on the columns it shares with `fit$origData`, which
+#' must include the id and time columns) to the fitted row it came from instead
+#' of assuming the row numbers line up.  Rows that do not match a fitted row
+#' get `NA`, with a warning when they are observations.
+#'
+#' @param fit nlmixr2 fit
+#' @param obs observation data (already passed through
+#'   `nlmixr2est::vpcNameDataCmts()`)
+#' @param col fit column to get (for example `"tad"`)
+#' @param supplied logical; `TRUE` when `obs` was supplied by the user instead
+#'   of being `fit$origData`
+#' @return vector with one value of `col` per row of `obs` (`NA` for rows
+#'   without a fitted value)
+#' @noRd
+.vpcFitColForData <- function(fit, obs, col, supplied=FALSE) {
+  .orig <- fit$origData
+  .val <- fit[[col]]
+  .full <- rep(.val[NA_integer_], nrow(.orig))
+  .full[fit$env$.rownum] <- .val
+  if (!supplied) {
+    return(.full[seq_len(nrow(obs))])
+  }
+  .orig <- nlmixr2est::vpcNameDataCmts(fit, .orig)
+  # match column names case-insensitively (as the rest of the VPC setup does);
+  # names that are ambiguous in either dataset are not used
+  .lo <- tolower(names(obs))
+  .lorig <- tolower(names(.orig))
+  .by <- intersect(.lo[!(.lo %in% .lo[duplicated(.lo)])],
+                   .lorig[!(.lorig %in% .lorig[duplicated(.lorig)])])
+  # columns that are numbers in the fitted data are compared as numbers at full
+  # precision (as.character() keeps only 15 digits); numbers supplied as text
+  # are read as numbers so they still match
+  .num <- vapply(.by, function(n) {
+    is.numeric(.orig[[which(.lorig == n)]])
+  }, logical(1))
+  .key <- function(d, lower) {
+    do.call(paste, c(lapply(.by, function(n) {
+      .x <- d[[which(lower == n)]]
+      # enc2utf8() so the same text in another encoding still matches
+      .v <- enc2utf8(as.character(.x))
+      if (.num[[n]]) {
+        .y <- if (is.numeric(.x)) as.double(.x) else
+          suppressWarnings(as.numeric(.v))
+        # text that is not a number is kept as text, so it cannot match
+        .ok <- !is.na(.y)
+        .y[.ok & .y == 0] <- 0 # -0 prints as "-0"
+        .v[.ok] <- sprintf("%.17g", .y[.ok])
+      }
+      # prefix each value with its length (and code NA separately) so no two
+      # different rows share a key, even with a literal "NA" or the separator
+      # in a value
+      ifelse(is.na(.v), "NA", paste0(nchar(.v, type="bytes"), ":", .v))
+    }), sep="\r"))
+  }
+  .amb <- rep(FALSE, nrow(obs))
+  if (all(c("id", "time") %in% .by)) {
+    .ko <- .key(obs, .lo)
+    # only fitted rows carry a value, so only match those; this also keeps an
+    # observation from picking up an identical-looking dose row when the
+    # columns telling them apart were dropped
+    .fitRows <- fit$env$.rownum
+    .kfit <- .key(.orig, .lorig)[.fitRows]
+    .m <- .fitRows[match(.ko, .kfit)]
+    # fitted rows that look identical on the shared columns but have different
+    # values cannot be told apart, so do not guess between them
+    .dup <- unique(.kfit[duplicated(.kfit)])
+    if (length(.dup) > 0L) {
+      .in <- .kfit %in% .dup
+      .nv <- tapply(.val[.in], .kfit[.in], function(v) {
+        length(unique(v))
+      })
+      .amb <- .ko %in% names(.nv)[.nv > 1L]
+      .m[.amb] <- NA_integer_
+    }
+  } else {
+    .m <- rep(NA_integer_, nrow(obs))
+  }
+  # observations as vpcPlot() keeps them: evid == 0 and mdv == 0 when present
+  .isObs <- rep(TRUE, nrow(obs))
+  for (.c in c("evid", "mdv")) {
+    .w <- which(tolower(names(obs)) == .c)
+    if (length(.w) == 1L) {
+      .isObs <- .isObs & !is.na(obs[[.w]]) & obs[[.w]] == 0
+    }
+  }
+  # observations without a dv are dropped from the VPC, so do not warn for them
+  .w <- which(tolower(names(obs)) == "dv")
+  if (length(.w) == 1L) {
+    .isObs <- .isObs & !is.na(obs[[.w]])
+  }
+  .n <- sum(.isObs & .amb)
+  if (.n > 0) {
+    warning(.n, " observation(s) in 'data' match several fitted rows with ",
+            "different '", col, "' values so '", col, "' is NA for them; keep ",
+            "the columns that tell them apart (like 'cmt') or add a '", col,
+            "' column to 'data' to supply it", call.=FALSE)
+  }
+  .n <- sum(.isObs & is.na(.m) & !.amb)
+  if (.n > 0) {
+    warning(.n, " observation(s) in 'data' do not match the fitted data so '",
+            col, "' is NA for them; add a '", col, "' column to 'data' to ",
+            "supply it", call.=FALSE)
+  }
+  .full[.m]
+}
+
 #' Mark censored observations for a censored VPC
 #'
 #' nlmixr2 data encodes a censored record at its censoring limit (`DV` equal to
@@ -602,14 +714,10 @@ vpcCens <- function(..., cens=TRUE, idv="time") {
   .wo <- which(.nol == idv)
   if (length(.wo) != 1) {
     if (any(names(fit) == idv)) {
-      .fit <- as.data.frame(fit)
-      .wid <- which(tolower(names(.fit)) == "id")
-      names(.fit)[.wid] <- "ID"
-      .fit$nlmixrRowNums <-  fit$env$.rownum
-      .fit <- .fit[, c("ID", idv, "nlmixrRowNums")]
-      .obs$nlmixrRowNums <- seq_along(.obs$ID)
-      .obs <- merge(.obs, .fit, by=c("ID", "nlmixrRowNums"), all.x=TRUE)
-      .wo <- which(.nol == idv)
+      .obs[[idv]] <- .vpcFitColForData(fit, .obs, idv, supplied=!is.null(data))
+      .no <- names(.obs)
+      .nol <- tolower(.no)
+      .wo <- which(.no == idv)
     } else {
       stop("cannot find '", idv, "' in original dataset",
            call.=FALSE)
