@@ -115,9 +115,10 @@ plot.nlmixr2AugPred <- function(x, y, ..., log = "") {
   .log <- .augPredLog(log)
   if (any(names(x) == "Endpoint")) {
     .ret <- list()
-    for (.tmp in levels(x$Endpoint)) {
+    # Skip endpoint levels without any rows (#44)
+    for (.tmp in levels(droplevels(as.factor(x$Endpoint)))) {
       utils::assignInMyNamespace(".augPredEndpoint", .tmp)
-      .x <- x[x$Endpoint == .tmp, names(x) != "Endpoint"]
+      .x <- x[which(x$Endpoint == .tmp), names(x) != "Endpoint"]
       .r <- plot.nlmixr2AugPred(.x, log = log)
       for (.k in seq_along(.r)) {
         .ret[[length(.ret) + 1L]] <- .r[[.k]]

@@ -10,6 +10,10 @@
   .dat <- .dat[.w, ]
   .doCmt <- FALSE
   if (any(names(.dat) == "CMT")) {
+    # Only keep compartments that actually have observations; state
+    # compartments (like depot/central) are still factor levels but have no
+    # data and should not become endpoints (#44)
+    .dat$CMT <- droplevels(as.factor(.dat$CMT))
     if (length(levels(.dat$CMT)) > 1) {
       .doCmt <- TRUE
     }
@@ -209,7 +213,7 @@ plotCmt <- function(x, cmt, bsv = NULL) {
   .hasNpde <- any(names(x) == "NPD")
   .hasPred <- any(names(x) == "PRED")
   .hasIpred <- any(names(x) == "IPRED")
-  .datCmt <- x[x$CMT == cmt,, drop = FALSE]
+  .datCmt <- x[which(x$CMT == cmt),, drop = FALSE]
   if (nrow(.datCmt) > 0) {
     if (.hasPred & .hasIpred) {
       .lst[["dv_pred_ipred_linear"]] <-
@@ -281,7 +285,10 @@ plotCmt <- function(x, cmt, bsv = NULL) {
       .pIndividual <- .pIndividual +
         ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$PRED), col = "blue", linewidth = 1.2)
     }
-    if (any(names(.datCmt) == "lowerLim")) {
+    # With multiple endpoints, an endpoint without censoring has only missing
+    # limits, which geom_cens() cannot draw (#44)
+    if (any(names(.datCmt) == "lowerLim") &&
+          any(!is.na(.datCmt$lowerLim) | !is.na(.datCmt$upperLim))) {
       .pIndividual <- .pIndividual +
         geom_cens(ggplot2::aes(lower = .data$lowerLim, upper = .data$upperLim), fill = "purple")
     }
