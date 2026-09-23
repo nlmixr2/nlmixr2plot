@@ -1,6 +1,6 @@
 # Changelog
 
-## nlmixr2plot 5.1.1
+## nlmixr2plot 5.2.0
 
 - Added automatic model diagrams
   ([\#10](https://github.com/nlmixr2/nlmixr2plot/issues/10)).
