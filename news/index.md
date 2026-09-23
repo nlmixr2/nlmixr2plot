@@ -2,6 +2,8 @@
 
 ## nlmixr2plot 5.2.0
 
+CRAN release: 2026-09-22
+
 - Added automatic model diagrams
   ([\#10](https://github.com/nlmixr2/nlmixr2plot/issues/10)).
   [`modelGraph()`](https://nlmixr2.github.io/nlmixr2plot/reference/modelGraph.md)
