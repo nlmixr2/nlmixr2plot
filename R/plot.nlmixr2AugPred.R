@@ -194,9 +194,9 @@ plot.nlmixr2AugPred <- function(x, y, ..., log = "") {
     ) +
     ggplot2::geom_point(data = .augPredObserved) +
     .augPredFacet(1L) +
-    .logScales(x = logX, y = logY) +
     rxode2::rxTheme() +
-    ggplot2::ggtitle(label = title)
+    ggplot2::ggtitle(label = title) +
+    .logScales(x = logX, y = logY)
 }
 
 #' Facet for one page of augPred plots

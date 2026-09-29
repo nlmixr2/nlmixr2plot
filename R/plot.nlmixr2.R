@@ -54,6 +54,13 @@
 #' also references its caller's frame, as `.GenericCallEnv`, so figures are
 #' not built directly in methods either.)
 #'
+#' The builders add their scales in their last `+`.  Each `+` clones the
+#' plot's scales and the clone keeps the scales it was cloned from, so a
+#' scale added earlier is stored again for every later `+` (about 50 KB each
+#' time for an xgxr log scale).  Adding `guides()` keeps a copy of the plot as
+#' it was at that point (even when added straight after `ggplot()`), so the
+#' builders do not use it.
+#'
 #' @param p ggplot built without data (`ggplot2::ggplot(mapping = ...)`)
 #' @param data data frame for the figure
 #' @return `p` with `data` as its data (fortified, as `ggplot2::ggplot()`
@@ -122,22 +129,24 @@
   .scales
 }
 
-.dvPlot <- function(.dat0, vars, log = FALSE) {
+.dvPlot <- function(.dat0, vars, cmt, subtitle, log = FALSE) {
   if (any(names(.dat0) == "CENS")) {
     dataPlot <- data.frame(DV = .dat0$DV, CENS = .dat0$CENS, utils::stack(.dat0[, vars, drop = FALSE]))
   } else {
     dataPlot <- data.frame(DV = .dat0$DV, utils::stack(.dat0[, vars, drop = FALSE]))
   }
-  .plotData(.dvFigure(.censLevels(.dat0), log), dataPlot)
+  .plotData(.dvFigure(.censLevels(.dat0), log, cmt, subtitle), dataPlot)
 }
 
 #' DV vs prediction figure, without its data
 #'
 #' @param nCens number of censoring levels, or `NULL` without censoring
 #' @param log use log-scaled axes
+#' @param cmt compartment (endpoint) name for the title
+#' @param subtitle plot subtitle
 #' @return ggplot without data; see `.plotData()`
 #' @noRd
-.dvFigure <- function(nCens, log) {
+.dvFigure <- function(nCens, log, cmt, subtitle) {
   if (is.null(nCens)) {
     .aes <- ggplot2::aes(.data$values, .data$DV)
   } else {
@@ -146,11 +155,11 @@
   ggplot2::ggplot(mapping = .aes) +
     ggplot2::facet_wrap(~ind) +
     ggplot2::geom_abline(slope = 1, intercept = 0, col = "red", linewidth = 1.2) +
-    .logScales(x = log, y = log) +
     ggplot2::geom_point(alpha = 0.5) +
     ggplot2::xlab("Predictions") +
+    ggplot2::ggtitle(cmt, subtitle) +
     rxode2::rxTheme() +
-    .censColor(nCens)
+    c(.logScales(x = log, y = log), .censColor(nCens))
 }
 
 .scatterPlot <- function(.dat0, vars, .cmt, log = FALSE) {
@@ -181,8 +190,7 @@
     ggplot2::xlab(vars[1]) +
     ggplot2::ylab(vars[2]) +
     rxode2::rxTheme() +
-    .censColor(nCens) +
-    .logScales(x = log, y = FALSE)
+    c(.censColor(nCens), .logScales(x = log, y = FALSE))
 }
 
 #' Individual (by subject) figure, without its data
@@ -324,48 +332,38 @@ plotCmt <- function(x, cmt, bsv = NULL) {
   if (nrow(.datCmt) > 0) {
     if (.hasPred && .hasIpred) {
       .lst[["dv_pred_ipred_linear"]] <-
-        .dvPlot(.datCmt, c("PRED", "IPRED")) +
-        ggplot2::ggtitle(cmt, "DV vs PRED/IPRED")
+        .dvPlot(.datCmt, c("PRED", "IPRED"), cmt, "DV vs PRED/IPRED")
 
       .lst[["dv_pred_ipred_log"]] <-
-        .dvPlot(.datCmt, c("PRED", "IPRED"), TRUE) +
-        ggplot2::ggtitle(cmt, "log-scale DV vs PRED/IPRED")
+        .dvPlot(.datCmt, c("PRED", "IPRED"), cmt, "log-scale DV vs PRED/IPRED", log = TRUE)
     } else if (.hasIpred) {
       .lst[["dv_ipred_linear"]] <-
-        .dvPlot(.datCmt, "IPRED") +
-        ggplot2::ggtitle(cmt, "DV vs IPRED")
+        .dvPlot(.datCmt, "IPRED", cmt, "DV vs IPRED")
 
       .lst[["dv_ipred_log"]] <-
-        .dvPlot(.datCmt, "IPRED", TRUE) +
-        ggplot2::ggtitle(cmt, "log-scale DV vs IPRED")
+        .dvPlot(.datCmt, "IPRED", cmt, "log-scale DV vs IPRED", log = TRUE)
     } else if (.hasPred) {
       .lst[["dv_pred_linear"]] <-
-        .dvPlot(.datCmt, "PRED") +
-        ggplot2::ggtitle(cmt, "DV vs PRED")
+        .dvPlot(.datCmt, "PRED", cmt, "DV vs PRED")
 
       .lst[["dv_pred_log"]] <-
-        .dvPlot(.datCmt, "PRED", TRUE) +
-        ggplot2::ggtitle(cmt, "log-scale DV vs PRED")
+        .dvPlot(.datCmt, "PRED", cmt, "log-scale DV vs PRED", log = TRUE)
     }
 
     if (.hasCwres) {
       .lst[["dv_cpred_linear"]] <-
-        .dvPlot(.datCmt, c("CPRED", "IPRED")) +
-        ggplot2::ggtitle(cmt, "DV vs CPRED/IPRED")
+        .dvPlot(.datCmt, c("CPRED", "IPRED"), cmt, "DV vs CPRED/IPRED")
 
       .lst[["dv_cpred_log"]] <-
-        .dvPlot(.datCmt, c("CPRED", "IPRED"), TRUE) +
-        ggplot2::ggtitle(cmt, "log-scale DV vs CPRED/IPRED")
+        .dvPlot(.datCmt, c("CPRED", "IPRED"), cmt, "log-scale DV vs CPRED/IPRED", log = TRUE)
     }
 
     if (.hasNpde) {
       .lst[["dv_epred_linear"]] <-
-        .dvPlot(.datCmt, c("EPRED", "IPRED")) +
-        ggplot2::ggtitle(cmt, "DV vs EPRED/IPRED")
+        .dvPlot(.datCmt, c("EPRED", "IPRED"), cmt, "DV vs EPRED/IPRED")
 
       .lst[["dv_epred_log"]] <-
-        .dvPlot(.datCmt, c("EPRED", "IPRED"), TRUE) +
-        ggplot2::ggtitle(cmt, "log-scale DV vs EPRED/IPRED")
+        .dvPlot(.datCmt, c("EPRED", "IPRED"), cmt, "log-scale DV vs EPRED/IPRED", log = TRUE)
     }
 
     for (x in intersect(names(.datCmt), c("IPRED", "PRED", "CPRED", "EPRED", "TIME", "tad"))) {
