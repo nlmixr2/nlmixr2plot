@@ -39,92 +39,180 @@
   return(.dat)
 }
 
-.dvPlot <- function(.dat0, vars, log = FALSE) {
-  .xgxr <- getOption("rxode2.xgxr", TRUE) &&
-    requireNamespace("xgxr", quietly = TRUE)
-  if (any(names(.dat0) == "CENS")) {
-    dataPlot <- data.frame(DV = .dat0$DV, CENS = .dat0$CENS, utils::stack(.dat0[, vars, drop = FALSE]))
-    .aes <- ggplot2::aes(.data$values, .data$DV, color = .data$CENS)
-    if (length(levels(.dat0$CENS)) == 3) {
-      .color <- ggplot2::scale_color_manual(values = c("blue", "black", "red"))
-    } else {
-      .color <- ggplot2::scale_color_manual(values = c("black", "red"))
-    }
-    .legendPos <- ggplot2::theme(
+#' Attach the data to a figure built without it
+#'
+#' The figures in this package are built by helpers that receive only small
+#' values (column names, titles, flags) and get their data here.  A ggplot
+#' keeps the frames that built it: `plot_env`, the environments of `aes()`
+#' quosures and of facet and smoother formulas, the frame that called each
+#' `geom_*()`/`stat_*()` (through the layer's ggproto object) and the frame of
+#' `ggplot()` itself, which holds its `data` argument (through the plot's
+#' `Layout` ggproto object).  `serialize()` writes every one of those frames
+#' in full.  Building from data-free frames means a saved figure holds its
+#' data once, in `$data`, instead of the fit, the full plotting data or the
+#' other figures that are in scope where it is built.  (An S3 method's frame
+#' also references its caller's frame, as `.GenericCallEnv`, so figures are
+#' not built directly in methods either.)
+#'
+#' @param p ggplot built without data (`ggplot2::ggplot(mapping = ...)`)
+#' @param data data frame for the figure
+#' @return `p` with `data` as its data (fortified, as `ggplot2::ggplot()`
+#'   does)
+#' @noRd
+.plotData <- function(p, data) {
+  p$data <- ggplot2::fortify(data)
+  p
+}
+
+#' Number of censoring levels in plotting data
+#'
+#' @param data data frame from `.setupPlotData()`
+#' @return `NULL` when `data` has no `CENS` column, otherwise the number of
+#'   levels of `CENS`
+#' @noRd
+.censLevels <- function(data) {
+  if (any(names(data) == "CENS")) {
+    length(levels(data$CENS))
+  } else {
+    NULL
+  }
+}
+
+#' Colour scale and legend position for censored data
+#'
+#' @param nCens number of censoring levels (from `.censLevels()`), or `NULL`
+#'   for data without censoring
+#' @return list of the colour scale and legend theme, or `NULL` when `nCens`
+#'   is `NULL`
+#' @noRd
+.censColor <- function(nCens) {
+  if (is.null(nCens)) {
+    return(NULL)
+  }
+  if (nCens == 3) {
+    .color <- ggplot2::scale_color_manual(values = c("blue", "black", "red"))
+  } else {
+    .color <- ggplot2::scale_color_manual(values = c("black", "red"))
+  }
+  list(
+    .color,
+    ggplot2::theme(
       legend.position = "bottom",
       legend.box = "horizontal",
       legend.title = ggplot2::element_blank()
     )
+  )
+}
+
+#' Log-scale x and y scales, using xgxr when available
+#'
+#' @param x,y add a log-scaled x or y axis
+#' @return list of scales (empty when neither axis is log-scaled)
+#' @noRd
+.logScales <- function(x, y) {
+  .xgxr <- getOption("rxode2.xgxr", TRUE) &&
+    requireNamespace("xgxr", quietly = TRUE)
+  .scales <- list()
+  if (x) {
+    .scales <- c(.scales, list(if (.xgxr) xgxr::xgx_scale_x_log10() else ggplot2::scale_x_log10()))
+  }
+  if (y) {
+    .scales <- c(.scales, list(if (.xgxr) xgxr::xgx_scale_y_log10() else ggplot2::scale_y_log10()))
+  }
+  .scales
+}
+
+.dvPlot <- function(.dat0, vars, log = FALSE) {
+  if (any(names(.dat0) == "CENS")) {
+    dataPlot <- data.frame(DV = .dat0$DV, CENS = .dat0$CENS, utils::stack(.dat0[, vars, drop = FALSE]))
   } else {
     dataPlot <- data.frame(DV = .dat0$DV, utils::stack(.dat0[, vars, drop = FALSE]))
+  }
+  .plotData(.dvFigure(.censLevels(.dat0), log), dataPlot)
+}
+
+#' DV vs prediction figure, without its data
+#'
+#' @param nCens number of censoring levels, or `NULL` without censoring
+#' @param log use log-scaled axes
+#' @return ggplot without data; see `.plotData()`
+#' @noRd
+.dvFigure <- function(nCens, log) {
+  if (is.null(nCens)) {
     .aes <- ggplot2::aes(.data$values, .data$DV)
-    .color <- NULL
-    .legendPos <- NULL
+  } else {
+    .aes <- ggplot2::aes(.data$values, .data$DV, color = .data$CENS)
   }
-  .logx <- NULL
-  .logy <- NULL
-  if (log) {
-    if (.xgxr) {
-      .logx <- xgxr::xgx_scale_x_log10()
-      .logy <- xgxr::xgx_scale_y_log10()
-    } else {
-      .logx <- ggplot2::scale_x_log10()
-      .logy <- ggplot2::scale_y_log10()
-    }
-  }
-  ggplot2::ggplot(dataPlot, .aes) +
+  ggplot2::ggplot(mapping = .aes) +
     ggplot2::facet_wrap(~ind) +
     ggplot2::geom_abline(slope = 1, intercept = 0, col = "red", linewidth = 1.2) +
-    .logx +
-    .logy +
+    .logScales(x = log, y = log) +
     ggplot2::geom_point(alpha = 0.5) +
     ggplot2::xlab("Predictions") +
     rxode2::rxTheme() +
-    .color +
-    .legendPos
+    .censColor(nCens)
 }
 
 .scatterPlot <- function(.dat0, vars, .cmt, log = FALSE) {
   dataPlot <- .dat0
   dataPlot$x <- dataPlot[[vars[1]]]
   dataPlot$y <- dataPlot[[vars[2]]]
-  if (any(names(.dat0) == "CENS")) {
-    .aes <- ggplot2::aes(.data$x, .data$y, color = .data$CENS)
-    if (length(levels(dataPlot$CENS)) == 3) {
-      .color <- ggplot2::scale_color_manual(values = c("blue", "black", "red"))
-    } else {
-      .color <- ggplot2::scale_color_manual(values = c("black", "red"))
-    }
-    .legendPos <- ggplot2::theme(
-      legend.position = "bottom",
-      legend.box = "horizontal",
-      legend.title = ggplot2::element_blank()
-    )
-  } else {
+  .plotData(.scatterFigure(vars, .cmt, .censLevels(.dat0), log), dataPlot)
+}
+
+#' Residual (or prediction) scatter figure, without its data
+#'
+#' @param vars names of the x and y columns (for the titles and axis labels)
+#' @param cmt compartment (endpoint) name for the title
+#' @param nCens number of censoring levels, or `NULL` without censoring
+#' @param log use a log-scaled x axis
+#' @return ggplot without data; see `.plotData()`
+#' @noRd
+.scatterFigure <- function(vars, cmt, nCens, log) {
+  if (is.null(nCens)) {
     .aes <- ggplot2::aes(.data$x, .data$y)
-    .color <- NULL
-    .legendPos <- NULL
+  } else {
+    .aes <- ggplot2::aes(.data$x, .data$y, color = .data$CENS)
   }
-  .xgxr <- getOption("rxode2.xgxr", TRUE) &&
-    requireNamespace("xgxr", quietly = TRUE)
-  .logx <- NULL
-  if (log) {
-    if (.xgxr) {
-      .logx <- xgxr::xgx_scale_x_log10()
-    } else {
-      .logx <- ggplot2::scale_x_log10()
-    }
-  }
-  ggplot2::ggplot(dataPlot, .aes) +
+  ggplot2::ggplot(mapping = .aes) +
     ggplot2::geom_point(alpha = 0.5) +
     ggplot2::geom_abline(slope = 0, intercept = 0, col = "red") +
-    ggplot2::ggtitle(.cmt, paste0(vars[1], " vs ", vars[2])) +
+    ggplot2::ggtitle(cmt, paste0(vars[1], " vs ", vars[2])) +
     ggplot2::xlab(vars[1]) +
     ggplot2::ylab(vars[2]) +
     rxode2::rxTheme() +
-    .color +
-    .legendPos +
-    .logx
+    .censColor(nCens) +
+    .logScales(x = log, y = FALSE)
+}
+
+#' Individual (by subject) figure, without its data
+#'
+#' @param pred add the population prediction (`PRED`) line
+#' @param cens add the censoring intervals (`lowerLim`/`upperLim`)
+#' @return ggplot without data, faceted for page 1; see `.plotData()` and
+#'   `.individualFacet()`
+#' @noRd
+.individualFigure <- function(pred, cens) {
+  ggplot2::ggplot(mapping = ggplot2::aes(x = .data$TIME, y = .data$DV)) +
+    ggplot2::geom_point() +
+    ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$IPRED), col = "red", linewidth = 1.2) +
+    (if (pred) {
+      ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$PRED), col = "blue", linewidth = 1.2)
+    }) +
+    (if (cens) {
+      geom_cens(ggplot2::aes(lower = .data$lowerLim, upper = .data$upperLim), fill = "purple")
+    }) +
+    .individualFacet(1L) +
+    rxode2::rxTheme()
+}
+
+#' Facet for one page of individual plots
+#'
+#' @param page page number
+#' @return a `ggforce::facet_wrap_paginate()` facet
+#' @noRd
+.individualFacet <- function(page) {
+  ggforce::facet_wrap_paginate(~ID, nrow = 4, ncol = 4, page = page)
 }
 
 #' Plot a nlmixr2 data object
@@ -280,29 +368,15 @@ plotCmt <- function(x, cmt, bsv = NULL) {
         }
       }
     }
-    .pIndividual <- ggplot2::ggplot(.datCmt, ggplot2::aes(x = .data$TIME, y = .data$DV)) +
-      ggplot2::geom_point() +
-      ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$IPRED), col = "red", linewidth = 1.2)
-    if (any(names(.datCmt) == "PRED")) {
-      .pIndividual <- .pIndividual +
-        ggplot2::geom_line(ggplot2::aes(x = .data$TIME, y = .data$PRED), col = "blue", linewidth = 1.2)
-    }
     # With multiple endpoints, an endpoint without censoring has only missing
     # limits, which geom_cens() cannot draw (#44)
-    if (
-      any(names(.datCmt) == "lowerLim") &&
-        any(!is.na(.datCmt$lowerLim) | !is.na(.datCmt$upperLim))
-    ) {
-      .pIndividual <- .pIndividual +
-        geom_cens(ggplot2::aes(lower = .data$lowerLim, upper = .data$upperLim), fill = "purple")
-    }
-    .facet <- function(page) {
-      ggforce::facet_wrap_paginate(~ID, nrow = 4, ncol = 4, page = page)
-    }
-    .pIndividual <- .pIndividual +
-      .facet(1L) +
-      rxode2::rxTheme()
-    .pages <- .paginate(.pIndividual, .facet)
+    .cens <- any(names(.datCmt) == "lowerLim") &&
+      any(!is.na(.datCmt$lowerLim) | !is.na(.datCmt$upperLim))
+    .pIndividual <- .plotData(
+      .individualFigure(pred = any(names(.datCmt) == "PRED"), cens = .cens),
+      .datCmt
+    )
+    .pages <- .paginate(.pIndividual, .individualFacet)
     .nPages <- length(.pages)
     for (.j in seq_len(.nPages)) {
       .lst[[paste("individual", .j, sep = "_")]] <-
@@ -376,20 +450,25 @@ traceplot <- function(x, ...) {
 traceplot.nlmixr2FitCore <- function(x, ...) {
   .m <- x$parHistStacked
   if (!is.null(.m)) {
-    .p0 <- ggplot2::ggplot(.m, ggplot2::aes(.data$iter, .data$val)) +
-      ggplot2::geom_line() +
-      ggplot2::facet_wrap(~par, scales = "free_y")
-    .niter <- attr(class(x$parHist), "niter")
-    if (!is.null(.niter)) {
-      .p0 <-
-        .p0 +
-        ggplot2::geom_vline(xintercept = .niter, col = "blue", linewidth = 1.2)
-    }
-    .p0 <- .p0 + rxode2::rxTheme()
-    return(.p0)
+    return(.plotData(.traceplotFigure(attr(class(x$parHist), "niter")), .m))
   } else {
     return(invisible(NULL))
   }
+}
+
+#' Trace plot figure, without its data
+#'
+#' @param niter iteration(s) to mark with a vertical line, or `NULL`
+#' @return ggplot without data; see `.plotData()`
+#' @noRd
+.traceplotFigure <- function(niter) {
+  ggplot2::ggplot(mapping = ggplot2::aes(.data$iter, .data$val)) +
+    ggplot2::geom_line() +
+    ggplot2::facet_wrap(~par, scales = "free_y") +
+    (if (!is.null(niter)) {
+      ggplot2::geom_vline(xintercept = niter, col = "blue", linewidth = 1.2)
+    }) +
+    rxode2::rxTheme()
 }
 
 #' @export

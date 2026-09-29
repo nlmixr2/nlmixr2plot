@@ -1,3 +1,14 @@
+# nlmixr2plot (development version)
+
+* The figures from `plot()` of a fit, `traceplot()` and `plot()` of an
+  `augPred()` object no longer carry the fit, the full plotting data or the
+  other figures in their environments, so saving them (with `saveRDS()` or
+  as a 'targets' target) is far smaller.  Before, each figure's `aes()`,
+  facet and layer environments held the frame it was built in, and with it
+  the whole fit or every figure built before it (the trace plot and the
+  individual plots could each serialize to hundreds of MB).  Each figure now
+  stores its data once, in `$data`; the plots look the same.
+
 # nlmixr2plot 5.2.0
 
 * Added automatic model diagrams (#10).  `modelGraph()` parses a model's
