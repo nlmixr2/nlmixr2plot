@@ -1,5 +1,11 @@
 # Changelog
 
+## nlmixr2plot (development version)
+
+- `modelDiagram(..., engine = "ggplot2", labels = TRUE)` now draws the
+  arrow labels on a white background, so the arrow no longer runs
+  through the label text.
+
 ## nlmixr2plot 5.2.0
 
 CRAN release: 2026-09-22
