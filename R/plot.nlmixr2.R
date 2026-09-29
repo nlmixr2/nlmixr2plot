@@ -215,6 +215,23 @@
   ggforce::facet_wrap_paginate(~ID, nrow = 4, ncol = 4, page = page)
 }
 
+#' Bootstrap figure of a fit
+#'
+#' `nlmixr2extra::bootplot()` builds its figure in its method's frame, which
+#' the figure keeps, and that frame references the frame that called
+#' `bootplot()` (as `.GenericCallEnv`).  Called from `plot()` of a fit, that
+#' was the method's frame, holding the fit, the plotting data and every other
+#' figure (see `.plotData()`), so it is called from here instead.  The
+#' argument is named `x` as in `plot()`, because `bootplot()` names a
+#' bootstrap it has to rerun after the expression it was given.
+#'
+#' @param x nlmixr2 fit with bootstrap results
+#' @return the figure from `nlmixr2extra::bootplot()`
+#' @noRd
+.bootplotFigure <- function(x) {
+  nlmixr2extra::bootplot(x)
+}
+
 #' Plot a nlmixr2 data object
 #'
 #' Plot some standard goodness of fit plots for the focei fitted object.  When
@@ -273,7 +290,7 @@ plot.nlmixr2FitData <- function(x, covariate = NULL, ...) {
     .lst[["traceplot"]] <- .tp
   }
   if (exists(".bootPlotData", object$env)) {
-    .bp <- nlmixr2extra::bootplot(x)
+    .bp <- .bootplotFigure(x)
     .lst[["bootplot"]] <- .bp
   }
   # Between-subject variability plots are model-level (etas are shared across

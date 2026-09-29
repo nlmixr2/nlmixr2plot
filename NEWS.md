@@ -23,6 +23,11 @@
   about 0.9 MB (up to 3 MB for large models) to each saved diagram.  The
   diagrams look the same.
 
+* The `bootplot` figure that `plot()` includes for a fit with bootstrap
+  results no longer carries the frame of `plot()`, with the fit, the plotting
+  data and every other figure: for theo_sd with 3 bootstrap samples it went
+  from 152 MB to 6 MB saved.
+
 # nlmixr2plot 5.2.0
 
 * Added automatic model diagrams (#10).  `modelGraph()` parses a model's
