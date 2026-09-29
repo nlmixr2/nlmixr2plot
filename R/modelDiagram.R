@@ -2214,7 +2214,8 @@ print.nlmixr2ModelGraph <- function(x, ...) {
         ggplot2::geom_label(
           data = .seg,
           ggplot2::aes(x = (.data$x + .data$xend) / 2, y = (.data$y + .data$yend) / 2, label = .data$label),
-          size = 2.5
+          size = 2.5,
+          fill = "white"
         )
     }
   }
