@@ -91,6 +91,13 @@ test_that("plot(augPred) supports log axes (#32)", {
   expect_equal(nrow(b$data[[1]]), 2L)
   expect_equal(length(unique(b$data[[1]]$group)), 2L)
 
+  # The figures hold their data once, in `$data`: the layers select their rows
+  # from it rather than holding their own data frames, and no environment the
+  # figures reference holds a copy (see helper-figure-envs.R)
+  for (.l in c("", "y")) {
+    expect_identical(.figureHeldData(plot(d3, log = .l)[[1]]), character(0), info = .l)
+  }
+
   expect_error(plot(d, log = FALSE), NA)
   expect_error(plot(d, log = "z"), "log")
   expect_error(plot(d, log = TRUE), "log")
