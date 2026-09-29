@@ -73,7 +73,16 @@
   .ret
 }
 
+# Serialized size (bytes) of `x`, apart from the source files that srcrefs
+# point to: devtools::load_all() keeps them on the package's functions and
+# calls, which a figure can reach, but an installed package does not
+.figureSize <- function(x) {
+  length(serialize(x, NULL, refhook = function(e) {
+    if (inherits(e, "srcfile")) "srcfile" else NULL
+  }))
+}
+
 # Serialized size (bytes) of a figure apart from its `$data`
 .figureSizeWithoutData <- function(fig) {
-  length(serialize(fig, NULL)) - length(serialize(fig$data, NULL))
+  .figureSize(fig) - .figureSize(fig$data)
 }
