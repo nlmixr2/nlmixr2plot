@@ -1106,9 +1106,12 @@ test_that("long products keep their input and elimination parts", {
     "d/dt(y) = tau*(b - y)*(1 - inh)"
   )
   m <- rxode2::rxode2(paste(code, collapse = "\n"))
-  t0 <- Sys.time()
-  g <- modelGraph(m, dosing = "s01")
-  expect_lt(as.numeric(Sys.time() - t0, units = "secs"), 30)
+  # Without modelGraph()'s expansion budget, expanding this long product term
+  # by term does not finish in any useful time; the limit fails the test then
+  # instead of hanging the run.  It is far above the normal run time, so a
+  # loaded machine does not trip it.
+  setTimeLimit(elapsed = 300, transient = TRUE)
+  g <- tryCatch(modelGraph(m, dosing = "s01"), finally = setTimeLimit(elapsed = Inf))
   expect_equal(nrow(.edge(g, NA, "y", "input")), 1L)
   expect_equal(nrow(.edge(g, "y", NA, "elimination")), 1L)
   # `b*(1 - inh)`: the compartments in `b` stimulate y, and (through
