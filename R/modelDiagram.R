@@ -2289,21 +2289,11 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     ) +
     # keep the annotations inside the plot (away from the legend)
     ggplot2::geom_blank(data = .mdGgplotExtents, ggplot2::aes(x = .data$x, y = .data$y)) +
-    ggplot2::scale_fill_manual(values = .mdRoleColors, drop = TRUE, name = "compartment") +
-    ggplot2::coord_equal(clip = "off") +
-    ggplot2::theme_void() +
-    ggplot2::theme(plot.margin = ggplot2::margin(10, 10, 10, 10)) +
     (if (flows) {
-      list(
-        ggplot2::geom_segment(
-          data = .mdGgplotFlows,
-          ggplot2::aes(x = .data$x, y = .data$y, xend = .data$xend, yend = .data$yend, linetype = .data$flow),
-          arrow = ggplot2::arrow(length = ggplot2::unit(0.08, "inches"), type = "closed")
-        ),
-        ggplot2::scale_linetype_manual(
-          values = c("mass transfer" = "solid", stimulation = "dashed", inhibition = "dotted", modulation = "dotdash"),
-          name = "flow"
-        )
+      ggplot2::geom_segment(
+        data = .mdGgplotFlows,
+        ggplot2::aes(x = .data$x, y = .data$y, xend = .data$xend, yend = .data$yend, linetype = .data$flow),
+        arrow = ggplot2::arrow(length = ggplot2::unit(0.08, "inches"), type = "closed")
       )
     }) +
     (if (flows && labels) {
@@ -2312,5 +2302,24 @@ print.nlmixr2ModelGraph <- function(x, ...) {
         ggplot2::aes(x = (.data$x + .data$xend) / 2, y = (.data$y + .data$yend) / 2, label = .data$label),
         size = 2.5
       )
-    })
+    }) +
+    ggplot2::coord_equal(clip = "off") +
+    ggplot2::theme_void() +
+    ggplot2::theme(plot.margin = ggplot2::margin(10, 10, 10, 10)) +
+    c(
+      list(ggplot2::scale_fill_manual(values = .mdRoleColors, drop = TRUE, name = "compartment")),
+      if (flows) {
+        list(
+          ggplot2::scale_linetype_manual(
+            values = c(
+              "mass transfer" = "solid",
+              stimulation = "dashed",
+              inhibition = "dotted",
+              modulation = "dotdash"
+            ),
+            name = "flow"
+          )
+        )
+      }
+    )
 }

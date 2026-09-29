@@ -19,9 +19,9 @@
   grows with the number of simulations.  The figures look the same.
 
 * The `engine = "ggplot2"` diagram from `modelDiagram()` no longer keeps its
-  layer data and a second copy of itself in its environments, which added
-  about 0.9 MB (up to 3 MB for large models) to each saved diagram.  The
-  diagrams look the same.
+  layer data and a second copy of itself in its environments, and adds its
+  scales last; together about 1 MB (up to 3.4 MB for large models) less for
+  each saved diagram.  The diagrams look the same.
 
 * The `bootplot` figure that `plot()` includes for a fit with bootstrap
   results no longer carries the frame of `plot()`, with the fit, the plotting

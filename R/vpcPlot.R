@@ -563,19 +563,23 @@ vpcPlot <- function(
   force(title)
   force(log_y)
   stats[c("sim", "data", "strat.split")] <- NULL
+  # one `+`, since each `+` stores another copy of tidyvpc's scales (see
+  # `.plotData()`)
   plot(stats) +
-    (if (!is.null(xlab)) {
-      ggplot2::xlab(xlab)
-    }) +
-    (if (!is.null(ylab)) {
-      ggplot2::ylab(ylab)
-    }) +
-    (if (!is.null(title)) {
-      ggplot2::ggtitle(title)
-    }) +
-    (if (log_y) {
-      xgxr::xgx_scale_y_log10()
-    })
+    c(
+      if (!is.null(xlab)) {
+        list(ggplot2::xlab(xlab))
+      },
+      if (!is.null(ylab)) {
+        list(ggplot2::ylab(ylab))
+      },
+      if (!is.null(title)) {
+        list(ggplot2::ggtitle(title))
+      },
+      if (log_y) {
+        list(xgxr::xgx_scale_y_log10())
+      }
+    )
 }
 
 #' @rdname vpcPlot
