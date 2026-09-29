@@ -18,6 +18,11 @@
   34 MB ('tidyvpc').  The 'vpc' figure now takes about 3 MB, and neither
   grows with the number of simulations.  The figures look the same.
 
+* The `engine = "ggplot2"` diagram from `modelDiagram()` no longer keeps its
+  layer data and a second copy of itself in its environments, which added
+  about 0.9 MB (up to 3 MB for large models) to each saved diagram.  The
+  diagrams look the same.
+
 # nlmixr2plot 5.2.0
 
 * Added automatic model diagrams (#10).  `modelGraph()` parses a model's

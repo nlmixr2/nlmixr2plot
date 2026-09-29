@@ -164,6 +164,31 @@ test_that("modelDiagram engines", {
   expect_s3_class(plot(g), "ggplot")
 })
 
+test_that("the ggplot2 diagram holds its data only in $data", {
+  # Each layer selects its rows of `$data`, so the environments the figure
+  # keeps (aes() and layer environments) hold neither the layer data frames
+  # nor a copy of the figure, which a saved diagram would write out again.
+  for (.labels in c(FALSE, TRUE)) {
+    p <- suppressMessages(modelDiagram(.pkTurnover, engine = "ggplot2", labels = .labels))
+    expect_identical(.figureHeldData(p), character(0), info = paste("labels =", .labels))
+  }
+  expect_equal(p$data$.layer, rep(c("node", "flow"), c(4L, 6L)))
+  expect_equal(p$data$name[1:4], c("depot", "gut", "center", "effect"))
+  expect_equal(p$data$label[5:6], c("ktr * depot", "ka * gut"))
+
+  # without flows, the figure has only the compartments
+  m <- rxode2::rxode2({
+    d/dt(A) = 0
+  })
+  p <- modelDiagram(m, engine = "ggplot2", labels = TRUE)
+  expect_identical(.figureHeldData(p), character(0))
+  expect_equal(p$data$.layer, "node")
+  expect_equal(
+    unname(vapply(p$layers, function(l) class(l$geom)[1], character(1))),
+    c("GeomTile", "GeomText", "GeomText", "GeomBlank")
+  )
+})
+
 test_that("bidirectional transfer is drawn once in DOT", {
   m <- rxode2::rxode2({
     d/dt(central) = -k12*central + k21*periph - kel*central
@@ -577,7 +602,7 @@ test_that("ggplot2 arrows between the same compartments do not overlap", {
       inherits(l$geom, "GeomSegment")
     },
     logical(1)
-  ))]]$data
+  ))]]$layer_data(p$data)
   seg <- seg[seg$flow != "mass transfer", ]
   expect_equal(nrow(seg), 2L)
   expect_false(isTRUE(all.equal(seg$y[1], seg$y[2])))
@@ -1036,7 +1061,7 @@ test_that("lag, F, rate and dur are annotations on their compartment", {
       inherits(l$geom, "GeomText") &&
         grepl("annotation", paste(deparse(l$mapping$label), collapse = ""), fixed = TRUE)
     ) {
-      l$data$annotation
+      l$layer_data(p$data)$annotation
     }
   })))
   expect_equal(txt, c("lag = tlag\nF = fbio", "rate = 2\ndur = 1"))
