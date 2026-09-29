@@ -221,7 +221,7 @@ vpcPlot <- function(
     .sim <- .vpcCensDropStray(.sim, .simCens, stratify)
     .obs <- .vpcCensDropStray(.obs, .obsCens, stratify)
     rxode2::rxReq("vpc")
-    return(vpc::vpc_cens(
+    .db <- vpc::vpc_cens(
       sim = .sim,
       sim_cols = .simCens,
       obs = .obs,
@@ -241,9 +241,14 @@ vpcPlot <- function(
       vpc_theme = vpc_theme,
       facet = facet,
       labeller = labeller,
-      vpcdb = vpcdb,
+      vpcdb = TRUE,
       verbose = verbose
-    ))
+    )
+    if (vpcdb) {
+      return(.db)
+    }
+    # vpc_cens() plots its vpcdb with log_y = FALSE
+    return(.vpcDbFigure(.db, vpc_theme = vpc_theme, smooth = smooth, log_y = FALSE, title = title))
   }
   .simCols <- list(
     id = "id",
@@ -417,21 +422,9 @@ vpcPlot <- function(
         warning(sub("\n+$", "", w), call. = FALSE)
       })
     }
-    .vpcGg <- plot(.vpcStats[[1]])
-    if (!is.null(xlab)) {
-      .vpcGg <- .vpcGg + ggplot2::xlab(xlab)
-    }
-    if (!is.null(ylab)) {
-      .vpcGg <- .vpcGg + ggplot2::ylab(ylab)
-    }
-    if (!is.null(title)) {
-      .vpcGg <- .vpcGg + ggplot2::ggtitle(title)
-    }
+    .vpcGg <- .tidyvpcFigure(.vpcStats[[1]], xlab = xlab, ylab = ylab, title = title, log_y = log_y)
     if (!missing(show)) {
       warning("tidyvpc does not support showing specific percentiles, showing all", immediate. = TRUE, call. = FALSE)
-    }
-    if (log_y) {
-      .vpcGg <- .vpcGg + xgxr::xgx_scale_y_log10()
     }
     .vpcGg
   } else {
@@ -458,7 +451,7 @@ vpcPlot <- function(
       .lloq <- NULL
       .uloq <- NULL
     }
-    vpc::vpc_vpc(
+    .db <- vpc::vpc_vpc(
       sim = .sim,
       sim_cols = .simCols,
       obs = .obs,
@@ -484,10 +477,105 @@ vpcPlot <- function(
       facet = facet,
       scales = scales,
       labeller = labeller,
-      vpcdb = vpcdb,
+      vpcdb = TRUE,
       verbose = verbose
     )
+    if (vpcdb) {
+      return(.db)
+    }
+    .vpcDbFigure(.db, vpc_theme = vpc_theme, smooth = smooth, log_y = log_y, title = title)
   }
+}
+
+#' Draw a 'vpc' VPC from its vpcdb
+#'
+#' `vpc::vpc_vpc()` and `vpc::vpc_cens()` build their figure in frames that
+#' each bind the whole vpcdb, the simulation included: the `geom_*()` and
+#' facet helpers and the `ggplot()` method.  A figure keeps those frames (see
+#' `.plotData()`), and `serialize()` writes the vpcdb out once for each of
+#' them, so a saved VPC carried about a dozen copies of the simulation.  Ask
+#' them for the vpcdb instead (`vpcdb = TRUE`) and draw it here with
+#' `vpc::plot_vpc()`, as they do, after `.vpcDbTrim()`.
+#'
+#' @param db vpcdb from `vpc::vpc_vpc()` or `vpc::vpc_cens()`
+#' @param vpc_theme,smooth,log_y,title passed to `vpc::plot_vpc()`, as
+#'   `vpc::vpc_vpc()` passes them (`vpc::vpc_cens()` uses `log_y = FALSE`)
+#' @return the VPC figure
+#' @noRd
+.vpcDbFigure <- function(db, vpc_theme, smooth, log_y, title) {
+  # an unforced argument would keep the caller's frame in the figure
+  force(vpc_theme)
+  force(smooth)
+  force(log_y)
+  force(title)
+  db <- .vpcDbTrim(db)
+  vpc::plot_vpc(db, vpc_theme = vpc_theme, smooth = smooth, log_y = log_y, title = title)
+}
+
+#' Keep only the parts of a vpcdb that 'vpc' draws
+#'
+#' `vpc::plot_vpc()` draws the VPC statistics (`vpc_dat`, `aggr_obs`) and the
+#' bins.  It reads `sim` and `obs` only to see whether they are present, except
+#' that the observed points (`show = list(obs_dv = TRUE)`) are drawn from the
+#' `idv` and `dv` columns of `obs`, faceted by the `stratify` columns.  So
+#' `sim` is cut to no rows and `obs` to no rows, or to those columns when the
+#' points are shown (`show` is resolved against `vpc::show_default` as
+#' `vpc::plot_vpc()` does).
+#'
+#' @param db vpcdb
+#' @return `db` with `sim` and `obs` cut down
+#' @noRd
+.vpcDbTrim <- function(db) {
+  if (!is.null(db$sim)) {
+    db$sim <- utils::head(db$sim, 0L)
+  }
+  if (!is.null(db$obs)) {
+    # vpc::plot_vpc() warns about unknown `show` elements itself
+    .show <- suppressWarnings(vpc::replace_list_elements(vpc::show_default[[db$type]], db$show))
+    if (isTRUE(.show$obs_dv)) {
+      db$obs <- db$obs[, intersect(c("idv", "dv", db$stratify), names(db$obs)), drop = FALSE]
+    } else {
+      db$obs <- utils::head(db$obs, 0L)
+    }
+  }
+  db
+}
+
+#' Draw a tidyvpc VPC
+#'
+#' tidyvpc builds its figure in a frame that binds the whole `tidyvpcobj`, so
+#' the figure kept the simulation (`sim`), the observed data as supplied
+#' (`data`) and its split by strata (`strat.split`).  Its plot does not read
+#' them, so they are dropped before plotting.  The figure can also keep the
+#' frame that calls `plot()` (as the `.GenericCallEnv` of the method's frame,
+#' which an unevaluated argument of tidyvpc's keeps), so that frame holds only
+#' the trimmed object: not the figure, and not `vpcPlot()`'s frame.
+#'
+#' @param stats `tidyvpcobj` from `tidyvpc::vpcstats()`
+#' @param xlab,ylab,title axis labels and title, or `NULL` for tidyvpc's own
+#' @param log_y log-scale the y axis
+#' @return the VPC figure
+#' @noRd
+.tidyvpcFigure <- function(stats, xlab, ylab, title, log_y) {
+  # an unforced argument would keep the caller's frame in the figure
+  force(xlab)
+  force(ylab)
+  force(title)
+  force(log_y)
+  stats[c("sim", "data", "strat.split")] <- NULL
+  plot(stats) +
+    (if (!is.null(xlab)) {
+      ggplot2::xlab(xlab)
+    }) +
+    (if (!is.null(ylab)) {
+      ggplot2::ylab(ylab)
+    }) +
+    (if (!is.null(title)) {
+      ggplot2::ggtitle(title)
+    }) +
+    (if (log_y) {
+      xgxr::xgx_scale_y_log10()
+    })
 }
 
 #' @rdname vpcPlot

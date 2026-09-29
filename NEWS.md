@@ -9,6 +9,15 @@
   individual plots could each serialize to hundreds of MB).  Each figure now
   stores its data once, in `$data`; the plots look the same.
 
+* The VPC figures from `vpcPlot()`, `vpcPlotTad()`, `vpcCens()` and
+  `vpcCensTad()` no longer carry the VPC simulation, and with `method =
+  "tidyvpc"` no longer carry the fit either.  'vpc' built its figure in
+  about a dozen frames that each held the whole simulation, and the tidyvpc
+  figure kept the frame of `vpcPlot()` itself, so saving a VPC of a
+  1500-observation fit with 50 simulations wrote 97 MB ('vpc') or up to
+  34 MB ('tidyvpc').  The 'vpc' figure now takes about 3 MB, and neither
+  grows with the number of simulations.  The figures look the same.
+
 # nlmixr2plot 5.2.0
 
 * Added automatic model diagrams (#10).  `modelGraph()` parses a model's
