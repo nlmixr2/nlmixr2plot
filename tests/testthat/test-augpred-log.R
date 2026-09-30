@@ -114,3 +114,18 @@ test_that("plot(augPred) supports log axes (#32)", {
     expect_true(.isLog(b$layout$panel_scales_y[[1]]))
   }
 })
+
+test_that("plot(augPred) titles each endpoint and nothing else", {
+  d <- data.frame(
+    id = factor(rep(1, 6)),
+    time = rep(c(0, 1, 2), 2),
+    values = c(1, 2, 3, 1.5, 2.5, 3.5),
+    ind = factor(rep(c("Pred", "Observed"), each = 3), c("Pred", "Observed")),
+    Endpoint = factor("cp")
+  )
+  class(d) <- c("nlmixr2AugPred", "data.frame")
+  expect_equal(plot(d)[[1]]$labels$title, "cp")
+  # the endpoint of an earlier plot is not the title of a later one
+  d$Endpoint <- NULL
+  expect_null(plot(d)[[1]]$labels$title)
+})

@@ -1,5 +1,3 @@
-.augPredEndpoint <- NULL
-
 #' Expand a paginated ggplot into one ggplot per page
 #'
 #' `ggtibble::as_gglist()` copies the plot for each page with
@@ -101,14 +99,24 @@
 #' @export
 #' @importFrom ggplot2 .data
 plot.nlmixr2AugPred <- function(x, y, ..., log = "") {
+  .augPredPlot(x, log = log, title = NULL)
+}
+
+#' Plot augPred data, one figure list for all of its endpoints
+#'
+#' @param x augPred data
+#' @param log see `plot.nlmixr2AugPred()`
+#' @param title plot title (the endpoint, or `NULL`)
+#' @return `ggtibble::gglist` of the figures
+#' @noRd
+.augPredPlot <- function(x, log, title) {
   .log <- .augPredLog(log)
   if (any(names(x) == "Endpoint")) {
     .ret <- list()
     # Skip endpoint levels without any rows (#44)
     for (.tmp in levels(droplevels(as.factor(x$Endpoint)))) {
-      utils::assignInMyNamespace(".augPredEndpoint", .tmp)
       .x <- x[which(x$Endpoint == .tmp), names(x) != "Endpoint"]
-      .r <- plot.nlmixr2AugPred(.x, log = log)
+      .r <- .augPredPlot(.x, log = log, title = .tmp)
       for (.k in seq_along(.r)) {
         .ret[[length(.ret) + 1L]] <- .r[[.k]]
       }
@@ -141,7 +149,7 @@ plot.nlmixr2AugPred <- function(x, y, ..., log = "") {
       dobs$.group <- factor(rep(NA, nrow(dobs)), levels = levels(dpred$.group))
       x <- rbind(dpred, dobs)
     }
-    .p <- .plotData(.augPredFigure(.log$x, .log$y, .augPredEndpoint), x)
+    .p <- .plotData(.augPredFigure(.log$x, .log$y, title), x)
     return(ggtibble::new_gglist(.paginate(.p, .augPredFacet)))
   }
 }

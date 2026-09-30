@@ -4,6 +4,9 @@
   arrow labels on a white background, so the arrow no longer runs
   through the label text.
 
+* `plot()` of an `augPred()` object no longer titles a single-endpoint
+  figure with the last endpoint of an earlier multiple-endpoint plot.
+
 * The figures from `plot()` of a fit, `traceplot()` and `plot()` of an
   `augPred()` object no longer carry the fit, the full plotting data or the
   other figures in their environments, so saving them (with `saveRDS()` or
