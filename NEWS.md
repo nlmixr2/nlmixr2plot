@@ -4,6 +4,37 @@
   arrow labels on a white background, so the arrow no longer runs
   through the label text.
 
+* `plot()` of an `augPred()` object no longer titles a single-endpoint
+  figure with the last endpoint of an earlier multiple-endpoint plot.
+
+* The figures from `plot()` of a fit, `traceplot()` and `plot()` of an
+  `augPred()` object no longer carry the fit, the full plotting data or the
+  other figures in their environments, so saving them (with `saveRDS()` or
+  as a 'targets' target) is far smaller.  Before, each figure's `aes()`,
+  facet and layer environments held the frame it was built in, and with it
+  the whole fit or every figure built before it (the trace plot and the
+  individual plots could each serialize to hundreds of MB).  Each figure now
+  stores its data once, in `$data`; the plots look the same.
+
+* The VPC figures from `vpcPlot()`, `vpcPlotTad()`, `vpcCens()` and
+  `vpcCensTad()` no longer carry the VPC simulation, and with `method =
+  "tidyvpc"` no longer carry the fit either.  'vpc' built its figure in
+  about a dozen frames that each held the whole simulation, and the tidyvpc
+  figure kept the frame of `vpcPlot()` itself, so saving a VPC of a
+  1500-observation fit with 50 simulations wrote 97 MB ('vpc') or up to
+  34 MB ('tidyvpc').  The 'vpc' figure now takes about 3 MB, and neither
+  grows with the number of simulations.  The figures look the same.
+
+* The `engine = "ggplot2"` diagram from `modelDiagram()` no longer keeps its
+  layer data and a second copy of itself in its environments, and adds its
+  scales last; together about 1 MB (up to 3.4 MB for large models) less for
+  each saved diagram.  The diagrams look the same.
+
+* The `bootplot` figure that `plot()` includes for a fit with bootstrap
+  results no longer carries the frame of `plot()`, with the fit, the plotting
+  data and every other figure: for theo_sd with 3 bootstrap samples it went
+  from 152 MB to 6 MB saved.
+
 # nlmixr2plot 5.2.0
 
 * Added automatic model diagrams (#10).  `modelGraph()` parses a model's
