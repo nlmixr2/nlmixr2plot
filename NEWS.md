@@ -1,5 +1,9 @@
 # nlmixr2plot (development version)
 
+* `modelDiagram(..., engine = "ggplot2", labels = TRUE)` now draws the
+  arrow labels on a white background, so the arrow no longer runs
+  through the label text.
+
 * The figures from `plot()` of a fit, `traceplot()` and `plot()` of an
   `augPred()` object no longer carry the fit, the full plotting data or the
   other figures in their environments, so saving them (with `saveRDS()` or
