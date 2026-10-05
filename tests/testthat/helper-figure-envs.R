@@ -130,3 +130,21 @@
 .figureSizeWithoutData <- function(fig) {
   .figureSize(fig) - .figureSize(fig$data)
 }
+
+# Number of the earlier scales lists that a figure's scales (`p$scales`) keep
+# and that already held scales.  Each `+` clones the plot's scales list, and
+# the clone inherits from (so keeps) the list it was cloned from; a saved
+# figure writes every one of them out.  Adding the scales in the last `+`
+# leaves none.
+.figureKeptScales <- function(scales) {
+  .n <- 0L
+  repeat {
+    scales <- tryCatch(get("super", envir = scales)(), error = function(e) NULL)
+    if (is.null(scales) || !inherits(scales, "ScalesList")) {
+      return(.n)
+    }
+    if (length(scales$scales) > 0L) {
+      .n <- .n + 1L
+    }
+  }
+}

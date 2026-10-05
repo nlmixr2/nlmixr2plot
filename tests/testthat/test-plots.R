@@ -97,22 +97,15 @@ test_that("test plots with vdiffr", {
 
   # Scales go in a figure's last `+`: each `+` clones the plot's scales and
   # the clone keeps the one before it, so a scale added earlier is stored
-  # again for every later `+` (about 50 KB a time for an xgxr log scale).  The
-  # figure's scales therefore cost less than one such clone more than the
-  # same scales added to an empty plot.
-  .nCens <- .censLevels(.dat)
-  for (.case in list(
-    list(nm = "dv_pred_ipred_log", scales = c(.logScales(TRUE, TRUE), .censColor(.nCens))),
-    list(nm = "IWRES_TIME_log", scales = c(.censColor(.nCens), .logScales(TRUE, FALSE)))
-  )) {
-    .ref <- ggplot2::ggplot() + .case$scales
-    .refSize <- length(serialize(.ref$scales, NULL))
-    .oneClone <- length(serialize((.ref + ggplot2::labs())$scales, NULL)) - .refSize
-    expect_lt(
-      length(serialize(.small[[.case$nm]]$scales, NULL)) - .refSize,
-      .oneClone,
-      label = sprintf("extra size of the scales of %s (bytes)", .case$nm)
-    )
+  # again for every later `+` (about 50 KB a time for an xgxr log scale).  So
+  # the figure keeps no earlier scales list that held scales.  (Comparing
+  # serialized sizes instead depends on the R build: on R-devel one clone
+  # serializes to several times its size on R 4.6.)
+  .ref <- ggplot2::ggplot() + .logScales(TRUE, TRUE)
+  expect_identical(.figureKeptScales(.ref$scales), 0L)
+  expect_gt(.figureKeptScales((.ref + ggplot2::labs())$scales), 0L)
+  for (.nm in c("dv_pred_ipred_log", "IWRES_TIME_log")) {
+    expect_identical(.figureKeptScales(.small[[.nm]]$scales), 0L, label = sprintf("earlier scales kept by %s", .nm))
   }
 
   #vdiffr::expect_doppelganger("vpc plot", vp)
