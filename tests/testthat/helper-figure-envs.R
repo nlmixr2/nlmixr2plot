@@ -22,11 +22,15 @@
 # NULL); answering with a string writes only that string, so each environment
 # is visited on its own and nothing is evaluated.  This is how the
 # environments of unevaluated promises (which serialize() writes with their
-# expressions) are found without forcing them.
+# expressions) are found without forcing them.  Source files are skipped as
+# in .figureSize().
 .figureFindEnvs <- function(x, acc, from) {
   serialize(x, NULL, refhook = function(e) {
     if (!is.environment(e) || identical(e, x)) {
       return(NULL)
+    }
+    if (inherits(e, "srcfile")) {
+      return("srcfile")
     }
     for (.e in acc$envs) {
       if (identical(.e, e)) {
@@ -109,8 +113,13 @@
 }
 
 # Serialized size (bytes) of `x`, apart from the source files that srcrefs
-# point to: devtools::load_all() keeps them on the package's functions and
-# calls, which a figure can reach, but an installed package does not
+# point to.  devtools::load_all() keeps them on this package's functions and
+# calls, and a package installed with its source kept (as GitHub Actions
+# installs rxode2, whose StatCens ggproto is in a figure with geom_cens()) on
+# its own; a figure reaches them through those functions.  A source file's
+# environment leads on to every environment of its package (the lazy-load
+# table), with whatever those hold at the time, so it would count the whole
+# session.  Packages are installed without their source by default.
 .figureSize <- function(x) {
   length(serialize(x, NULL, refhook = function(e) {
     if (inherits(e, "srcfile")) "srcfile" else NULL
