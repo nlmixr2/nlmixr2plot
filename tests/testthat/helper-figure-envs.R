@@ -15,14 +15,15 @@
 }
 
 # Add to `acc$envs` (and `acc$todo`) the environments that serialize() meets
-# while writing `x`, apart from `x` itself.  serialize() asks `refhook` about
-# each environment it would write in full (and each external pointer and weak
-# reference, which it writes as usual when the hook returns NULL); answering
-# with a string writes only that string, so each environment is visited on its
-# own and nothing is evaluated.  This is how the environments of unevaluated
-# promises (which serialize() writes with their expressions) are found
-# without forcing them.
-.figureFindEnvs <- function(x, acc) {
+# while writing `x`, apart from `x` itself, and to `acc$from` the position in
+# `acc$envs` of `x` (`from`; 0 for the figure itself).  serialize() asks
+# `refhook` about each environment it would write in full (and each external
+# pointer and weak reference, which it writes as usual when the hook returns
+# NULL); answering with a string writes only that string, so each environment
+# is visited on its own and nothing is evaluated.  This is how the
+# environments of unevaluated promises (which serialize() writes with their
+# expressions) are found without forcing them.
+.figureFindEnvs <- function(x, acc, from) {
   serialize(x, NULL, refhook = function(e) {
     if (!is.environment(e) || identical(e, x)) {
       return(NULL)
@@ -33,40 +34,74 @@
       }
     }
     acc$envs <- c(acc$envs, list(e))
-    acc$todo <- c(acc$todo, list(e))
+    acc$from <- c(acc$from, from)
+    acc$todo <- c(acc$todo, length(acc$envs))
     "new"
   })
   invisible()
 }
 
-# Every environment that serialize() writes out in full for `x`
+# Every environment that serialize() writes out in full for `x`, with the
+# attribute `from`: for each, the position of the environment it was found
+# in (0 for `x` itself)
 .figureEnvs <- function(x) {
   .acc <- new.env(parent = emptyenv())
   .acc$envs <- list()
-  .acc$todo <- list()
-  .figureFindEnvs(x, .acc)
+  .acc$from <- integer(0)
+  .acc$todo <- integer(0)
+  .figureFindEnvs(x, .acc, 0L)
   while (length(.acc$todo) > 0L) {
-    .e <- .acc$todo[[1L]]
+    .i <- .acc$todo[[1L]]
     .acc$todo <- .acc$todo[-1L]
-    .figureFindEnvs(.e, .acc)
+    .figureFindEnvs(.acc$envs[[.i]], .acc, .i)
   }
-  .acc$envs
+  structure(.acc$envs, from = .acc$from)
+}
+
+# How the figure reaches environment `i` of `envs` (from .figureEnvs()), as
+# "figure > a > b": each environment is named by its ggproto class, or by its
+# first bindings
+.figureEnvPath <- function(envs, i) {
+  .from <- attr(envs, "from")
+  .path <- character(0)
+  while (i > 0L) {
+    .e <- envs[[i]]
+    .path <- c(
+      if (inherits(.e, "ggproto")) {
+        class(.e)[1]
+      } else {
+        paste0("{", paste(utils::head(ls(.e, all.names = TRUE), 4L), collapse = ","), "}")
+      },
+      .path
+    )
+    i <- .from[[i]]
+  }
+  paste(c("figure", .path), collapse = " > ")
 }
 
 # Data frames (more than one row), fits and plots bound in the environments a
-# figure references, as "name <class>" strings.  A figure should hold its
-# data only in `$data`; one-row data frames are ggplot2's own (like the
-# intercept and slope of geom_abline()).  Reading a binding forces a promise
-# bound there, so the bindings are read from a copy of the figure after all
-# of its environments have been found.
+# figure references, as "name <class>" strings.  The first one found in each
+# environment also says how the figure reaches that environment (see
+# .figureEnvPath()), so a failing test shows what keeps it.  A figure should
+# hold its data only in `$data`; one-row data frames are ggplot2's own (like
+# the intercept and slope of geom_abline()).  Reading a binding forces a
+# promise bound there, so the bindings are read from a copy of the figure
+# after all of its environments have been found.
 .figureHeldData <- function(fig) {
   fig <- unserialize(serialize(fig, NULL))
+  .envs <- .figureEnvs(fig)
   .ret <- character(0)
-  for (.e in .figureEnvs(fig)) {
+  for (.i in seq_along(.envs)) {
+    .e <- .envs[[.i]]
+    .first <- TRUE
     for (.nm in setdiff(ls(.e, all.names = TRUE), "...")) {
       .v <- .figureEnvValue(.e, .nm)
       if ((is.data.frame(.v) && nrow(.v) > 1L) || inherits(.v, c("ggplot", "gglist"))) {
-        .ret <- c(.ret, paste0(.nm, " <", class(.v)[1], ">"))
+        .ret <- c(
+          .ret,
+          paste0(.nm, " <", class(.v)[1], ">", if (.first) paste0(" in ", .figureEnvPath(.envs, .i)))
+        )
+        .first <- FALSE
       }
     }
   }
