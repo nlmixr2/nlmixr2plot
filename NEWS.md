@@ -31,9 +31,10 @@
   each saved diagram.  The diagrams look the same.
 
 * The `bootplot` figure that `plot()` includes for a fit with bootstrap
-  results no longer carries the frame of `plot()`, with the fit, the plotting
-  data and every other figure: for theo_sd with 3 bootstrap samples it went
-  from 152 MB to 6 MB saved.
+  results no longer carries the frame of `plot()`, with the plotting data and
+  every other figure: for theo_sd with 3 bootstrap samples it went from
+  152 MB to 6 MB saved.  It still carries the fit, which
+  `nlmixr2extra::bootplot()` keeps in its own frame.
 
 # nlmixr2plot 5.2.0
 
