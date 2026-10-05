@@ -363,8 +363,14 @@ vpcPlot <- function(
     .tidySim <- eval(.tidySim)
 
     if (!is.null(stratify)) {
-      .strat <- str2lang(paste0("tidyvpc::stratify(.tidySim, ~", paste(stratify, collapse = "+"), ")"))
-      .tidySim <- eval(.strat)
+      # The formula's environment is kept by the figure (in tidyvpc's facet
+      # and the `terms` of its strata), so make it in the base environment,
+      # not here with the fit and the simulation; its variables are columns
+      # of the data.
+      .tidySim <- tidyvpc::stratify(
+        .tidySim,
+        stats::as.formula(paste0("~", paste(stratify, collapse = "+")), env = baseenv())
+      )
     }
     .tidyBin <- ".tidySim"
     .binless <- FALSE

@@ -209,13 +209,15 @@ test_that("VPC figures keep neither the fit nor the simulation", {
   censData$CENS[censData$DV < 3 & censData$AMT == 0] <- 1
   censData$CENS[censData$DV >= 3 & censData$AMT == 0] <- 0
   censData$DV[censData$CENS == 1] <- 3
+  censData$SEX <- censData$ID %% 2L
   fit <- try(
     suppressMessages(
       nlmixr2est::nlmixr(
         one.cmt,
         censData,
         est = "focei",
-        control = nlmixr2est::foceiControl(print = 0, eval.max = 10)
+        control = nlmixr2est::foceiControl(print = 0, eval.max = 10),
+        table = list(keep = "SEX")
       )
     ),
     silent = TRUE
@@ -227,7 +229,9 @@ test_that("VPC figures keep neither the fit nor the simulation", {
     "vpcPlot(method = 'tidyvpc')" = list(vpcPlot, list(method = "tidyvpc")),
     "vpcPlotTad(method = 'vpc')" = list(vpcPlotTad, list(method = "vpc")),
     "vpcCens(method = 'vpc')" = list(vpcCens, list(method = "vpc")),
-    "vpcCens(method = 'tidyvpc')" = list(vpcCens, list(method = "tidyvpc"))
+    "vpcCens(method = 'tidyvpc')" = list(vpcCens, list(method = "tidyvpc")),
+    # the stratification formula is kept by tidyvpc's facet and strata
+    "vpcPlot(method = 'tidyvpc', stratify = 'SEX')" = list(vpcPlot, list(method = "tidyvpc", stratify = "SEX"))
   )
   for (.nm in names(.cases)) {
     .f <- .cases[[.nm]][[1]]
