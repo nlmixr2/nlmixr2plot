@@ -1,13 +1,9 @@
-.augPredEndpoint <- NULL
-
 #' Expand a paginated ggplot into one ggplot per page
 #'
 #' `ggtibble::as_gglist()` copies the plot for each page with
-#' `unserialize(serialize(plot))`.  The plots built here are created inside
-#' functions that hold the whole nlmixr2 fit, so their aes environments drag
-#' that object along and each copy costs seconds.  Re-adding the paginated
-#' facet with a different `page` produces the same plot without walking the
-#' environment.
+#' `unserialize(serialize(plot))`, which writes out the data and every
+#' environment the plot references.  Re-adding the paginated facet with a
+#' different `page` produces the same plot without that copy.
 #'
 #' @param p ggplot whose facet is a `ggforce::facet_wrap_paginate()` for page 1
 #' @param facet function of a page number returning the facet for that page
@@ -24,8 +20,7 @@
 #' Parse the base-R style `log` argument for augPred plots
 #'
 #' @param log character string containing any of `"x"` and `"y"`
-#' @return list with logical `x` and `y` elements and `scales`, a list of
-#'   ggplot2 scales to add to the plot
+#' @return list with logical `x` and `y` elements (log-scaled axes)
 #' @noRd
 .augPredLog <- function(log) {
   if (is.null(log) || (is.logical(log) && length(log) == 1L && !is.na(log) && !log)) {
@@ -39,16 +34,7 @@
   }
   .x <- grepl("x", log, fixed = TRUE)
   .y <- grepl("y", log, fixed = TRUE)
-  .xgxr <- getOption("rxode2.xgxr", TRUE) &&
-    requireNamespace("xgxr", quietly = TRUE)
-  .scales <- list()
-  if (.x) {
-    .scales <- c(.scales, list(if (.xgxr) xgxr::xgx_scale_x_log10() else ggplot2::scale_x_log10()))
-  }
-  if (.y) {
-    .scales <- c(.scales, list(if (.xgxr) xgxr::xgx_scale_y_log10() else ggplot2::scale_y_log10()))
-  }
-  list(x = .x, y = .y, scales = .scales)
+  list(x = .x, y = .y)
 }
 
 #' Plot a nlmixr2 augPred object
@@ -113,24 +99,33 @@
 #' @export
 #' @importFrom ggplot2 .data
 plot.nlmixr2AugPred <- function(x, y, ..., log = "") {
+  .augPredPlot(x, log = log, title = NULL)
+}
+
+#' Plot augPred data, one figure list for all of its endpoints
+#'
+#' @param x augPred data
+#' @param log see `plot.nlmixr2AugPred()`
+#' @param title plot title (the endpoint, or `NULL`)
+#' @return `ggtibble::gglist` of the figures
+#' @noRd
+.augPredPlot <- function(x, log, title) {
   .log <- .augPredLog(log)
   if (any(names(x) == "Endpoint")) {
     .ret <- list()
     # Skip endpoint levels without any rows (#44)
     for (.tmp in levels(droplevels(as.factor(x$Endpoint)))) {
-      utils::assignInMyNamespace(".augPredEndpoint", .tmp)
       .x <- x[which(x$Endpoint == .tmp), names(x) != "Endpoint"]
-      .r <- plot.nlmixr2AugPred(.x, log = log)
+      .r <- .augPredPlot(.x, log = log, title = .tmp)
       for (.k in seq_along(.r)) {
         .ret[[length(.ret) + 1L]] <- .r[[.k]]
       }
     }
     return(ggtibble::new_gglist(.ret))
   } else {
-    dobs <- x[x$ind == "Observed", ]
-    dpred <- x[x$ind != "Observed", ]
-    .lineAes <- NULL
     if (.log$x || .log$y) {
+      dobs <- x[.augPredIsObserved(x), ]
+      dpred <- x[!.augPredIsObserved(x), ]
       # Non-positive (and missing) values cannot be drawn on a log axis.  Drop them, but
       # start a new line group after each dropped prediction so the line
       # breaks at the gap instead of bridging it.
@@ -150,20 +145,73 @@ plot.nlmixr2AugPred <- function(x, y, ..., log = "") {
       .seg <- stats::ave(as.integer(!.okPred), dpred$id, dpred$ind, FUN = cumsum)
       dpred$.group <- interaction(dpred$id, dpred$ind, .seg, drop = TRUE)
       dpred <- dpred[.okPred, ]
-      x <- rbind(dpred[, names(dpred) != ".group"], dobs)
-      .lineAes <- ggplot2::aes(group = .data$.group)
+      # Observations are points, not lines, so they have no line group
+      dobs$.group <- factor(rep(NA, nrow(dobs)), levels = levels(dpred$.group))
+      x <- rbind(dpred, dobs)
     }
-    .facet <- function(page) {
-      ggforce::facet_wrap_paginate(~id, nrow = 4, ncol = 4, page = page)
-    }
-    .p <-
-      ggplot2::ggplot(x, ggplot2::aes(.data$time, .data$values, col = .data$ind)) +
-      ggplot2::geom_line(.lineAes, data = dpred, linewidth = 1.2) +
-      ggplot2::geom_point(data = dobs) +
-      .facet(1L) +
-      .log$scales +
-      rxode2::rxTheme() +
-      ggplot2::ggtitle(label = .augPredEndpoint)
-    return(ggtibble::new_gglist(.paginate(.p, .facet)))
+    .p <- .plotData(.augPredFigure(.log$x, .log$y, title), x)
+    return(ggtibble::new_gglist(.paginate(.p, .augPredFacet)))
   }
+}
+
+#' Which augPred rows are observations
+#'
+#' @param data augPred data
+#' @return logical vector, `TRUE` for observed (not predicted) rows
+#' @noRd
+.augPredIsObserved <- function(data) {
+  data$ind == "Observed"
+}
+
+#' Layer data for the augPred prediction lines
+#'
+#' The augPred figure holds one data frame (observations and predictions) and
+#' each layer selects its rows at build time, so the figure does not store
+#' separate copies for its layers.
+#'
+#' @param data plot data
+#' @return the prediction rows of `data`
+#' @noRd
+.augPredPredicted <- function(data) {
+  data[!.augPredIsObserved(data), ]
+}
+
+#' Layer data for the augPred observation points
+#'
+#' @inheritParams .augPredPredicted
+#' @return the observation rows of `data`
+#' @noRd
+.augPredObserved <- function(data) {
+  data[.augPredIsObserved(data), ]
+}
+
+#' augPred figure, without its data
+#'
+#' @param logX,logY log-scale the x or y axis.  On a log axis the prediction
+#'   lines are grouped by the `.group` column, which splits them where
+#'   non-positive values were dropped.
+#' @param title plot title (the endpoint, or `NULL`)
+#' @return ggplot without data, faceted for page 1; see `.plotData()`
+#' @noRd
+.augPredFigure <- function(logX, logY, title) {
+  ggplot2::ggplot(mapping = ggplot2::aes(.data$time, .data$values, col = .data$ind)) +
+    ggplot2::geom_line(
+      if (logX || logY) ggplot2::aes(group = .data$.group),
+      data = .augPredPredicted,
+      linewidth = 1.2
+    ) +
+    ggplot2::geom_point(data = .augPredObserved) +
+    .augPredFacet(1L) +
+    rxode2::rxTheme() +
+    ggplot2::ggtitle(label = title) +
+    .logScales(x = logX, y = logY)
+}
+
+#' Facet for one page of augPred plots
+#'
+#' @param page page number
+#' @return a `ggforce::facet_wrap_paginate()` facet
+#' @noRd
+.augPredFacet <- function(page) {
+  ggforce::facet_wrap_paginate(~id, nrow = 4, ncol = 4, page = page)
 }
