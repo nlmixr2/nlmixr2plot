@@ -59,7 +59,7 @@ The `fitResult` payload fields are:
 | Field | Contents |
 |---|---|
 | `fit` | The fit the plots belong to, or `NULL` for `plot(augPred(...))`. |
-| `result` | The value the function returns: the `ggtibble::gglist` of plots from `plot(fit)` or `plot(augPred(...))`, or the `ggplot` from `vpcPlot()`. |
+| `result` | The value the function returns: the `ggtibble::gglist` of plots from `plot(fit)` or `plot(augPred(...))`, or the `ggplot` from `vpcPlot()` (the vpc database with `vpcdb = TRUE`). |
 | `kind` | `"plot"`, `"vpcPlot"` or `"augPredPlot"`. |
 | `call` | The call, normalized by `rxode2` so its head is the `kind` (e.g. `plot(fit)`, `vpcPlot(fit, n = 5)` or `augPredPlot(ap)`) and large inlined values are replaced by markers. |
 | `data` | For `"augPredPlot"` only, the `augPred()` data that was plotted; otherwise `NULL`. |
