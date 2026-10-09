@@ -1,5 +1,11 @@
 # nlmixr2plot (development version)
 
+* `plot()` of a fit, `vpcPlot()` and `plot()` of an `augPred()` object
+  now emit one `fitResult` event on the rxode2 event bus (when rxode2
+  has one) with the plots they made, so loggers such as nlmixr2log can
+  store them with the fit.  Simulations done inside `vpcPlot()` emit
+  nothing.  Without a listener nothing changes.
+
 * `modelDiagram(..., engine = "ggplot2", labels = TRUE)` now draws the
   arrow labels on a white background, so the arrow no longer runs
   through the label text.
