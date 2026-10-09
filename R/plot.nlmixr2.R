@@ -291,6 +291,11 @@
 #' }
 #' @export
 plot.nlmixr2FitData <- function(x, covariate = NULL, ...) {
+  ## event bus: one fitResult with the plots (see rxEvents.R)
+  force(x)
+  .nlmixr2plotEventEnter()
+  .evCall <- sys.call()
+  on.exit(.nlmixr2plotEventExit(returnValue(), x, .evCall, "plot"), add = TRUE)
   .lst <- list()
   object <- x
   .tp <- traceplot(x)

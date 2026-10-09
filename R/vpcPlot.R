@@ -94,6 +94,13 @@ vpcPlot <- function(
   method = c("vpc", "tidyvpc")
 ) {
   force(idv)
+  ## event bus: the simulation inside is silent; one fitResult with the
+  ## plot on exit, for the fit (read at exit, after a supplied simulation is
+  ## replaced by its fit) (see rxEvents.R)
+  force(fit)
+  .nlmixr2plotEventEnter()
+  .evCall <- sys.call()
+  on.exit(.nlmixr2plotEventExit(returnValue(), fit, .evCall, "vpcPlot"), add = TRUE)
   if (missing(method)) {
     method <- ifelse(requireNamespace("vpc", quietly = TRUE), "vpc", "tidyvpc")
   } else {
