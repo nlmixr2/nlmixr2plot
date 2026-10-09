@@ -10,7 +10,9 @@
 
 #' @noRd
 .nlmixr2plotEventEnter <- function() {
-  if (.nlmixr2plotEventBus()) getExportedValue("rxode2", ".rxEventEnter")()
+  if (.nlmixr2plotEventBus()) {
+    getExportedValue("rxode2", ".rxEventEnter")()
+  }
   invisible()
 }
 
@@ -24,6 +26,5 @@
   if (is.null(result)) {
     return(.exit())
   }
-  .exit("fitResult", fit = fit, result = result, kind = kind, call = call, data = data,
-        fun = kind)
+  .exit("fitResult", fit = fit, result = result, kind = kind, call = call, data = data, fun = kind)
 }

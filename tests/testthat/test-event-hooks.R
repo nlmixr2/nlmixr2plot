@@ -1,5 +1,4 @@
-skip_if_not(exists("rxEventEmit", envir = asNamespace("rxode2"), inherits = FALSE),
-            "rxode2 has no event bus")
+skip_if_not(exists("rxEventEmit", envir = asNamespace("rxode2"), inherits = FALSE), "rxode2 has no event bus")
 skip_if_not_installed("nlmixr2est")
 skip_if_not_installed("nlmixr2data")
 
@@ -22,9 +21,11 @@ skip_if_not_installed("nlmixr2data")
     linCmt() ~ add(add.sd)
   })
 }
-.fit <- function() suppressMessages(suppressWarnings(
-  nlmixr2est::nlmixr2(.one, nlmixr2data::theo_sd, est = "posthoc")
-))
+.fit <- function() {
+  suppressMessages(suppressWarnings(
+    nlmixr2est::nlmixr2(.one, nlmixr2data::theo_sd, est = "posthoc")
+  ))
+}
 
 test_that("plot(fit) emits one fitResult with the plot list", {
   fit <- .fit()
