@@ -1,4 +1,4 @@
-# nlmixr2plot 5.1.0.9000
+# nlmixr2plot (development version)
 
 * `plot()` no longer fails on a fit with more than one variance level. A model
   with between-occasion variability reports `omega` as a list holding one matrix
@@ -8,11 +8,137 @@
   guard now asks whether the fit reports any between-subject eta, which is what
   the BSV plots need and does not depend on the number of variance levels.
 
+* `modelDiagram(..., engine = "ggplot2", labels = TRUE)` now draws the
+  arrow labels on a white background, so the arrow no longer runs
+  through the label text.
+
+* `plot()` of an `augPred()` object no longer titles a single-endpoint
+  figure with the last endpoint of an earlier multiple-endpoint plot.
+
+* The figures from `plot()` of a fit, `traceplot()` and `plot()` of an
+  `augPred()` object no longer carry the fit, the full plotting data or the
+  other figures in their environments, so saving them (with `saveRDS()` or
+  as a 'targets' target) is far smaller.  Before, each figure's `aes()`,
+  facet and layer environments held the frame it was built in, and with it
+  the whole fit or every figure built before it (the trace plot and the
+  individual plots could each serialize to hundreds of MB).  Each figure now
+  stores its data once, in `$data`; the plots look the same.
+
+* The VPC figures from `vpcPlot()`, `vpcPlotTad()`, `vpcCens()` and
+  `vpcCensTad()` no longer carry the VPC simulation, and with `method =
+  "tidyvpc"` no longer carry the fit either.  'vpc' built its figure in
+  about a dozen frames that each held the whole simulation, and the tidyvpc
+  figure kept the frame of `vpcPlot()` itself, so saving a VPC of a
+  1500-observation fit with 50 simulations wrote 97 MB ('vpc') or up to
+  34 MB ('tidyvpc').  The 'vpc' figure now takes about 3 MB, and neither
+  grows with the number of simulations.  The figures look the same.
+
+* The `engine = "ggplot2"` diagram from `modelDiagram()` no longer keeps its
+  layer data and a second copy of itself in its environments, and adds its
+  scales last; together about 1 MB (up to 3.4 MB for large models) less for
+  each saved diagram.  The diagrams look the same.
+
+* The `bootplot` figure that `plot()` includes for a fit with bootstrap
+  results no longer carries the frame of `plot()`, with the plotting data and
+  every other figure: for theo_sd with 3 bootstrap samples it went from
+  152 MB to 6 MB saved.  It still carries the fit, which
+  `nlmixr2extra::bootplot()` keeps in its own frame.
+
+# nlmixr2plot 5.2.0
+
+* Added automatic model diagrams (#10).  `modelGraph()` parses a model's
+  differential equations (from a model function, `rxode2` model/UI or an
+  `nlmixr2` fit) into a graph of compartments and flows (mass transfer,
+  eliminations, inputs and non-mass-transfer interactions like effect
+  compartments or PD stimulation/inhibition), detecting dosing compartments
+  from the dosing records.  `modelDiagram()` lays it out with dosing and
+  absorption compartments above the central compartment, peripheral
+  compartments to the left, eliminations/metabolites below and PD models to
+  the right, and draws it with the `"DiagrammeR"` (Graphviz), `"ggplot2"` or
+  `"dot"` (DOT source) engine.  Dosing properties (`lag()`, `f()`, `rate()`,
+  `dur()`) are shown as annotations on their compartment, and `delay()` terms
+  are understood.  The diagrams were checked against all 3043 models of
+  'nlmixr2lib', including large QSP/PBPK models.  `plot()` of an `rxode2`
+  user interface (`rxUi`) object or compiled `rxode2` model draws its
+  diagram, and the new "Automatic model diagrams" vignette describes the
+  feature.
+
+* Fixed `vpcPlot()` with `method = "tidyvpc"` when the observed data has
+  observation records with a missing `DV`.  Those records were dropped from
+  the observed data but kept in the simulation, so a stratified (e.g.
+  multiple-endpoint) VPC errored and a single-endpoint VPC paired simulated
+  values with the wrong observations.  The matching simulated records are now
+  dropped too (#74).
+* `plot()` of a multiple-endpoint fit no longer creates empty
+  "Endpoint: " groups for state compartments without observations (like
+  `depot` or `central`); only observed endpoints are plotted.  `plot()` of an
+  `augPred()` object likewise skips endpoints without data (#44).
+* `vpcPlot()`/`vpcPlotTad()` of a multiple-endpoint fit whose data codes the
+  endpoints with `cmt` no longer shows an extra `NA` panel (or a single `NA`
+  panel with `pred_corr = TRUE`); the simulated compartment labels are now
+  matched to the observed ones by name (#44).
+* The censored VPC (`vpcCens()`, or `vpcPlot()` with `cens = TRUE` and the
+  `vpc` backend) of a multiple-endpoint fit now stratifies by its endpoints
+  only, matching the simulated endpoints to the observed ones; an endpoint
+  whose observations are all missing no longer becomes an `NA` panel (#44).
+* `plot()` of a censored multiple-endpoint fit no longer errors in
+  `geom_cens()` ("argument must be coercible to non-negative integer") for an
+  endpoint without censored observations (#44).
+* The censored VPC (`vpcCens()`, `vpcCensTad()`, or `vpcPlot()` with
+  `cens = TRUE` and the `vpc` backend) now honours the `data` argument; it
+  previously always used the fitted data, whatever `data` was supplied (#55).
+  The observed data now comes from the original (or supplied) dataset instead of
+  the fit, so censored records are identified from the `CENS` column rather than
+  from the fit's imputed `DV` (which, for `censMethod = "cdf"`, could land above
+  the limit and be counted as uncensored).  Records without an observation are
+  dropped, as in the fit.
+* The VPC observed data now drops records with `MDV = 1` even when an `EVID`
+  column is also present (previously only `EVID` was checked when both existed).
+* `plot()` of an `augPred()` object now accepts a base-R style `log` argument
+  (`log = "y"`, `"x"` or `"xy"`) to draw the individual plots on log-scaled
+  axes; non-positive values, which cannot be shown on a log axis, are dropped
+  (#32).
+* `vpcPlot()`, `vpcPlotTad()`, `vpcCens()` and `vpcCensTad()` now use a
+  supplied `nlmixr2est::vpcSim()` simulation instead of discarding it and
+  re-simulating with the default `n = 300`.  Supplying `n` alongside a
+  simulation warns that it is ignored, and `pred_corr = TRUE` errors unless the
+  simulation was created with `pred = TRUE` (#57).  The observed-data
+  prediction correction for a supplied simulation is computed from that
+  simulation's own fit rather than from whichever `vpcSim(pred = TRUE)` ran
+  last.
+* Fixed the VPC simulation ignoring the `data` argument of `vpcPlot()`,
+  `vpcPlotTad()`, `vpcCens()` and `vpcCensTad()`; the simulation always used
+  the fit's dataset, so it did not match the observed data built from `data`
+  (and `tidyvpc` warned that `xsim` did not match the observed x-values).  The
+  simulation now uses `data` when supplied.  A supplied
+  `nlmixr2est::vpcSim()` simulation was made from its own dataset, so passing
+  `data` alongside one now warns that it only replaces the observed data
+  (#68).  Because the simulation now follows `data`, an endpoint without
+  observations in `data` is no longer simulated either, so it drops out of a
+  multiple-endpoint VPC instead of being shown as a simulated-only panel.
+  For a model with a non-normal endpoint, `data` now needs a numeric `CMT`
+  column (the model's compartment numbers), since the compartments would
+  otherwise be taken from the fitted data by row number, or read from a
+  factor's level order, and would not match `data`.
+* Fixed the prediction-corrected VPC (`pred_corr = TRUE`) ignoring the `data`
+  argument; the observed data was rebuilt from the fit's dataset instead of the
+  supplied `data` (#62).
+* Fixed stratified censored VPCs (`vpcCens()`/`vpcCensTad()`, or `vpcPlot()`
+  with `cens = TRUE`) failing with "The following specified stratification
+  columns were NOT found in observation data"; the observed data now comes
+  from the original (or supplied) dataset, which keeps the stratification
+  columns that the fit table drops (#56, #55).
 * Fixed the confidence-band width (and its legend label) for `vpcPlot()`/
   `vpcPlotTad()` with the `tidyvpc` backend; `ci = c(lower, upper)` was passed
   to `tidyvpc::vpcstats()` as `conf.level = ci[2]` instead of the actual
   interval width `ci[2] - ci[1]`, so the default `ci = c(0.05, 0.95)` (a 90% CI)
   was drawn and labeled as a 95% CI.
+* Fixed `vpcPlotTad()`/`vpcCensTad()` (and any `idv` taken from the fit) with a
+  user-supplied `data` that is a subset or reordering of the fitted data; `tad`
+  was merged from the fit by row number, so it silently became `NA` (or was
+  paired with the wrong row).  Each supplied row is now matched by content to
+  the fitted row it came from, and a warning is given for observations that
+  are not in the fitted data (#60).
 
 # nlmixr2plot 5.1.0
 

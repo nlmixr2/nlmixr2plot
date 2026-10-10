@@ -48,8 +48,7 @@ if (nzchar(.batch)) {
   # Slow-batch mode: run ONLY this batch's slow files.
   .b <- suppressWarnings(as.integer(.batch))
   if (is.na(.b) || .b < 1L || .b > length(.slow_batches)) {
-    stop(sprintf("NLMIXR2PLOT_TEST_BATCH=%s out of range (1..%d)",
-                 .batch, length(.slow_batches)))
+    stop(sprintf("NLMIXR2PLOT_TEST_BATCH=%s out of range (1..%d)", .batch, length(.slow_batches)))
   }
   .files <- .slow_batches[[.b]]
   .filter <- paste0("^(", paste(.files, collapse = "|"), ")$")
