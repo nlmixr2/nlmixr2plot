@@ -1,5 +1,13 @@
 # nlmixr2plot (development version)
 
+* `plot()` no longer fails on a fit with more than one variance level. A model
+  with between-occasion variability reports `omega` as a list holding one matrix
+  per level rather than as a single matrix, and the between-subject-variability
+  guard tested `nrow(omega) > 0`, which is `NA` for a list, so `plot()` stopped
+  with "missing value where TRUE/FALSE needed" before drawing anything. The
+  guard now asks whether the fit reports any between-subject eta, which is what
+  the BSV plots need and does not depend on the number of variance levels.
+
 * `modelDiagram(..., engine = "ggplot2", labels = TRUE)` now draws the
   arrow labels on a white background, so the arrow no longer runs
   through the label text.
