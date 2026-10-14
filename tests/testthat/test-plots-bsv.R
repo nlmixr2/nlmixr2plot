@@ -46,13 +46,13 @@ test_that("BSV plots survive a model with between-occasion variability", {
   # here rather than only through a failing plot.
   expect_true(is.list(fit$omega))
   expect_null(nrow(fit$omega))
-  expect_true(nlmixr2plot:::.bsvHasBsv(fit))
+  expect_true(.bsvHasBsv(fit))
 
   p <- plot(fit)
   expect_s3_class(p, "gglist")
   expect_true("bsv" %in% names(p[["All Data"]]))
   # Only subject-level etas are plotted; the occasion eta is not a BSV term.
-  expect_setequal(nlmixr2plot:::.bsvEtas(fit), "etaCl")
+  expect_setequal(.bsvEtas(fit), "etaCl")
 })
 
 test_that("BSV plots: multi-eta fit gives QQ, correlation, and covariate plots", {
