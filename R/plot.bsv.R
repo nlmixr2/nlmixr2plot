@@ -23,7 +23,9 @@
 .bsvOmega <- function(x) {
   .omega <- x$omega
   if (is.list(.omega)) {
-    .omega <- .omega$id
+    # `[[` rather than `$`, so a plain list never partially matches another
+    # level whose name merely starts with `id`
+    .omega <- .omega[["id"]]
   }
   if (!is.matrix(.omega)) {
     return(NULL)
@@ -48,7 +50,8 @@
   if (is.null(.omega)) {
     return(character(0))
   }
-  .etas <- rownames(.omega)[diag(.omega) != 0]
+  # `which()` also drops an NA variance, which is not an estimated eta either
+  .etas <- rownames(.omega)[which(diag(.omega) != 0)]
   if (length(.etas) == 0L) {
     return(character(0))
   }
@@ -207,6 +210,10 @@
   if (is.na(.reId) || is.na(.gdId)) {
     return(NULL)
   }
+  # Keep only the ID and the BSV etas, so a non-eta `ranef()` column (such as a
+  # mixture fit's `mixnum`) cannot collide with a covariate of the same name in
+  # the merge below and leave that covariate as `<name>.y`
+  .re <- .re[, c(.reId, .bsvEtas(x)), drop = FALSE]
   .present <- intersect(covariate, colnames(.gd))
   .missing <- setdiff(covariate, colnames(.gd))
   if (length(.missing) > 0L) {
@@ -244,12 +251,15 @@
   if (is.null(covariate)) {
     return(NULL)
   }
+  .etas <- .bsvEtas(x)
+  if (length(.etas) == 0L) {
+    return(NULL)
+  }
   .m <- .bsvCovData(x, covariate)
   if (is.null(.m)) {
     return(NULL)
   }
   .covs <- attr(.m, "covariates")
-  .etas <- .bsvEtas(x)
   .lst <- list()
   for (.eta in .etas) {
     for (.cov in .covs) {

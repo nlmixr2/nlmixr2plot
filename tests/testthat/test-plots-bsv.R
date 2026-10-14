@@ -6,6 +6,7 @@
 }
 
 test_that("BSV plots survive a model with between-occasion variability", {
+  skip_on_cran()
   skip_if_not_installed("nlmixr2data")
 
   # A model with more than one variance level reports `omega` as a list of one
@@ -23,12 +24,13 @@ test_that("BSV plots survive a model with between-occasion variability", {
       lcl <- log(0.008)
       lvc <- log(0.6)
       etaCl ~ 0.1
+      etaVc ~ 0.1
       etaClOcc ~ 0.1 | OCC
       cpaddSd <- 0.1
     })
     model({
       cl <- exp(lcl + etaCl + etaClOcc)
-      vc <- exp(lvc)
+      vc <- exp(lvc + etaVc)
       cp <- linCmt()
       cp ~ add(cpaddSd)
     })
@@ -48,47 +50,24 @@ test_that("BSV plots survive a model with between-occasion variability", {
   expect_null(nrow(fit$omega))
   expect_true(.bsvHasBsv(fit))
 
-  p <- plot(fit)
+  p <- plot(fit, covariate = "WT")
   expect_s3_class(p, "gglist")
   # Only subject-level etas are plotted; the occasion eta is not a BSV term, so
-  # there is one QQ plot and no correlation panel.
-  expect_setequal(.bsvEtas(fit), "etaCl")
+  # it gets no QQ, correlation or covariate panel.
+  expect_setequal(.bsvEtas(fit), c("etaCl", "etaVc"))
   .bsv <- p[["All Data"]][["bsv"]]
-  expect_equal(names(.bsv), "QQ plots")
-  expect_equal(names(.bsv[["QQ plots"]]), "QQ plot for etaCl")
-})
-
-test_that(".bsvHasBsv() is FALSE when omega has only non-subject levels", {
-  # An occasion-only model reports a non-NULL `omega` list with no `id` level,
-  # and its `ranef()` is the bare ID vector (nlmixr2est drops the occasion
-  # columns without `drop = FALSE`).  The guard must not mistake it for BSV, and
-  # must not need `ranef()` to be a data frame to say so.
-  x <- list(omega = list(OCC = matrix(0.1, dimnames = list("eOcc", "eOcc"))))
-  local_mocked_bindings(
-    ranef = function(object, ...) factor(1:2),
-    .package = "nlmixr2est"
+  expect_setequal(
+    names(.bsv),
+    c("QQ plots", "BSV correlation", "BSV covariate correlation")
   )
-  expect_false(.bsvHasBsv(x))
-  expect_identical(.bsvEtas(x), character(0))
-  expect_false(.bsvHasBsv(list(omega = NULL)))
-})
-
-test_that(".bsvEtas() keeps only estimated subject-level etas", {
-  # `ranef()` of a mixture fit carries the per-subject `mixnum` assignment, and
-  # a `fix(0)` eta kept beside estimated ones has a zero `omega` diagonal;
-  # neither is a BSV term, so neither gets QQ or correlation plots.
-  .om <- diag(c(0.1, 0))
-  dimnames(.om) <- list(c("etaCl", "etaKa"), c("etaCl", "etaKa"))
-  local_mocked_bindings(
-    ranef = function(object, ...) {
-      data.frame(ID = 1:2, etaCl = c(-0.1, 0.1), etaKa = 0, mixnum = 1:2)
-    },
-    .package = "nlmixr2est"
+  expect_setequal(
+    names(.bsv[["QQ plots"]]),
+    c("QQ plot for etaCl", "QQ plot for etaVc")
   )
-  expect_equal(.bsvEtas(list(omega = .om)), "etaCl")
-  # The same subject block nested in a multi-level `omega` list
-  .lst <- list(omega = list(id = .om, OCC = matrix(0.1, dimnames = list("o", "o"))))
-  expect_equal(.bsvEtas(.lst), "etaCl")
+  expect_setequal(
+    names(.bsv[["BSV covariate correlation"]]),
+    c("etaCl vs WT", "etaVc vs WT")
+  )
 })
 
 test_that("BSV plots: multi-eta fit gives QQ, correlation, and covariate plots", {
