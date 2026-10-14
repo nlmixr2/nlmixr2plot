@@ -15,7 +15,9 @@ test_that("BSV plots survive a model with between-occasion variability", {
   # plot() stopped with "missing value where TRUE/FALSE needed".
   d <- nlmixr2data::pheno_sd
   d$OCC <- unsplit(lapply(split(d$EVID, d$ID), function(e) cumsum(e != 0)), d$ID)
-  d$OCC <- pmax(d$OCC, 1L)
+  # Two occasions are enough for a multi-level `omega`; more would leave most
+  # subject-occasion cells without an observation in this sparse data set.
+  d$OCC <- pmin(pmax(d$OCC, 1L), 2L)
 
   # The occasion eta shares `cl`'s mu-referenced chain with the subject eta, so
   # SAEM can use its two-level IOV path; that keeps this fit fast enough for CI.
@@ -64,6 +66,7 @@ test_that("BSV plots survive a model with between-occasion variability", {
     names(.bsv[["QQ plots"]]),
     c("QQ plot for etaCl", "QQ plot for etaVc")
   )
+  expect_named(.bsv[["BSV correlation"]], "etaCl vs etaVc")
   expect_setequal(
     names(.bsv[["BSV covariate correlation"]]),
     c("etaCl vs WT", "etaVc vs WT")

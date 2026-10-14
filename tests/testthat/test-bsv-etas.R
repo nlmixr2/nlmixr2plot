@@ -33,6 +33,10 @@ test_that(".bsvEtas() keeps only estimated subject-level etas", {
   # The same subject block nested in a multi-level `omega` list
   .lst <- list(omega = list(id = .om, OCC = matrix(0.1, dimnames = list("o", "o"))))
   expect_equal(.bsvEtas(.lst), "etaCl")
+  # and the plots built from it draw etaCl alone, with no correlation panel
+  .p <- .bsvPlots(list(omega = .om))
+  expect_named(.p, "QQ plots")
+  expect_named(.p[["QQ plots"]], "QQ plot for etaCl")
 })
 
 test_that("BSV plots are skipped when every subject eta is fixed at zero", {
