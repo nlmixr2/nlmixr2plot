@@ -2,6 +2,26 @@
 
 ## nlmixr2plot (development version)
 
+- [`plot()`](https://rdrr.io/r/graphics/plot.default.html) no longer
+  fails on a fit with more than one variance level. A model with
+  between-occasion variability reports `omega` as a list holding one
+  matrix per level rather than as a single matrix, and the
+  between-subject-variability guard tested `nrow(omega) > 0`, which is
+  `NA` for a list, so
+  [`plot()`](https://rdrr.io/r/graphics/plot.default.html) stopped with
+  “missing value where TRUE/FALSE needed” before drawing anything. The
+  guard now asks whether the fit reports any between-subject eta, which
+  is what the BSV plots need and does not depend on the number of
+  variance levels.
+
+- The between-subject-variability plots now take their etas from the
+  subject-level `omega` block (dropping any fixed at zero) rather than
+  from every column
+  [`ranef()`](https://rdrr.io/pkg/nlme/man/random.effects.html) returns,
+  so a mixture fit no longer gets a QQ plot of its `mixnum`
+  subpopulation labels or a spurious correlation panel, and an
+  occasion-only fit is correctly treated as having no BSV.
+
 - [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of a fit,
   [`vpcPlot()`](https://nlmixr2.github.io/nlmixr2plot/reference/vpcPlot.md)
   and [`plot()`](https://rdrr.io/r/graphics/plot.default.html) of an
