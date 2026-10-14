@@ -1,23 +1,61 @@
 #' Does a fit have estimated between-subject variability (BSV)?
 #'
 #' @param x A nlmixr2 fit object
-#' @return `TRUE` when the model has a non-empty omega (BSV) matrix
+#' @return `TRUE` when the fit reports at least one between-subject eta
 #' @noRd
 .bsvHasBsv <- function(x) {
+  # Testing the shape of `omega` (as `nrow(omega) > 0` once did) fails on a
+  # model with several variance levels, where `omega` is a list; these plots
+  # draw the etas `.bsvEtas()` reports, so ask that question instead.
+  length(.bsvEtas(x)) > 0L
+}
+
+#' Subject-level omega matrix of a fit
+#'
+#' `omega` is a matrix for a single-level model, but a list holding one matrix
+#' per level once the model has between-occasion variability (named for the
+#' levels, e.g. `id` and `OCC`); the subject level is then `omega$id`, as
+#' `nlmixr2est`'s own print method reads it.
+#'
+#' @param x A nlmixr2 fit object
+#' @return The subject-level omega matrix, or `NULL` when there is none
+#' @noRd
+.bsvOmega <- function(x) {
   .omega <- x$omega
-  !is.null(.omega) && nrow(.omega) > 0L
+  if (is.list(.omega)) {
+    # `[[` rather than `$`, so a plain list never partially matches another
+    # level whose name merely starts with `id`
+    .omega <- .omega[["id"]]
+  }
+  if (!is.matrix(.omega)) {
+    return(NULL)
+  }
+  .omega
 }
 
 #' Names of the BSV eta columns for a fit
 #'
-#' `ranef()` returns a data frame of `ID` plus one column per between-subject
-#' eta (inter-occasion etas are already dropped upstream by `nlmixr2est`).
+#' The subject-level etas with a non-zero variance in `omega` that `ranef()`
+#' reports a column for.  Taking the names from `omega` rather than from
+#' whatever else `ranef()` holds keeps out a mixture fit's `mixnum` label,
+#' occasion etas, and a `fix(0)` eta kept alongside estimated ones.  The
+#' subject-level omega is checked first so `ranef()` is not asked for a fit
+#' with no subject etas, where it may not be a data frame at all.
 #'
 #' @param x A nlmixr2 fit object
 #' @return Character vector of eta column names (excluding the ID column)
 #' @noRd
 .bsvEtas <- function(x) {
-  setdiff(colnames(nlmixr2est::ranef(x)), c("ID", "id"))
+  .omega <- .bsvOmega(x)
+  if (is.null(.omega)) {
+    return(character(0))
+  }
+  # `which()` also drops an NA variance, which is not an estimated eta either
+  .etas <- rownames(.omega)[which(diag(.omega) != 0)]
+  if (length(.etas) == 0L) {
+    return(character(0))
+  }
+  intersect(.etas, colnames(nlmixr2est::ranef(x)))
 }
 
 #' Generalized smoothing layer used throughout the BSV plots
@@ -172,6 +210,10 @@
   if (is.na(.reId) || is.na(.gdId)) {
     return(NULL)
   }
+  # Keep only the ID and the BSV etas, so a non-eta `ranef()` column (such as a
+  # mixture fit's `mixnum`) cannot collide with a covariate of the same name in
+  # the merge below and leave that covariate as `<name>.y`
+  .re <- .re[, c(.reId, .bsvEtas(x)), drop = FALSE]
   .present <- intersect(covariate, colnames(.gd))
   .missing <- setdiff(covariate, colnames(.gd))
   if (length(.missing) > 0L) {
@@ -209,12 +251,15 @@
   if (is.null(covariate)) {
     return(NULL)
   }
+  .etas <- .bsvEtas(x)
+  if (length(.etas) == 0L) {
+    return(NULL)
+  }
   .m <- .bsvCovData(x, covariate)
   if (is.null(.m)) {
     return(NULL)
   }
   .covs <- attr(.m, "covariates")
-  .etas <- .bsvEtas(x)
   .lst <- list()
   for (.eta in .etas) {
     for (.cov in .covs) {
