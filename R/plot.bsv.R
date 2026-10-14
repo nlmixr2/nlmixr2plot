@@ -20,13 +20,18 @@
 #' Names of the BSV eta columns for a fit
 #'
 #' `ranef()` returns a data frame of `ID` plus one column per between-subject
-#' eta (inter-occasion etas are already dropped upstream by `nlmixr2est`).
+#' eta (inter-occasion etas are already dropped upstream by `nlmixr2est`).  A
+#' mixture fit also carries `mixnum` (the most likely subpopulation per subject;
+#' `MIXEST` in some fits), which is a label rather than an eta and is dropped.
 #'
 #' @param x A nlmixr2 fit object
 #' @return Character vector of eta column names (excluding the ID column)
 #' @noRd
 .bsvEtas <- function(x) {
-  setdiff(colnames(nlmixr2est::ranef(x)), c("ID", "id"))
+  setdiff(
+    colnames(nlmixr2est::ranef(x)),
+    c("ID", "id", "mixnum", "MIXEST")
+  )
 }
 
 #' Generalized smoothing layer used throughout the BSV plots

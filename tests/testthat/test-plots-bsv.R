@@ -16,20 +16,20 @@ test_that("BSV plots survive a model with between-occasion variability", {
   d$OCC <- unsplit(lapply(split(d$EVID, d$ID), function(e) cumsum(e != 0)), d$ID)
   d$OCC <- pmax(d$OCC, 1L)
 
+  # The occasion eta shares `cl`'s mu-referenced chain with the subject eta, so
+  # SAEM can use its two-level IOV path; that keeps this fit fast enough for CI.
   iov <- function() {
     ini({
       lcl <- log(0.008)
       lvc <- log(0.6)
       etaCl ~ 0.1
-      etaVcOcc ~ 0.1 | OCC
+      etaClOcc ~ 0.1 | OCC
       cpaddSd <- 0.1
     })
     model({
-      cl <- exp(lcl + etaCl)
-      vc <- exp(lvc + etaVcOcc)
-      kel <- cl / vc
-      d / dt(central) <- -kel * central
-      cp <- central / vc
+      cl <- exp(lcl + etaCl + etaClOcc)
+      vc <- exp(lvc)
+      cp <- linCmt()
       cp ~ add(cpaddSd)
     })
   }
@@ -50,9 +50,35 @@ test_that("BSV plots survive a model with between-occasion variability", {
 
   p <- plot(fit)
   expect_s3_class(p, "gglist")
-  expect_true("bsv" %in% names(p[["All Data"]]))
-  # Only subject-level etas are plotted; the occasion eta is not a BSV term.
+  # Only subject-level etas are plotted; the occasion eta is not a BSV term, so
+  # there is one QQ plot and no correlation panel.
   expect_setequal(.bsvEtas(fit), "etaCl")
+  .bsv <- p[["All Data"]][["bsv"]]
+  expect_equal(names(.bsv), "QQ plots")
+  expect_equal(names(.bsv[["QQ plots"]]), "QQ plot for etaCl")
+})
+
+test_that(".bsvHasBsv() is FALSE when omega has only non-subject levels", {
+  # An occasion-only model reports a non-NULL `omega` list but no subject eta in
+  # `ranef()`, so the guard must look past the NULL check to the etas.
+  x <- list(omega = list(OCC = matrix(0.1, dimnames = list("eOcc", "eOcc"))))
+  local_mocked_bindings(
+    ranef = function(object, ...) data.frame(ID = 1:2),
+    .package = "nlmixr2est"
+  )
+  expect_false(.bsvHasBsv(x))
+})
+
+test_that(".bsvEtas() drops the mixture-number column", {
+  # `ranef()` of a mixture fit carries the per-subject `mixnum` assignment; it
+  # is a discrete label, not an eta, and must not get QQ or correlation plots.
+  local_mocked_bindings(
+    ranef = function(object, ...) {
+      data.frame(ID = 1:2, etaCl = c(-0.1, 0.1), mixnum = 1:2)
+    },
+    .package = "nlmixr2est"
+  )
+  expect_equal(.bsvEtas(list()), "etaCl")
 })
 
 test_that("BSV plots: multi-eta fit gives QQ, correlation, and covariate plots", {
