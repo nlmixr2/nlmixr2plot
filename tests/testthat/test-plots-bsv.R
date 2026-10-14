@@ -121,6 +121,12 @@ test_that("BSV plots: categorical / low-cardinality covariate uses box-and-whisk
   # sex has 2 unique values -> categorical -> boxplot; wt continuous -> smoother
   expect_true("GeomBoxplot" %in% .bsvGeoms(bsvc[["eta.ka vs sex"]]))
   expect_true("GeomSmooth" %in% .bsvGeoms(bsvc[["eta.ka vs wt"]]))
+
+  # The box plots and smoother plots hold their data only in `$data`, not the
+  # fit (see helper-figure-envs.R)
+  for (.nm in names(bsvc)) {
+    expect_identical(.figureHeldData(bsvc[[.nm]]), character(0), info = .nm)
+  }
 })
 
 test_that("BSV plots: single-eta fit has QQ but no correlation plots", {

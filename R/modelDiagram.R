@@ -2171,20 +2171,115 @@ print.nlmixr2ModelGraph <- function(x, ...) {
     x = .ann$x + 0.075 * vapply(.annLines, function(l) max(nchar(l)), numeric(1)),
     y = .ann$y + 0.13 * lengths(.annLines)
   )
-  .p <- ggplot2::ggplot() +
+  .plotData(
+    .mdGgplotFigure(
+      hw = .hw,
+      hh = .hh,
+      tileLinewidth = ifelse(.n$dosing, 1, 0.4),
+      flows = !is.null(.seg) && nrow(.seg) > 0L,
+      labels = labels
+    ),
+    .mdGgplotData(.n, .ann, .annExtent, .seg)
+  )
+}
+
+#' Data for the ggplot2 model diagram
+#'
+#' The layers of the diagram draw different rows of one data frame (see
+#' `.mdGgplotFigure()`), marked by its `.layer` column.
+#'
+#' @param nodes compartments (`x`, `y`, `role` and `name`)
+#' @param ann dosing annotations (`x`, `y` and `annotation`)
+#' @param annExtent upper right corners of the annotations (`x`, `y`)
+#' @param seg arrows (`x`, `y`, `xend`, `yend`, `flow` and `label`), or
+#'   `NULL` for none
+#' @return data frame with one row per compartment, annotation, annotation
+#'   corner and arrow
+#' @noRd
+.mdGgplotData <- function(nodes, ann, annExtent, seg) {
+  .nn <- nrow(nodes)
+  .na <- nrow(ann)
+  .ne <- nrow(annExtent)
+  .ns <- if (is.null(seg)) 0L else nrow(seg)
+  data.frame(
+    .layer = rep(c("node", "annotation", "extent", "flow"), c(.nn, .na, .ne, .ns)),
+    x = c(nodes$x, ann$x, annExtent$x, seg$x),
+    y = c(nodes$y, ann$y, annExtent$y, seg$y),
+    xend = c(rep(NA_real_, .nn + .na + .ne), seg$xend),
+    yend = c(rep(NA_real_, .nn + .na + .ne), seg$yend),
+    role = factor(c(as.character(nodes$role), rep(NA_character_, .na + .ne + .ns)), levels = levels(nodes$role)),
+    name = c(nodes$name, rep(NA_character_, .na + .ne + .ns)),
+    annotation = c(rep(NA_character_, .nn), ann$annotation, rep(NA_character_, .ne + .ns)),
+    flow = c(rep(NA_character_, .nn + .na + .ne), seg$flow),
+    label = c(rep(NA_character_, .nn + .na + .ne), seg$label),
+    stringsAsFactors = FALSE
+  )
+}
+
+#' Rows of the ggplot2 model diagram data drawn by one layer
+#'
+#' @param data data from `.mdGgplotData()`
+#' @param layer `"node"`, `"annotation"`, `"extent"` or `"flow"`
+#' @return the rows of `data` for `layer`
+#' @noRd
+.mdGgplotRows <- function(data, layer) {
+  data[data$.layer == layer, , drop = FALSE]
+}
+
+#' Compartment rows of the ggplot2 model diagram data (a layer's `data`)
+#' @noRd
+.mdGgplotNodes <- function(data) {
+  .mdGgplotRows(data, "node")
+}
+
+#' Annotation rows of the ggplot2 model diagram data (a layer's `data`)
+#' @noRd
+.mdGgplotAnnotations <- function(data) {
+  .mdGgplotRows(data, "annotation")
+}
+
+#' Annotation corner rows of the ggplot2 model diagram data (a layer's `data`)
+#' @noRd
+.mdGgplotExtents <- function(data) {
+  .mdGgplotRows(data, "extent")
+}
+
+#' Arrow rows of the ggplot2 model diagram data (a layer's `data`)
+#' @noRd
+.mdGgplotFlows <- function(data) {
+  .mdGgplotRows(data, "flow")
+}
+
+#' ggplot2 model diagram, without its data
+#'
+#' Each layer selects its rows of the figure's data (`.mdGgplotNodes()` and
+#' its siblings), so the figure holds its data once, in `$data`; see
+#' `.plotData()`.
+#'
+#' @param hw,hh half width and half height of the compartment boxes
+#' @param tileLinewidth outline width of each compartment box, in the order
+#'   of the compartment rows
+#' @param flows draw the arrows (the data has `"flow"` rows)
+#' @param labels label the arrows with their expressions
+#' @return ggplot without data
+#' @noRd
+.mdGgplotFigure <- function(hw, hh, tileLinewidth, flows, labels) {
+  # an unforced argument would keep the caller's frame in the figure
+  force(labels)
+  ggplot2::ggplot() +
     ggplot2::geom_tile(
-      data = .n,
+      data = .mdGgplotNodes,
       ggplot2::aes(x = .data$x, y = .data$y, fill = .data$role),
-      width = 2 * .hw,
-      height = 2 * .hh,
+      width = 2 * hw,
+      height = 2 * hh,
       color = "gray30",
-      linewidth = ifelse(.n$dosing, 1, 0.4)
+      linewidth = tileLinewidth
     ) +
-    ggplot2::geom_text(data = .n, ggplot2::aes(x = .data$x, y = .data$y, label = .data$name)) +
+    ggplot2::geom_text(data = .mdGgplotNodes, ggplot2::aes(x = .data$x, y = .data$y, label = .data$name)) +
     # dosing properties (lag, F, rate, dur) as an annotation at the upper
     # right corner of the compartment
     ggplot2::geom_text(
-      data = .ann,
+      data = .mdGgplotAnnotations,
       ggplot2::aes(x = .data$x, y = .data$y, label = .data$annotation),
       hjust = 0,
       vjust = 0,
@@ -2193,31 +2288,39 @@ print.nlmixr2ModelGraph <- function(x, ...) {
       lineheight = 0.9
     ) +
     # keep the annotations inside the plot (away from the legend)
-    ggplot2::geom_blank(data = .annExtent, ggplot2::aes(x = .data$x, y = .data$y)) +
-    ggplot2::scale_fill_manual(values = .mdRoleColors, drop = TRUE, name = "compartment") +
-    ggplot2::coord_equal(clip = "off") +
-    ggplot2::theme_void() +
-    ggplot2::theme(plot.margin = ggplot2::margin(10, 10, 10, 10))
-  if (!is.null(.seg) && nrow(.seg) > 0L) {
-    .p <- .p +
+    ggplot2::geom_blank(data = .mdGgplotExtents, ggplot2::aes(x = .data$x, y = .data$y)) +
+    (if (flows) {
       ggplot2::geom_segment(
-        data = .seg,
+        data = .mdGgplotFlows,
         ggplot2::aes(x = .data$x, y = .data$y, xend = .data$xend, yend = .data$yend, linetype = .data$flow),
         arrow = ggplot2::arrow(length = ggplot2::unit(0.08, "inches"), type = "closed")
-      ) +
-      ggplot2::scale_linetype_manual(
-        values = c("mass transfer" = "solid", stimulation = "dashed", inhibition = "dotted", modulation = "dotdash"),
-        name = "flow"
       )
-    if (labels) {
-      .p <- .p +
-        ggplot2::geom_label(
-          data = .seg,
-          ggplot2::aes(x = (.data$x + .data$xend) / 2, y = (.data$y + .data$yend) / 2, label = .data$label),
-          size = 2.5,
-          fill = "white"
+    }) +
+    (if (flows && labels) {
+      ggplot2::geom_label(
+        data = .mdGgplotFlows,
+        ggplot2::aes(x = (.data$x + .data$xend) / 2, y = (.data$y + .data$yend) / 2, label = .data$label),
+        size = 2.5,
+        fill = "white"
+      )
+    }) +
+    ggplot2::coord_equal(clip = "off") +
+    ggplot2::theme_void() +
+    ggplot2::theme(plot.margin = ggplot2::margin(10, 10, 10, 10)) +
+    c(
+      list(ggplot2::scale_fill_manual(values = .mdRoleColors, drop = TRUE, name = "compartment")),
+      if (flows) {
+        list(
+          ggplot2::scale_linetype_manual(
+            values = c(
+              "mass transfer" = "solid",
+              stimulation = "dashed",
+              inhibition = "dotted",
+              modulation = "dotdash"
+            ),
+            name = "flow"
+          )
         )
-    }
-  }
-  .p
+      }
+    )
 }

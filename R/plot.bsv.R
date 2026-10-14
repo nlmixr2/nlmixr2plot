@@ -22,20 +22,22 @@
 
 #' Generalized smoothing layer used throughout the BSV plots
 #'
-#' Adds the consistent point + reference-line + linear-smoother layers used by
+#' The consistent point + reference-line + linear-smoother layers used by
 #' both the BSV-BSV correlation plots and the continuous BSV-covariate plots.
 #' The caller owns the data, `aes()`, axis labels, title and theme; this helper
 #' only supplies the shared geom styling so it stays consistent across the
-#' package.
+#' package.  It takes no plot, so the smoother's `y ~ x` formula (and the
+#' layers) keep only this helper's empty frame.
 #'
-#' @param p A `ggplot2` object whose mapping already supplies `x` and `y`
-#' @return `p` with the point, `y = 0` reference line and `lm` smoother added
+#' @return list of the point, `y = 0` reference line and `lm` smoother layers,
+#'   to add to a `ggplot2` object whose mapping supplies `x` and `y`
 #' @noRd
-.bsvSmooth <- function(p) {
-  p +
-    ggplot2::geom_point(alpha = 0.5) +
-    ggplot2::geom_abline(slope = 0, intercept = 0, col = "red") +
+.bsvSmooth <- function() {
+  list(
+    ggplot2::geom_point(alpha = 0.5),
+    ggplot2::geom_abline(slope = 0, intercept = 0, col = "red"),
     ggplot2::geom_smooth(method = "lm", formula = y ~ x, se = TRUE)
+  )
 }
 
 #' QQ plots of each BSV parameter
@@ -52,16 +54,25 @@
   .lst <- list()
   for (.eta in .etas) {
     .nm <- paste("QQ plot for", .eta)
-    .lst[[.nm]] <-
-      ggplot2::ggplot(.re, ggplot2::aes(sample = .data[[.eta]])) +
-      ggplot2::stat_qq() +
-      ggplot2::stat_qq_line() +
-      ggplot2::xlab("Theoretical quantiles") +
-      ggplot2::ylab(.eta) +
-      ggplot2::ggtitle("Between-subject variability", .nm) +
-      rxode2::rxTheme()
+    .lst[[.nm]] <- .plotData(.bsvQqFigure(.eta, .nm), .re)
   }
   ggtibble::new_gglist(.lst)
+}
+
+#' QQ plot figure for one BSV parameter, without its data
+#'
+#' @param eta BSV parameter (column) name
+#' @param title plot subtitle
+#' @return ggplot without data; see `.plotData()`
+#' @noRd
+.bsvQqFigure <- function(eta, title) {
+  ggplot2::ggplot(mapping = ggplot2::aes(sample = .data[[eta]])) +
+    ggplot2::stat_qq() +
+    ggplot2::stat_qq_line() +
+    ggplot2::xlab("Theoretical quantiles") +
+    ggplot2::ylab(eta) +
+    ggplot2::ggtitle("Between-subject variability", title) +
+    rxode2::rxTheme()
 }
 
 #' BSV-BSV correlation plots
@@ -84,16 +95,44 @@
     .a <- .pairs[1L, .j]
     .b <- .pairs[2L, .j]
     .nm <- paste(.a, "vs", .b)
-    .lst[[.nm]] <-
-      .bsvSmooth(
-        ggplot2::ggplot(.re, ggplot2::aes(x = .data[[.a]], y = .data[[.b]]))
-      ) +
-      ggplot2::xlab(.a) +
-      ggplot2::ylab(.b) +
-      ggplot2::ggtitle("Between-subject variability", .nm) +
-      rxode2::rxTheme()
+    .lst[[.nm]] <- .plotData(.bsvScatterFigure(.a, .b, .nm), .re)
   }
   ggtibble::new_gglist(.lst)
+}
+
+#' Scatter (with smoother) figure of two BSV-plot columns, without its data
+#'
+#' Used for BSV-BSV correlation and continuous BSV-covariate plots.
+#'
+#' @param xCol,yCol x and y column names (also the axis labels)
+#' @param title plot subtitle
+#' @return ggplot without data; see `.plotData()`
+#' @noRd
+.bsvScatterFigure <- function(xCol, yCol, title) {
+  ggplot2::ggplot(mapping = ggplot2::aes(x = .data[[xCol]], y = .data[[yCol]])) +
+    .bsvSmooth() +
+    ggplot2::xlab(xCol) +
+    ggplot2::ylab(yCol) +
+    ggplot2::ggtitle("Between-subject variability", title) +
+    rxode2::rxTheme()
+}
+
+#' Box-and-whisker figure of a BSV parameter by a categorical covariate,
+#' without its data
+#'
+#' @param covCol covariate column name (x axis)
+#' @param eta BSV parameter column name (y axis)
+#' @param title plot subtitle
+#' @return ggplot without data; see `.plotData()`
+#' @noRd
+.bsvBoxFigure <- function(covCol, eta, title) {
+  ggplot2::ggplot(mapping = ggplot2::aes(x = factor(.data[[covCol]]), y = .data[[eta]])) +
+    ggplot2::geom_boxplot() +
+    ggplot2::geom_abline(slope = 0, intercept = 0, col = "red") +
+    ggplot2::xlab(covCol) +
+    ggplot2::ylab(eta) +
+    ggplot2::ggtitle("Between-subject variability", title) +
+    rxode2::rxTheme()
 }
 
 #' Find the (case-insensitive) ID column name in a data frame
@@ -188,23 +227,9 @@
         is.factor(.col) || is.character(.col) || is.logical(.col) || length(.u) <= 5L
       .nm <- paste(.eta, "vs", .cov)
       if (.isCategorical) {
-        .lst[[.nm]] <-
-          ggplot2::ggplot(.m, ggplot2::aes(x = factor(.data[[.cov]]), y = .data[[.eta]])) +
-          ggplot2::geom_boxplot() +
-          ggplot2::geom_abline(slope = 0, intercept = 0, col = "red") +
-          ggplot2::xlab(.cov) +
-          ggplot2::ylab(.eta) +
-          ggplot2::ggtitle("Between-subject variability", .nm) +
-          rxode2::rxTheme()
+        .lst[[.nm]] <- .plotData(.bsvBoxFigure(.cov, .eta, .nm), .m)
       } else {
-        .lst[[.nm]] <-
-          .bsvSmooth(
-            ggplot2::ggplot(.m, ggplot2::aes(x = .data[[.cov]], y = .data[[.eta]]))
-          ) +
-          ggplot2::xlab(.cov) +
-          ggplot2::ylab(.eta) +
-          ggplot2::ggtitle("Between-subject variability", .nm) +
-          rxode2::rxTheme()
+        .lst[[.nm]] <- .plotData(.bsvScatterFigure(.cov, .eta, .nm), .m)
       }
     }
   }

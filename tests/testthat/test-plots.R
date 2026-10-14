@@ -66,6 +66,48 @@ test_that("test plots with vdiffr", {
 
   expect_error(traceplot(fit), NA)
 
+  # Each figure holds its data only in `$data`: none of the environments it
+  # references (plot_env, aes() and formula environments, the frames behind
+  # ggplot2's layer and layout objects) holds the fit, the plotting data or
+  # other figures, which saveRDS() or a targets store would otherwise write
+  # out again for every figure.
+  .figs <- ggtibble::as_ggtibble(plot(fit, covariate = "WT"))
+  expect_true(any(grepl("traceplot", .figs$caption)))
+  expect_true(any(grepl("individual", .figs$caption)))
+  expect_true(any(grepl("BSV covariate correlation", .figs$caption)))
+  for (.i in seq_len(nrow(.figs))) {
+    expect_identical(.figureHeldData(.figs$figure[[.i]]), character(0), info = as.character(.figs$caption[.i]))
+  }
+
+  # Apart from `$data`, a figure is no larger when built from ten copies of
+  # every row: nothing else it stores grows with the data.  The larger set is
+  # built first so that any one-time growth of ggplot2's objects on first use
+  # can only make it smaller.
+  .dat <- .setupPlotData(fit)
+  .big <- plotCmt(.dat[rep(seq_len(nrow(.dat)), 10), ], cmt = "All Data")
+  .small <- plotCmt(.dat, cmt = "All Data")
+  expect_named(.big, names(.small))
+  for (.nm in names(.small)) {
+    expect_lte(
+      .figureSizeWithoutData(.big[[.nm]]) - .figureSizeWithoutData(.small[[.nm]]),
+      1024,
+      label = sprintf("growth of %s apart from its data (bytes)", .nm)
+    )
+  }
+
+  # Scales go in a figure's last `+`: each `+` clones the plot's scales and
+  # the clone keeps the one before it, so a scale added earlier is stored
+  # again for every later `+` (about 50 KB a time for an xgxr log scale).  So
+  # the figure keeps no earlier scales list that held scales.  (Comparing
+  # serialized sizes instead depends on the R build: on R-devel one clone
+  # serializes to several times its size on R 4.6.)
+  .ref <- ggplot2::ggplot() + .logScales(TRUE, TRUE)
+  expect_identical(.figureKeptScales(.ref$scales), 0L)
+  expect_gt(.figureKeptScales((.ref + ggplot2::labs())$scales), 0L)
+  for (.nm in c("dv_pred_ipred_log", "IWRES_TIME_log")) {
+    expect_identical(.figureKeptScales(.small[[.nm]]$scales), 0L, label = sprintf("earlier scales kept by %s", .nm))
+  }
+
   #vdiffr::expect_doppelganger("vpc plot", vp)
   #vdiffr::expect_doppelganger("vpc pred_corr plot", vp2)
   #vdiffr::expect_doppelganger("traceplot", tp)
