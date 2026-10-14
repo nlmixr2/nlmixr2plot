@@ -99,6 +99,11 @@
 #' @export
 #' @importFrom ggplot2 .data
 plot.nlmixr2AugPred <- function(x, y, ..., log = "") {
+  ## event bus: the augPred data has no fit, so it is sent along and the
+  ## logger finds its run by content (see rxEvents.R)
+  .nlmixr2plotEventEnter()
+  .evCall <- sys.call()
+  on.exit(.nlmixr2plotEventExit(returnValue(), NULL, .evCall, "augPredPlot", data = x), add = TRUE)
   .augPredPlot(x, log = log, title = NULL)
 }
 
