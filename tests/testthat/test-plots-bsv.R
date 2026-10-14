@@ -36,7 +36,9 @@ test_that("BSV plots survive a model with between-occasion variability", {
 
   fit <-
     suppressMessages(nlmixr2est::nlmixr(
-      iov, d, est = "saem",
+      iov,
+      d,
+      est = "saem",
       control = nlmixr2est::saemControl(nBurn = 5L, nEm = 5L, print = 0L)
     ))
 
