@@ -4,34 +4,55 @@
 #' @return `TRUE` when the fit reports at least one between-subject eta
 #' @noRd
 .bsvHasBsv <- function(x) {
-  # `omega` is a matrix for a single-level model, but a list holding one matrix
-  # per level once the model has between-occasion variability (named for the
-  # levels, e.g. `id` and `OCC`).  `nrow()` of that list is NULL, so testing the
-  # shape of `omega` yields NA rather than TRUE and stops the plot.  These plots
-  # draw the eta columns `.bsvEtas()` reports, so ask that question instead: it
-  # is what the plots actually need and it does not depend on how many variance
-  # levels the model has.
-  if (is.null(x$omega)) {
-    return(FALSE)
-  }
+  # Testing the shape of `omega` (as `nrow(omega) > 0` once did) fails on a
+  # model with several variance levels, where `omega` is a list; these plots
+  # draw the etas `.bsvEtas()` reports, so ask that question instead.
   length(.bsvEtas(x)) > 0L
+}
+
+#' Subject-level omega matrix of a fit
+#'
+#' `omega` is a matrix for a single-level model, but a list holding one matrix
+#' per level once the model has between-occasion variability (named for the
+#' levels, e.g. `id` and `OCC`); the subject level is then `omega$id`, as
+#' `nlmixr2est`'s own print method reads it.
+#'
+#' @param x A nlmixr2 fit object
+#' @return The subject-level omega matrix, or `NULL` when there is none
+#' @noRd
+.bsvOmega <- function(x) {
+  .omega <- x$omega
+  if (is.list(.omega)) {
+    .omega <- .omega$id
+  }
+  if (!is.matrix(.omega)) {
+    return(NULL)
+  }
+  .omega
 }
 
 #' Names of the BSV eta columns for a fit
 #'
-#' `ranef()` returns a data frame of `ID` plus one column per between-subject
-#' eta (inter-occasion etas are already dropped upstream by `nlmixr2est`).  A
-#' mixture fit also carries `mixnum` (the most likely subpopulation per subject;
-#' `MIXEST` in some fits), which is a label rather than an eta and is dropped.
+#' The subject-level etas with a non-zero variance in `omega` that `ranef()`
+#' reports a column for.  Taking the names from `omega` rather than from
+#' whatever else `ranef()` holds keeps out a mixture fit's `mixnum` label,
+#' occasion etas, and a `fix(0)` eta kept alongside estimated ones.  The
+#' subject-level omega is checked first so `ranef()` is not asked for a fit
+#' with no subject etas, where it may not be a data frame at all.
 #'
 #' @param x A nlmixr2 fit object
 #' @return Character vector of eta column names (excluding the ID column)
 #' @noRd
 .bsvEtas <- function(x) {
-  setdiff(
-    colnames(nlmixr2est::ranef(x)),
-    c("ID", "id", "mixnum", "MIXEST")
-  )
+  .omega <- .bsvOmega(x)
+  if (is.null(.omega)) {
+    return(character(0))
+  }
+  .etas <- rownames(.omega)[diag(.omega) != 0]
+  if (length(.etas) == 0L) {
+    return(character(0))
+  }
+  intersect(.etas, colnames(nlmixr2est::ranef(x)))
 }
 
 #' Generalized smoothing layer used throughout the BSV plots

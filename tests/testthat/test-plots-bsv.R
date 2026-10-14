@@ -59,26 +59,36 @@ test_that("BSV plots survive a model with between-occasion variability", {
 })
 
 test_that(".bsvHasBsv() is FALSE when omega has only non-subject levels", {
-  # An occasion-only model reports a non-NULL `omega` list but no subject eta in
-  # `ranef()`, so the guard must look past the NULL check to the etas.
+  # An occasion-only model reports a non-NULL `omega` list with no `id` level,
+  # and its `ranef()` is the bare ID vector (nlmixr2est drops the occasion
+  # columns without `drop = FALSE`).  The guard must not mistake it for BSV, and
+  # must not need `ranef()` to be a data frame to say so.
   x <- list(omega = list(OCC = matrix(0.1, dimnames = list("eOcc", "eOcc"))))
   local_mocked_bindings(
-    ranef = function(object, ...) data.frame(ID = 1:2),
+    ranef = function(object, ...) factor(1:2),
     .package = "nlmixr2est"
   )
   expect_false(.bsvHasBsv(x))
+  expect_identical(.bsvEtas(x), character(0))
+  expect_false(.bsvHasBsv(list(omega = NULL)))
 })
 
-test_that(".bsvEtas() drops the mixture-number column", {
-  # `ranef()` of a mixture fit carries the per-subject `mixnum` assignment; it
-  # is a discrete label, not an eta, and must not get QQ or correlation plots.
+test_that(".bsvEtas() keeps only estimated subject-level etas", {
+  # `ranef()` of a mixture fit carries the per-subject `mixnum` assignment, and
+  # a `fix(0)` eta kept beside estimated ones has a zero `omega` diagonal;
+  # neither is a BSV term, so neither gets QQ or correlation plots.
+  .om <- diag(c(0.1, 0))
+  dimnames(.om) <- list(c("etaCl", "etaKa"), c("etaCl", "etaKa"))
   local_mocked_bindings(
     ranef = function(object, ...) {
-      data.frame(ID = 1:2, etaCl = c(-0.1, 0.1), mixnum = 1:2)
+      data.frame(ID = 1:2, etaCl = c(-0.1, 0.1), etaKa = 0, mixnum = 1:2)
     },
     .package = "nlmixr2est"
   )
-  expect_equal(.bsvEtas(list()), "etaCl")
+  expect_equal(.bsvEtas(list(omega = .om)), "etaCl")
+  # The same subject block nested in a multi-level `omega` list
+  .lst <- list(omega = list(id = .om, OCC = matrix(0.1, dimnames = list("o", "o"))))
+  expect_equal(.bsvEtas(.lst), "etaCl")
 })
 
 test_that("BSV plots: multi-eta fit gives QQ, correlation, and covariate plots", {

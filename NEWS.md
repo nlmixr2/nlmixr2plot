@@ -7,9 +7,11 @@
   with "missing value where TRUE/FALSE needed" before drawing anything. The
   guard now asks whether the fit reports any between-subject eta, which is what
   the BSV plots need and does not depend on the number of variance levels.
-* The between-subject-variability plots no longer treat the `mixnum` column
-  that `ranef()` adds for a mixture model as an eta, so a mixture fit no longer
-  gets a QQ plot of subpopulation labels or a spurious correlation panel.
+* The between-subject-variability plots now take their etas from the
+  subject-level `omega` block (dropping any fixed at zero) rather than from
+  every column `ranef()` returns, so a mixture fit no longer gets a QQ plot of
+  its `mixnum` subpopulation labels or a spurious correlation panel, and an
+  occasion-only fit is correctly treated as having no BSV.
 * `plot()` of a fit, `vpcPlot()` and `plot()` of an `augPred()` object
   now emit one `fitResult` event on the rxode2 event bus (when rxode2
   has one) with the plots they made, so loggers such as nlmixr2log can
