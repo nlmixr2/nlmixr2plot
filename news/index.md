@@ -1,6 +1,6 @@
 # Changelog
 
-## nlmixr2plot (development version)
+## nlmixr2plot 5.2.1
 
 - [`plot()`](https://rdrr.io/r/graphics/plot.default.html) no longer
   fails on a fit with more than one variance level. A model with

@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">nlmixr2plot</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.2.0.9000</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">5.2.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -37,7 +37,7 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="development version" id="nlmixr2plot-development-version">nlmixr2plot (development version)<a class="anchor" aria-label="anchor" href="#nlmixr2plot-development-version"></a></h2>
+<h2 class="pkg-version" data-toc-text="5.2.1" id="nlmixr2plot-521">nlmixr2plot 5.2.1<a class="anchor" aria-label="anchor" href="#nlmixr2plot-521"></a></h2>
 <ul><li><p><code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> no longer fails on a fit with more than one variance level. A model with between-occasion variability reports <code>omega</code> as a list holding one matrix per level rather than as a single matrix, and the between-subject-variability guard tested <code>nrow(omega) &gt; 0</code>, which is <code>NA</code> for a list, so <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> stopped with “missing value where TRUE/FALSE needed” before drawing anything. The guard now asks whether the fit reports any between-subject eta, which is what the BSV plots need and does not depend on the number of variance levels.</p></li>
 <li><p>The between-subject-variability plots now take their etas from the subject-level <code>omega</code> block (dropping any fixed at zero) rather than from every column <code><a href="https://rdrr.io/pkg/nlme/man/random.effects.html" class="external-link">ranef()</a></code> returns, so a mixture fit no longer gets a QQ plot of its <code>mixnum</code> subpopulation labels or a spurious correlation panel, and an occasion-only fit is correctly treated as having no BSV.</p></li>
 <li><p><code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> of a fit, <code><a href="../reference/vpcPlot.html">vpcPlot()</a></code> and <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> of an <code><a href="https://rdrr.io/pkg/nlme/man/augPred.html" class="external-link">augPred()</a></code> object now emit one <code>fitResult</code> event on the rxode2 event bus (when rxode2 has one) with the plots they made, so loggers such as nlmixr2log can store them with the fit. Simulations done inside <code><a href="../reference/vpcPlot.html">vpcPlot()</a></code> emit nothing. Without a listener nothing changes.</p></li>
