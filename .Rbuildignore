@@ -19,3 +19,5 @@
 ^air\.toml$
 ^\.git-blame-ignore-revs$
 ^CLAUDE\.md$
+^Rplots\.pdf$
+^revdep$
