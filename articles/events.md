@@ -5,8 +5,7 @@ piece of work announce it with
 [`rxode2::rxEventEmit()`](https://nlmixr2.github.io/rxode2/reference/rxEventListen.html),
 and any package can listen with
 [`rxode2::rxEventListen()`](https://nlmixr2.github.io/rxode2/reference/rxEventListen.html).
-The main consumer is
-[nlmixr2log](https://github.com/nlmixr2/nlmixr2log), which records fits,
+The main consumer is `nlmixr2log` (in development), which records fits,
 simulations and their results, but you can write your own listener. See
 [`?rxode2::rxEventListen`](https://nlmixr2.github.io/rxode2/reference/rxEventListen.html)
 for the full API.
@@ -177,6 +176,6 @@ length(seen) == n
 ## Full logging
 
 For a complete record of fits, simulations, updates and the plots made
-from them, use [nlmixr2log](https://github.com/nlmixr2/nlmixr2log),
-which listens to all of these events (including `fitResult` from
-`nlmixr2plot`) and stores the plots with the run they belong to.
+from them, use `nlmixr2log` (in development), which listens to all of
+these events (including `fitResult` from `nlmixr2plot`) and stores the
+plots with the run they belong to.

@@ -2,6 +2,11 @@
 
 ## nlmixr2plot 5.2.1
 
+- The model-diagram test of a long product no longer checks how long
+  [`modelGraph()`](https://nlmixr2.github.io/nlmixr2plot/reference/modelGraph.md)
+  takes, and is skipped on CRAN. The timing check failed at random on
+  loaded CRAN machines (48 s against a 30 s limit).
+
 - [`plot()`](https://rdrr.io/r/graphics/plot.default.html) no longer
   fails on a fit with more than one variance level. A model with
   between-occasion variability reports `omega` as a list holding one

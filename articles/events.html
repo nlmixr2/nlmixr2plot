@@ -73,9 +73,10 @@
 <p><code>rxode2</code> provides a small event bus: packages that finish
 a top-level piece of work announce it with
 <code><a href="https://nlmixr2.github.io/rxode2/reference/rxEventListen.html" class="external-link">rxode2::rxEventEmit()</a></code>, and any package can listen with
-<code><a href="https://nlmixr2.github.io/rxode2/reference/rxEventListen.html" class="external-link">rxode2::rxEventListen()</a></code>. The main consumer is <a href="https://github.com/nlmixr2/nlmixr2log" class="external-link">nlmixr2log</a>, which
-records fits, simulations and their results, but you can write your own
-listener. See <code><a href="https://nlmixr2.github.io/rxode2/reference/rxEventListen.html" class="external-link">?rxode2::rxEventListen</a></code> for the full API.</p>
+<code><a href="https://nlmixr2.github.io/rxode2/reference/rxEventListen.html" class="external-link">rxode2::rxEventListen()</a></code>. The main consumer is
+<code>nlmixr2log</code> (in development), which records fits,
+simulations and their results, but you can write your own listener. See
+<code><a href="https://nlmixr2.github.io/rxode2/reference/rxEventListen.html" class="external-link">?rxode2::rxEventListen</a></code> for the full API.</p>
 <p>Two rules of the bus matter here:</p>
 <ul>
 <li>Events are delivered only from the <em>outermost</em> operation.
@@ -291,7 +292,7 @@ top-level <code><a href="https://rdrr.io/pkg/nlme/man/augPred.html" class="exter
 <h2 id="full-logging">Full logging<a class="anchor" aria-label="anchor" href="#full-logging"></a>
 </h2>
 <p>For a complete record of fits, simulations, updates and the plots
-made from them, use <a href="https://github.com/nlmixr2/nlmixr2log" class="external-link">nlmixr2log</a>, which
+made from them, use <code>nlmixr2log</code> (in development), which
 listens to all of these events (including <code>fitResult</code> from
 <code>nlmixr2plot</code>) and stores the plots with the run they belong
 to.</p>
