@@ -1,3 +1,15 @@
+# Build the (uncompiled) rxode2 ui of a model block or of model code given as
+# a string.  modelGraph() only needs the parsed model, and compiling every test
+# model is slow (especially on Windows), so most tests use this instead of
+# rxode2::rxode2().
+.mdUi <- function(expr) {
+  expr <- substitute(expr)
+  if (!is.call(expr) || !identical(expr[[1]], as.name("{"))) {
+    expr <- str2lang(paste0("{\n", paste(eval(expr, parent.frame()), collapse = "\n"), "\n}"))
+  }
+  suppressMessages(rxode2::rxode2(eval(call("function", NULL, call("{", call("model", expr))))))
+}
+
 .pkTurnover <- function() {
   ini({
     tktr <- log(1)
@@ -66,7 +78,7 @@ test_that("modelGraph classifies transfer, elimination and PD interaction", {
 })
 
 test_that("modelGraph handles peripherals, metabolites, effect compartments and inputs", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     C2 = centr/V2
     C3 = peri/V3
     C4 = peri2/V4
@@ -104,7 +116,7 @@ test_that("modelGraph handles peripherals, metabolites, effect compartments and 
 })
 
 test_that("inhibition is an interaction with a negative sign", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(central) = -kel*central
     d/dt(resp) = kin*(1 - imax*central/(ic50 + central)) - kout*resp
   })
@@ -180,7 +192,7 @@ test_that("the ggplot2 diagram holds its data only in $data", {
   expect_equal(p$data$label[5:6], c("ktr * depot", "ka * gut"))
 
   # without flows, the figure has only the compartments
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(A) = 0
   })
   p <- modelDiagram(m, engine = "ggplot2", labels = TRUE)
@@ -193,7 +205,7 @@ test_that("the ggplot2 diagram holds its data only in $data", {
 })
 
 test_that("bidirectional transfer is drawn once in DOT", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(central) = -k12*central + k21*periph - kel*central
     d/dt(periph) = k12*central - k21*periph
   })
@@ -229,13 +241,14 @@ test_that("linCmt models are diagrammed through linToOde()", {
 
 test_that("modelGraph errors for unsupported objects and models without ODEs", {
   expect_error(modelGraph(1), "cannot create a model diagram")
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     a = b + 1
   })
   expect_error(modelGraph(m), "no differential equations")
 })
 
 test_that("dosing compartments are detected from a fit's data", {
+  skip_on_cran()
   skip_if_not_installed("nlmixr2data")
   f <- function() {
     ini({
@@ -268,7 +281,7 @@ test_that("dosing compartments are detected from a fit's data", {
 })
 
 test_that("binding transfers mass from both binding partners (TMDD)", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(central) = -kel*central - kon*central*target + koff*complex
     d/dt(target) = ksyn - kdeg*target - kon*central*target + koff*complex
     d/dt(complex) = kon*target*central - koff*complex - kint*complex
@@ -284,7 +297,7 @@ test_that("binding transfers mass from both binding partners (TMDD)", {
 })
 
 test_that("zero-order transfer is mass transfer", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(depot) = -rate
     d/dt(center) = rate - cl*center
   })
@@ -295,7 +308,7 @@ test_that("zero-order transfer is mass transfer", {
 })
 
 test_that("interaction arrows do not cross other compartments", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(center) = -cl*center
     d/dt(eff1) = kin - kout*center*eff1
     d/dt(eff2) = kin - kout*center*eff2
@@ -323,7 +336,7 @@ test_that("interaction arrows do not cross other compartments", {
 })
 
 test_that("terms inside if/else blocks are used", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     if (t > tlag) {
       ktr = ka
     } else {
@@ -348,7 +361,7 @@ test_that("terms inside if/else blocks are used", {
 })
 
 test_that("interaction direction accounts for denominators and intermediate variables", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(center) = -cl*center
     d/dt(e1) = kin/(1 + imax*center) - kout*e1
     d/dt(e2) = kin*(1 + emax*center/(ec50 + center)) - kout*e2
@@ -365,7 +378,7 @@ test_that("interaction direction accounts for denominators and intermediate vari
 })
 
 test_that("parallel and externally driven transfers are mass transfer", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(A) = -k1*A - k2*A
     d/dt(B) = k1*A + k2*A - kel*B
   })
@@ -376,7 +389,7 @@ test_that("parallel and externally driven transfers are mass transfer", {
   expect_match(e$label, "k2 * A", fixed = TRUE)
   expect_equal(nrow(.edge(g, "A", NA, "elimination")), 0L)
   expect_equal(sum(g$edges$type == "interaction"), 0L)
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(A) = -Vmax*E
     d/dt(B) = Vmax*E
     d/dt(E) = kin - kout*E
@@ -388,7 +401,7 @@ test_that("parallel and externally driven transfers are mass transfer", {
   expect_equal(nrow(e), 1L)
   expect_equal(e$sign, 1)
   expect_equal(nrow(.edge(g, "E", "A", "interaction")), 0L)
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(A) = -Vmax*E*A/(Km + A)
     d/dt(B) = Vmax*E*A/(Km + A) - kel*B
     d/dt(E) = kin - kout*E
@@ -400,7 +413,7 @@ test_that("parallel and externally driven transfers are mass transfer", {
 })
 
 test_that("no interaction arrow crosses a compartment in the final layout", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(depot) = -ka*depot
     d/dt(center) = ka*depot - cl*center - kmet1*center - kmet2*center
     d/dt(met1) = kmet1*center - kel1*met1
@@ -432,7 +445,7 @@ test_that("no interaction arrow crosses a compartment in the final layout", {
 })
 
 test_that("numeric cmt follows rxode2's compartment order", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     cmt(center)
     d/dt(depot) = -ka*depot
     d/dt(center) = ka*depot - cl*center
@@ -451,7 +464,7 @@ test_that("numeric cmt follows rxode2's compartment order", {
 })
 
 test_that("identical terms in if/else branches are one flow", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(depot) = -ka*depot
     if (sex == 1) {
       d/dt(center) = ka*depot - cl1*center
@@ -468,7 +481,7 @@ test_that("identical terms in if/else branches are one flow", {
 })
 
 test_that("transit chains stack above central; Michaelis-Menten is elimination", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(depot) = -ktr*depot
     d/dt(transit1) = ktr*depot - ktr*transit1
     d/dt(transit2) = ktr*transit1 - ktr*transit2
@@ -485,7 +498,7 @@ test_that("transit chains stack above central; Michaelis-Menten is elimination",
 })
 
 test_that("DOT labels of bidirectional transfers use escaped line breaks", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(c1) = -k1*c1 + k2*p1
     d/dt(p1) = k1*c1 - k2*p1
   })
@@ -525,7 +538,7 @@ test_that("negative numeric constants keep their sign", {
 })
 
 test_that("conditions on compartment amounts are dependencies", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(center) = -cl*center
     if (center > 100) {
       tox_rate = k1
@@ -539,7 +552,7 @@ test_that("conditions on compartment amounts are dependencies", {
 })
 
 test_that("a reused variable name is not mistaken for a transfer", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     flux = cl/v*central
     d/dt(central) = -flux
     flux = q/v2*periph
@@ -564,7 +577,7 @@ test_that("factor evid/amt columns use their labels", {
 })
 
 test_that("an effect compartment with several drivers is placed clear of all arrows", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(central) = -cl*central - q*central + q*peri
     d/dt(peri) = q*central - q*peri
     d/dt(eff) = kin*central - kout*eff*peri
@@ -591,7 +604,7 @@ test_that("an effect compartment with several drivers is placed clear of all arr
 })
 
 test_that("ggplot2 arrows between the same compartments do not overlap", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(C) = -cl*C
     d/dt(eff) = kin*C - kout*eff*C
   })
@@ -612,7 +625,7 @@ test_that("ggplot2 arrows between the same compartments do not overlap", {
 })
 
 test_that("direction is seen through monotone functions, ifelse and Hill terms", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(center) = -cl*center
     d/dt(pd1) = kin*exp(-k*center) - kout*pd1
     d/dt(pd2) = kin*(1 + emax*center^g/(ec50^g + center^g)) - kout*pd2
@@ -627,7 +640,7 @@ test_that("direction is seen through monotone functions, ifelse and Hill terms",
   expect_match(dot, "arrowhead = dot", fixed = TRUE)
   expect_match(dot, "arrowhead = tee", fixed = TRUE)
   expect_s3_class(modelDiagram(g, engine = "ggplot2"), "ggplot")
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(center) = ifelse(t < 12, -k1, -k2)*center
   })
   g <- modelGraph(m)
@@ -636,7 +649,7 @@ test_that("direction is seen through monotone functions, ifelse and Hill terms",
 })
 
 test_that("PD inputs go above, outputs below and exchange compartments right", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(depot) = -ka*depot
     d/dt(center) = ka*depot - cl*center - q*center + q*periph
     d/dt(periph) = q*center - q*periph
@@ -658,7 +671,7 @@ test_that("PD inputs go above, outputs below and exchange compartments right", {
 })
 
 test_that("ifelse branches with several negative terms are losses", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(central) = ifelse(time > 12, -CL1*central - Q*central, -CL2*central - Q*central)
   })
   g <- modelGraph(m)
@@ -667,7 +680,7 @@ test_that("ifelse branches with several negative terms are losses", {
 })
 
 test_that("transfer matching ignores the order of sums and products", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(A) = -Vmax*A/(Km + A)
     d/dt(B) = A*Vmax/(A + Km) - kel*B
   })
@@ -677,7 +690,7 @@ test_that("transfer matching ignores the order of sums and products", {
 })
 
 test_that("ifelse flows switched off with 0 are still transfers", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(depot) = ifelse(time < 12, -ka*depot, 0)
     d/dt(central) = ifelse(time < 12, ka*depot, 0) - cl*central
   })
@@ -687,7 +700,7 @@ test_that("ifelse flows switched off with 0 are still transfers", {
 })
 
 test_that("compartments acting on central are placed clear of other arrows", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(central) = -cl*central - k1*central*eff1 - k2*central*eff2
     d/dt(eff1) = kin1 - kout1*eff1
     d/dt(eff2) = kin2 - kout2*eff2
@@ -716,7 +729,7 @@ test_that("compartments acting on central are placed clear of other arrows", {
 })
 
 test_that("ifelse with a transfer and an elimination is split into flows", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(depot) = ifelse(t < 12, -ka*depot, 0)
     d/dt(center) = ifelse(t < 12, ka*depot - cl*center, -cl*center)
   })
@@ -729,7 +742,7 @@ test_that("ifelse with a transfer and an elimination is split into flows", {
 })
 
 test_that("negated symbolic exponents are inhibition", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(C) = -cl*C
     d/dt(effect) = kin*C^(-gamma) - kout*effect
   })
@@ -738,7 +751,7 @@ test_that("negated symbolic exponents are inhibition", {
 })
 
 test_that("exchange partners of effect compartments stay off interaction arrows", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(C) = -cl*C
     d/dt(eff1) = kin - kout*eff1*C - k12*eff1 + k21*eff2
     d/dt(eff2) = k12*eff1 - k21*eff2*C
@@ -766,7 +779,7 @@ test_that("exchange partners of effect compartments stay off interaction arrows"
 })
 
 test_that("equations inside if blocks keep their condition", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(center) = -cl*center
     if (center > 100) {
       d/dt(tox) = k1 - kout*tox
@@ -779,7 +792,7 @@ test_that("equations inside if blocks keep their condition", {
   expect_equal(nrow(.edge(g, NA, "tox", "input")), 0L)
   expect_equal(nrow(.edge(g, "tox", NA, "elimination")), 1L)
   # an unconditional loss is not matched with a conditional gain
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(depot) = -ka*depot
     if (t < 12) {
       d/dt(central) = ka*depot - cl*central
@@ -794,7 +807,7 @@ test_that("equations inside if blocks keep their condition", {
 })
 
 test_that("mass transfer arrows do not cross compartments", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(central) = -k1*central - k2*central - k3*central
     d/dt(m1) = k1*central + k*m3 - kel1*m1
     d/dt(m2) = k2*central - kel2*m2
@@ -822,7 +835,7 @@ test_that("mass transfer arrows do not cross compartments", {
 })
 
 test_that("identical externally driven rates pair one-to-one", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(A) = -k*E
     d/dt(B) = k*E
     d/dt(C) = -k*E
@@ -836,7 +849,7 @@ test_that("identical externally driven rates pair one-to-one", {
 })
 
 test_that("scaled transfer is an elimination plus an interaction", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(A) = -k*A
     d/dt(B) = k*A*V1/V2 - kel*B
   })
@@ -849,7 +862,7 @@ test_that("scaled transfer is an elimination plus an interaction", {
 })
 
 test_that("missing cmt on a dose record doses the default compartment", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(depot) = -ka*depot
     d/dt(central) = ka*depot - cl*central
   })
@@ -863,7 +876,7 @@ test_that("missing cmt on a dose record doses the default compartment", {
 })
 
 test_that("repeated identical terms keep their mass", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(A) = -k*A - k*A
     d/dt(B) = k*A
   })
@@ -873,7 +886,7 @@ test_that("repeated identical terms keep their mass", {
 })
 
 test_that("only saturating quotients are taken as increasing", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(C) = -k*C
     d/dt(r1) = kin*C/(1 + C)^2 - kout*r1
     d/dt(r2) = kin*emax*C/(ec50 + C) - kout*r2
@@ -886,7 +899,7 @@ test_that("only saturating quotients are taken as increasing", {
 })
 
 test_that("a dataset without dose records has no dosing compartment", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(A) = -k*A
   })
   g <- modelGraph(m, data = data.frame(time = 0, evid = 1, amt = 0, cmt = 1))
@@ -900,7 +913,7 @@ test_that("a dataset without dose records has no dosing compartment", {
 })
 
 test_that("DOT column spacing grows with long compartment names", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(central) = -q*central + q*very_long_peripheral_compartment_name - k*central
     d/dt(very_long_peripheral_compartment_name) = q*central -
       q*very_long_peripheral_compartment_name
@@ -913,7 +926,7 @@ test_that("DOT column spacing grows with long compartment names", {
 })
 
 test_that("branch merging pairs repeated terms one-to-one", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(A) = ifelse(time < 12, -k*A, -k*A - k*A)
     d/dt(B) = k*A
   })
@@ -922,7 +935,7 @@ test_that("branch merging pairs repeated terms one-to-one", {
   e <- .edge(g, "A", NA, "elimination")
   expect_equal(nrow(e), 1L)
   expect_match(e$label, "^ifelse\\((t|time) < 12, 0, k \\* A\\)$")
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     if (time < 12) {
       d/dt(A) = -k*A
     } else {
@@ -936,7 +949,7 @@ test_that("branch merging pairs repeated terms one-to-one", {
 })
 
 test_that("a saturating quotient needs a positive constant", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(C) = -k*C
     d/dt(resp) = C/((-1) + C) - kout*resp
   })
@@ -956,16 +969,32 @@ test_that("plot() of an rxode2 ui or compiled model draws its diagram", {
   expect_match(grep("^  \"gut\" \\[", lines, value = TRUE), "penwidth = 2", fixed = TRUE)
   m <- rxode2::rxode2({
     d/dt(depot) = -ka*depot
-    d/dt(central) = ka*depot - cl*central
+    if (t < 12) {
+      d/dt(central) = ka*depot - cl*central
+    } else {
+      d/dt(central) = -cl*central
+    }
   })
+  expect_s3_class(m, "rxode2")
   expect_s3_class(plot(m, engine = "ggplot2"), "ggplot")
+  # the compiled model gives the same graph as its ui (other tests use the ui)
+  u <- .mdUi({
+    d/dt(depot) = -ka*depot
+    if (t < 12) {
+      d/dt(central) = ka*depot - cl*central
+    } else {
+      d/dt(central) = -cl*central
+    }
+  })
+  expect_equal(modelGraph(m)$edges, modelGraph(u)$edges)
+  expect_equal(modelGraph(m)$nodes, modelGraph(u)$nodes)
   skip_if_not_installed("DiagrammeR")
   withr::local_options(nlmixr2plot.diagram.engine = NULL)
   expect_s3_class(plot(ui), "htmlwidget")
 })
 
 test_that("the saturating constant must be known positive", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(C) = -k*C
     d/dt(r1) = C/((1 - 2) + C) - kout*r1
     d/dt(r2) = C/((1 + 2) + C) - kout*r2
@@ -978,7 +1007,7 @@ test_that("the saturating constant must be known positive", {
 })
 
 test_that("combined labels keep repeated contributions", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(A) = -k*A - k*A
     d/dt(B) = k*A + k*A
   })
@@ -990,7 +1019,7 @@ test_that("combined labels keep repeated contributions", {
 })
 
 test_that("delay() is a delayed transfer and keeps its direction", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(depot) = -ka*depot
     d/dt(central) = ka*delay(depot, tlag) - cl*central
   })
@@ -1000,7 +1029,7 @@ test_that("delay() is a delayed transfer and keeps its direction", {
   expect_equal(e$label, "ka * delay(depot, tlag)")
   expect_equal(nrow(.edge(g, "depot", NA, "elimination")), 0L)
   expect_equal(sum(g$edges$type == "interaction"), 0L)
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(central) = -cl*central
     d/dt(resp) = kin*(1 - delay(central, tau)/(ec50 + delay(central, tau))) - kout*resp
   })
@@ -1009,11 +1038,11 @@ test_that("delay() is a delayed transfer and keeps its direction", {
 })
 
 test_that("dosing modifiers and initial conditions do not change the graph", {
-  base <- rxode2::rxode2({
+  base <- .mdUi({
     d/dt(depot) = -ka*depot
     d/dt(central) = ka*depot - cl*central
   })
-  mod <- rxode2::rxode2({
+  mod <- .mdUi({
     d/dt(depot) = -ka*depot
     alag(depot) = tlag
     f(depot) = fbio
@@ -1093,7 +1122,7 @@ test_that("large sums of flows are still matched as transfers", {
     sprintf("jtot = %s", paste(sprintf("j%02d", 1:n), collapse = " + ")),
     "d/dt(central) = jtot - kel*central"
   )
-  m <- rxode2::rxode2(paste(code, collapse = "\n"))
+  m <- .mdUi(paste(code, collapse = "\n"))
   g <- modelGraph(m, dosing = "central")
   tr <- g$edges[g$edges$type == "transfer", ]
   expect_equal(nrow(tr), 2 * n)
@@ -1110,7 +1139,7 @@ test_that("long products keep their input and elimination parts", {
     sprintf("b = b0 + %s", paste(sprintf("w%02d*s%02d", 1:n, 1:n), collapse = " + ")),
     "d/dt(y) = tau*(b - y)*(1 - inh)"
   )
-  m <- rxode2::rxode2(paste(code, collapse = "\n"))
+  m <- .mdUi(paste(code, collapse = "\n"))
   # Without modelGraph()'s expansion budget, expanding this long product term
   # by term does not finish in any useful time; the limit fails the test then
   # instead of hanging the run.  It is far above the normal run time, so a
@@ -1132,7 +1161,7 @@ test_that("a hub with many compartments is fanned out without crossings", {
     sprintf("d/dt(t%02d) = q%02d*central - q%02d*t%02d", 1:n, 1:n, 1:n, 1:n),
     sprintf("d/dt(central) = d/dt(central) - q%02d*central + q%02d*t%02d", 1:n, 1:n, 1:n)
   )
-  m <- rxode2::rxode2(paste(code, collapse = "\n"))
+  m <- .mdUi(paste(code, collapse = "\n"))
   g <- modelGraph(m, dosing = "central")
   n2 <- g$nodes
   rownames(n2) <- n2$name
@@ -1159,7 +1188,7 @@ test_that("a hub with many compartments is fanned out without crossings", {
 })
 
 test_that("large graphs use straight edges in DOT", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(depot) = -ka*depot
     d/dt(central) = ka*depot - cl*central
   })
@@ -1174,12 +1203,12 @@ test_that("a term kept whole still shows its loss and production", {
   # decreases with A, so it is a loss, not an input
   loss <- paste(sprintf("k%03d*A", 1:128), collapse = " - ")
   den <- paste(sprintf("p%03d", 1:256), collapse = " + ")
-  m <- rxode2::rxode2(sprintf("d/dt(A) = (kin - %s)/(%s)", loss, den))
+  m <- .mdUi(sprintf("d/dt(A) = (kin - %s)/(%s)", loss, den))
   g <- modelGraph(m)
   expect_equal(nrow(.edge(g, "A", NA, "elimination")), 1L)
   expect_equal(nrow(.edge(g, NA, "A", "input")), 1L)
   # the same model written small behaves the same way
-  g <- modelGraph(rxode2::rxode2("d/dt(A) = (kin - kel*A)/v"))
+  g <- modelGraph(.mdUi("d/dt(A) = (kin - kel*A)/v"))
   expect_equal(nrow(.edge(g, "A", NA, "elimination")), 1L)
   expect_equal(nrow(.edge(g, NA, "A", "input")), 1L)
 })
@@ -1189,7 +1218,7 @@ test_that("substitution falls back for the whole model, not one equation", {
   # equations must still write `flux` the same way for the transfer to match
   l <- paste(sprintf("q%02d*B", 1:40), collapse = " + ")
   out <- paste(rep("loss", 40), collapse = " - ")
-  m <- rxode2::rxode2(paste("flux = k*A", paste0("loss = ", l),
+  m <- .mdUi(paste("flux = k*A", paste0("loss = ", l),
                             "d/dt(A) = -flux",
                             paste0("d/dt(B) = flux - ", out), sep = "\n"))
   g <- modelGraph(m)
@@ -1199,7 +1228,7 @@ test_that("substitution falls back for the whole model, not one equation", {
 })
 
 test_that("production that saturates with its own compartment is an input", {
-  g <- modelGraph(rxode2::rxode2("d/dt(A) = kin/(1 + A)"))
+  g <- modelGraph(.mdUi("d/dt(A) = kin/(1 + A)"))
   expect_equal(nrow(.edge(g, NA, "A", "input")), 1L)
   expect_equal(nrow(.edge(g, "A", NA, "elimination")), 0L)
 })
@@ -1208,7 +1237,7 @@ test_that("a reused variable keeps one identity per assignment", {
   # both equations use `flux`, but it means something different in each
   l <- paste(sprintf("q%02d*B", 1:40), collapse = " + ")
   out <- paste(rep("loss", 40), collapse = " - ")
-  m <- rxode2::rxode2(paste("flux = k*A", "d/dt(A) = -flux", "flux = h*B",
+  m <- .mdUi(paste("flux = k*A", "d/dt(A) = -flux", "flux = h*B",
                             paste0("loss = ", l),
                             paste0("d/dt(B) = flux - ", out), sep = "\n"))
   g <- modelGraph(m)
@@ -1220,7 +1249,7 @@ test_that("a reused variable keeps one identity per assignment", {
 })
 
 test_that("a variable assigned in if branches keeps every branch's dependencies", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(A) = -k*A
     d/dt(B) = -k*B
     if (t < 12) {
@@ -1238,7 +1267,7 @@ test_that("a variable assigned in if branches keeps every branch's dependencies"
 
 test_that("a variable means what it meant where it was used", {
   # `x` is reassigned after `drive` was set from it: `drive` is still A
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     x = A
     if (t < 12) {
       drive = x
@@ -1256,7 +1285,7 @@ test_that("a variable means what it meant where it was used", {
 })
 
 test_that("constants keep their value and sign", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     x = -1
     d/dt(A) = x*A
     d/dt(B) = exp(x*A) - k*B
@@ -1268,7 +1297,7 @@ test_that("constants keep their value and sign", {
 })
 
 test_that("a power is monotone only for a non-negative base", {
-  m <- rxode2::rxode2({
+  m <- .mdUi({
     d/dt(A) = -k*A
     d/dt(B) = (A - 1)^2 - k*B
     d/dt(C) = A^2 - k*C

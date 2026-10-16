@@ -74,6 +74,7 @@ test_that("BSV plots survive a model with between-occasion variability", {
 })
 
 test_that("BSV plots: multi-eta fit gives QQ, correlation, and covariate plots", {
+  skip_on_cran()
   skip_if_not_installed("nlmixr2data")
 
   one.cmt <- function() {
@@ -142,6 +143,7 @@ test_that("BSV plots: multi-eta fit gives QQ, correlation, and covariate plots",
 })
 
 test_that("BSV plots: categorical / low-cardinality covariate uses box-and-whisker", {
+  skip_on_cran()
   skip_if_not_installed("nlmixr2data")
   skip_if_not_installed("dplyr")
 
@@ -198,6 +200,7 @@ test_that("BSV plots: categorical / low-cardinality covariate uses box-and-whisk
 })
 
 test_that("BSV plots: single-eta fit has QQ but no correlation plots", {
+  skip_on_cran()
   poisModel <- function() {
     ini({
       tlambda <- log(2)
@@ -234,6 +237,7 @@ test_that("BSV plots: single-eta fit has QQ but no correlation plots", {
 })
 
 test_that("BSV plots: a fit without between-subject variability has no bsv element", {
+  skip_on_cran()
   skip_if_not_installed("nlmixr2data")
 
   oneCmtNoIiv <- function() {

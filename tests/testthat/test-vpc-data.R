@@ -1,4 +1,5 @@
 test_that("pred_corr VPC uses the supplied data (#62)", {
+  skip_on_cran()
   skip_if_not_installed("nlmixr2data")
   skip_if_not_installed("vpc")
 

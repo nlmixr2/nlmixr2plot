@@ -28,6 +28,7 @@ skip_if_not_installed("nlmixr2data")
 }
 
 test_that("plot(fit) emits one fitResult with the plot list", {
+  skip_on_cran()
   fit <- .fit()
   .listen()
   grDevices::pdf(NULL)
@@ -39,6 +40,7 @@ test_that("plot(fit) emits one fitResult with the plot list", {
 })
 
 test_that("vpcPlot emits one fitResult and no solveComplete", {
+  skip_on_cran()
   fit <- .fit()
   .listen()
   suppressMessages(suppressWarnings(vpcPlot(fit, n = 5)))
@@ -47,6 +49,7 @@ test_that("vpcPlot emits one fitResult and no solveComplete", {
 })
 
 test_that("plot(augPred(fit)) sends the augPred data along", {
+  skip_on_cran()
   fit <- .fit()
   ap <- suppressMessages(nlmixr2est::augPred(fit))
   .listen()

@@ -1,4 +1,5 @@
 test_that("test plots with vdiffr", {
+  skip_on_cran()
   skip_if_not_installed("nlmixr2data")
   skip_if_not_installed("withr")
   skip_if_not_installed("vpc")

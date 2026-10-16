@@ -1,4 +1,5 @@
 test_that("plot(augPred) returns a gglist that broadcasts ggplot2 additions", {
+  skip_on_cran()
   skip_if_not_installed("nlmixr2data")
   skip_if_not_installed("dplyr")
 
@@ -53,6 +54,7 @@ test_that("plot(augPred) returns a gglist that broadcasts ggplot2 additions", {
 })
 
 test_that("plot(fit) returns a named, nested gglist", {
+  skip_on_cran()
   skip_if_not_installed("nlmixr2data")
 
   one.compartment <- function() {
