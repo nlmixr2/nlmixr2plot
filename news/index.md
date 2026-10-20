@@ -2,6 +2,8 @@
 
 ## nlmixr2plot 5.2.1
 
+CRAN release: 2026-10-16
+
 - The model-diagram test of a long product no longer checks how long
   [`modelGraph()`](https://nlmixr2.github.io/nlmixr2plot/reference/modelGraph.md)
   takes, and is skipped on CRAN. The timing check failed at random on

@@ -33,11 +33,11 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/nlmixr2/nlmixr2plot/blob/v5.2.1/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/nlmixr2/nlmixr2plot/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="5.2.1" id="nlmixr2plot-521">nlmixr2plot 5.2.1<a class="anchor" aria-label="anchor" href="#nlmixr2plot-521"></a></h2>
+<h2 class="pkg-version" data-toc-text="5.2.1" id="nlmixr2plot-521">nlmixr2plot 5.2.1<a class="anchor" aria-label="anchor" href="#nlmixr2plot-521"></a></h2><p class="text-muted">CRAN release: 2026-10-16</p>
 <ul><li><p>The model-diagram test of a long product no longer checks how long <code><a href="../reference/modelGraph.html">modelGraph()</a></code> takes, and is skipped on CRAN. The timing check failed at random on loaded CRAN machines (48 s against a 30 s limit).</p></li>
 <li><p><code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> no longer fails on a fit with more than one variance level. A model with between-occasion variability reports <code>omega</code> as a list holding one matrix per level rather than as a single matrix, and the between-subject-variability guard tested <code>nrow(omega) &gt; 0</code>, which is <code>NA</code> for a list, so <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code> stopped with “missing value where TRUE/FALSE needed” before drawing anything. The guard now asks whether the fit reports any between-subject eta, which is what the BSV plots need and does not depend on the number of variance levels.</p></li>
 <li><p>The between-subject-variability plots now take their etas from the subject-level <code>omega</code> block (dropping any fixed at zero) rather than from every column <code><a href="https://rdrr.io/pkg/nlme/man/random.effects.html" class="external-link">ranef()</a></code> returns, so a mixture fit no longer gets a QQ plot of its <code>mixnum</code> subpopulation labels or a spurious correlation panel, and an occasion-only fit is correctly treated as having no BSV.</p></li>
