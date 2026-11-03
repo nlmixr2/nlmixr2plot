@@ -149,9 +149,7 @@ compiled `rxode2` model draws the diagram.
 - `test-coverage.yaml`, `pkgdown.yaml` – coverage and site
   (<https://nlmixr2.github.io/nlmixr2plot/>).
 - `format-check.yaml` – fails if `air format` would change files.
-- `lint.yaml` –
-  [`lintr::lint_package()`](https://lintr.r-lib.org/reference/lint.html)
-  with lintr pinned at 3.4.0.
+- `lint.yaml` – `lintr::lint_package()` with lintr pinned at 3.4.0.
 
 ## R Code Style
 
