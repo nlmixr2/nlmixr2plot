@@ -273,7 +273,7 @@ fit <-
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
 #> → compress parHistData in nlmixr2 object, save 2920
-#> → compress phiM in nlmixr2 object, save 4112
+#> → compress phiM in nlmixr2 object, save 4120
 
 vpcPlot(fit, n = 100)
 #>  
