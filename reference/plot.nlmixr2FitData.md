@@ -77,13 +77,13 @@ fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0, nBurn
 #>  
 #> ℹ parameter labels from comments are typically ignored in non-interactive mode
 #> ℹ Need to run with the source intact to parse comments
-#>  
-#>  
 #> → loading into symengine environment...
 #> → pruning branches (`if`/`else`) of saem model...
 #> ✔ done
 #> → finding duplicate expressions in saem model...
 #> ✔ done
+#>  
+#>  
 #> ℹ calculate uninformed etas
 #> ℹ done
 #> Calculating covariance matrix
@@ -99,7 +99,7 @@ fit <- nlmixr2(one.compartment, theo_sd,  est="saem", saemControl(print=0, nBurn
 #> → Calculating residuals/tables
 #> ✔ done
 #> → compress origData in nlmixr2 object, save 6584
-#> → compress parHistData in nlmixr2 object, save 2928
+#> → compress parHistData in nlmixr2 object, save 2944
 #> → compress phiM in nlmixr2 object, save 2912
 
 # This shows many goodness of fit plots
